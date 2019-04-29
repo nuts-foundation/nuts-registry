@@ -20,8 +20,7 @@ package main
 
 import (
 	"github.com/labstack/echo"
-
-	registry "./registry"
+	"github.com/nuts-foundation/nuts-registry/registry"
 )
 
 type emptyInterface struct{
