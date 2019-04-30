@@ -180,6 +180,40 @@ func TestMemoryDb_FindEndpointsByOrganizationInactiveEndpoint(t *testing.T) {
 	}
 }
 
+func TestMemoryDb_appendEOMissingEndpoints(t *testing.T) {
+	validDb := New()
+	validDb.appendOrganization(organization)
+	validDb.appendEO(mapping)
+
+	err := validDb.appendEO(mapping)
+
+	if err == nil {
+		t.Errorf("Expected error")
+	}
+
+	expected := "Endpoint <> Organization mapping references unknown endpoint with identifier [system#value]"
+	if err.Error() != expected {
+		t.Errorf("Expected [%s], got: [%s]", expected,  err.Error())
+	}
+}
+
+func TestMemoryDb_appendEOMissingOrg(t *testing.T) {
+	validDb := New()
+	validDb.appendEndpoint(endpoint)
+	validDb.appendEO(mapping)
+
+	err := validDb.appendEO(mapping)
+
+	if err == nil {
+		t.Errorf("Expected error")
+	}
+
+	expected := "Endpoint <> Organization mapping references unknown organization with identifier [system#value]"
+	if err.Error() != expected {
+		t.Errorf("Expected [%s], got: [%s]", expected,  err.Error())
+	}
+}
+
 func TestMemoryDb_FindEndpointsByOrganizationNoMapping(t *testing.T) {
 	validDb := New()
 	validDb.appendOrganization(organization)
