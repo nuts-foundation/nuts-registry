@@ -79,6 +79,7 @@ pygments_style = None
 
 intersphinx_mapping = {
     "nuts-documentation": ("https://nuts-documentation.readthedocs.io/en/%s/" % rtd_version, None),
+    "nuts-node-rpc-spec": ("https://nuts-node-rpc-spec.readthedocs.io/en/%s/" % rtd_version, None),
 }
 
 # -- Options for HTML output -------------------------------------------------

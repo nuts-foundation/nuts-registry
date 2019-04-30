@@ -16,10 +16,45 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package main
+package cmd
 
-import "github.com/nuts-foundation/nuts-registry/cmd"
+import (
+	"bytes"
+	"github.com/spf13/cobra"
+	"io"
+	"testing"
+)
 
-func main() {
-	cmd.Execute()
+
+
+func newVersionCommand(writer io.Writer) *cobra.Command {
+	testRootCommand := &cobra.Command{
+		Use:   "root",
+		Run: func(cmd *cobra.Command, args []string) {
+
+		},
+	}
+
+	testRootCommand.AddCommand(newVersionCmd(writer))
+
+	return testRootCommand
+}
+
+func TestVersion(t *testing.T) {
+	buf := new(bytes.Buffer)
+
+	root := newVersionCommand(buf)
+	root.SetOutput(buf)
+	root.SetArgs([]string{"version"})
+
+	err := root.Execute()
+
+	if (err != nil) {
+		t.Errorf("Expected no error, got %s", err.Error())
+	}
+
+	result := buf.String()
+	if (result != VERSION + "\n") {
+		t.Errorf("Expected: [%s], got: [%s]", VERSION, result)
+	}
 }

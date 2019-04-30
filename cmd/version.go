@@ -16,10 +16,28 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package main
+package cmd
 
-import "github.com/nuts-foundation/nuts-registry/cmd"
+import (
+	"fmt"
+	"io"
+	"os"
 
-func main() {
-	cmd.Execute()
+	"github.com/spf13/cobra"
+)
+
+// Creates a new Version command printing to Stdout
+func NewVersionCmd() *cobra.Command {
+	return newVersionCmd(os.Stdout)
+}
+
+// Creates a new Version command printing to the given writer
+func newVersionCmd(writer io.Writer) *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Print the version number of the Nuts registry",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Fprintln(writer, VERSION)
+		},
+	}
 }

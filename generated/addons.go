@@ -16,10 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package main
+package generated
 
-import "github.com/nuts-foundation/nuts-registry/cmd"
+import "fmt"
 
-func main() {
-	cmd.Execute()
+func (i Identifier) String() string {
+	return fmt.Sprintf("%s#%s", i.System, i.Value)
 }
+
+// from api spec
+const STATUS_ACTIVE = "active"
+

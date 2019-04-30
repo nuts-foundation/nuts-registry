@@ -16,10 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package main
+package cmd
 
-import "github.com/nuts-foundation/nuts-registry/cmd"
+const CONF_PORT = "port"
+const CONF_INTERFACE = "interface"
 
-func main() {
-	cmd.Execute()
-}
+const VERSION = `Nuts registry v0.1 -- HEAD`

@@ -16,10 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package main
+package db
 
-import "github.com/nuts-foundation/nuts-registry/cmd"
+const FILE_ENDPOINTS = "endpoints.json"
+const FILE_ORGANIZATIONS = "organizations.json"
+const FILE_ENDPOINTS_ORGANIZATIONS = "endpoints_organizations.json"
+const CONF_DATA_DIR = "data"
 
-func main() {
-	cmd.Execute()
-}
+var REQUIRED_FILES = [3]string{FILE_ENDPOINTS, FILE_ORGANIZATIONS,FILE_ENDPOINTS_ORGANIZATIONS}
