@@ -38,7 +38,8 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// load static db
-		err := db.Load()
+		memoryDb := db.New()
+		err := memoryDb.Load()
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(1)
@@ -46,7 +47,7 @@ var rootCmd = &cobra.Command{
 
 		// start webserver
 		e := echo.New()
-		generated.RegisterHandlers(e, api.EmptyInterface{})
+		generated.RegisterHandlers(e, api.ApiResource{Db: memoryDb})
 		e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%d", viper.GetString("interface"), viper.GetInt("port"))))
 	},
 }

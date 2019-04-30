@@ -50,10 +50,6 @@ func ValidateLocation(location string) error {
 		return err
 	}
 
-	if len(files) == 0 {
-		return newFileError(fmt.Sprintf("%s is empty", sLocation))
-	}
-
 	m := make(map[string]bool)
 
 	for _, f := range REQUIRED_FILES {

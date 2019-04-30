@@ -27,26 +27,23 @@ import (
 	"strings"
 )
 
-type index struct {
+type MemoryDb struct {
 	endpointIndex map[string]generated.Endpoint
 	organizationIndex map[string]generated.Organization
 	endpointToOrganizationIndex map[string][]generated.EndpointOrganization
 	organizationToEndpointIndex map[string][]generated.EndpointOrganization
 }
 
-type dbError struct {
-	s string
+func New() *MemoryDb {
+	return &MemoryDb{
+		make(map[string]generated.Endpoint),
+		make(map[string]generated.Organization),
+		make(map[string][]generated.EndpointOrganization),
+		make(map[string][]generated.EndpointOrganization),
+	}
 }
 
-func newDbError(text string) error {
-	return &dbError{text}
-}
-
-func (e *dbError) Error() string {
-	return e.s
-}
-
-func (i index) appendEO(eo generated.EndpointOrganization) error {
+func (i *MemoryDb) appendEO(eo generated.EndpointOrganization) error {
 	ois := eo.OrganizationIdentifier.String()
 	eis := eo.EndpointIdentifier.String()
 
@@ -66,23 +63,21 @@ func (i index) appendEO(eo generated.EndpointOrganization) error {
 	return nil
 }
 
-func (i index) appendEndpoint(e generated.Endpoint) {
+func (i *MemoryDb) appendEndpoint(e generated.Endpoint) {
 	i.endpointIndex[e.Identifier.String()] = e
 
-	// also create empty slice at this map index
+	// also create empty slice at this map Db
 	i.endpointToOrganizationIndex[e.Identifier.String()] = []generated.EndpointOrganization{}
 }
 
-func (i index) appendOrganization(o generated.Organization) {
+func (i *MemoryDb) appendOrganization(o generated.Organization) {
 	i.organizationIndex[o.Identifier.String()] = o
 
-	// also create empty slice at this map index
+	// also create empty slice at this map Db
 	i.organizationToEndpointIndex[o.Identifier.String()] = []generated.EndpointOrganization{}
 }
 
-var memoryDB index
-
-func Load() error {
+func (db *MemoryDb) Load() error {
 	location := viper.GetString(CONF_DATA_DIR)
 
 	err := ValidateLocation(location)
@@ -91,37 +86,30 @@ func Load() error {
 		return err
 	}
 
-	memoryDB = index{
-		make(map[string]generated.Endpoint),
-		make(map[string]generated.Organization),
-		make(map[string][]generated.EndpointOrganization),
-		make(map[string][]generated.EndpointOrganization),
-	}
-
-	err = loadEndpoints()
+	err = db.loadEndpoints()
 	if err != nil {
 		return err
 	}
 
-	err = loadOrganizations()
+	err = db.loadOrganizations()
 	if err != nil {
 		return err
 	}
 
-	err = loadEndpointsOrganizations()
+	err = db.loadEndpointsOrganizations()
 	return err
 }
 
-func FindEndpointsByOrganisation(organizationIdentifier string) ([]generated.Endpoint, error) {
+func (db *MemoryDb) FindEndpointsByOrganisation(organizationIdentifier string) ([]generated.Endpoint, error) {
 
-	_, exists := memoryDB.organizationIndex[organizationIdentifier]
+	_, exists := db.organizationIndex[organizationIdentifier]
 
 	// not found
 	if !exists {
 		return nil, newDbError(fmt.Sprintf("Organization with identifier [%s] does not exist", organizationIdentifier))
 	}
 
-	mappings, exists := memoryDB.organizationToEndpointIndex[organizationIdentifier]
+	mappings, exists := db.organizationToEndpointIndex[organizationIdentifier]
 
 	// not found
 	if !exists {
@@ -143,7 +131,7 @@ func FindEndpointsByOrganisation(organizationIdentifier string) ([]generated.End
 	// map to endpoints
 	var endpoints []generated.Endpoint
 	for _, f := range filtered {
-		es := memoryDB.endpointIndex[f.EndpointIdentifier.String()]
+		es := db.endpointIndex[f.EndpointIdentifier.String()]
 
 		if es.Status == generated.STATUS_ACTIVE {
 			endpoints = append(endpoints, es)
@@ -153,7 +141,7 @@ func FindEndpointsByOrganisation(organizationIdentifier string) ([]generated.End
 	return endpoints, nil
 }
 
-func SearchOrganizations(query string) []generated.Organization {
+func (db *MemoryDb) SearchOrganizations(query string) []generated.Organization {
 
 	// all organization names to lowercase and to slice
 	// query to slice
@@ -161,7 +149,7 @@ func SearchOrganizations(query string) []generated.Organization {
 	// continue until one is empty
 	// if query is empty, match is found
 	var matches []generated.Organization
-	for _, o := range memoryDB.organizationIndex {
+	for _, o := range db.organizationIndex {
 		if searchRecursive(strings.Split(strings.ToLower(query), ""), strings.Split(strings.ToLower(o.Name), "")) {
 			matches = append(matches, o)
 		}
@@ -187,7 +175,7 @@ func searchRecursive(query []string, orgName []string) bool {
 	}
 }
 
-func loadEndpoints() error {
+func (db *MemoryDb) loadEndpoints() error {
 
 	data, err := ReadFile(viper.GetString(CONF_DATA_DIR), FILE_ENDPOINTS)
 
@@ -203,15 +191,15 @@ func loadEndpoints() error {
 	}
 
 	for _, e := range stub {
-		memoryDB.appendEndpoint(e)
+		db.appendEndpoint(e)
 	}
 
-	glog.V(2).Infof("Added %d Endpoints to db", len(memoryDB.endpointIndex))
+	glog.V(2).Infof("Added %d Endpoints to db", len(db.endpointIndex))
 
 	return nil
 }
 
-func loadOrganizations() error {
+func (db *MemoryDb) loadOrganizations() error {
 
 	data, err := ReadFile(viper.GetString(CONF_DATA_DIR), FILE_ORGANIZATIONS)
 
@@ -227,15 +215,15 @@ func loadOrganizations() error {
 	}
 
 	for _, e := range stub {
-		memoryDB.appendOrganization(e)
+		db.appendOrganization(e)
 	}
 
-	glog.V(2).Infof("Added %d Organizations to db", len(memoryDB.organizationIndex))
+	glog.V(2).Infof("Added %d Organizations to db", len(db.organizationIndex))
 
 	return nil
 }
 
-func loadEndpointsOrganizations() error {
+func (db *MemoryDb) loadEndpointsOrganizations() error {
 	data, err := ReadFile(viper.GetString(CONF_DATA_DIR), FILE_ENDPOINTS_ORGANIZATIONS)
 
 	if err != nil {
@@ -251,13 +239,13 @@ func loadEndpointsOrganizations() error {
 
 	for _, e := range stub {
 		// all map values should be present, appending
-		err = memoryDB.appendEO(e)
+		err = db.appendEO(e)
 		if err != nil {
 			return err
 		}
 	}
 
-	glog.V(2).Infof("Added %d mappings of endpoint <-> organization to db", len(memoryDB.organizationIndex))
+	glog.V(2).Infof("Added %d mappings of endpoint <-> organization to db", len(db.organizationIndex))
 
 	return nil
 }

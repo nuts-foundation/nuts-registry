@@ -31,17 +31,6 @@ func TestIncorrectDir(t *testing.T) {
 	}
 }
 
-func TestEmptyDir(t *testing.T) {
-	err := ValidateLocation("../test_data/empty")
-
-	expected := "../test_data/empty is empty"
-	if err == nil {
-		t.Errorf("Expected error with: %s", expected)
-	} else if err.Error() != expected {
-		t.Errorf("Expected error with: [%s], got [%s]", expected, err.Error())
-	}
-}
-
 func TestMissingFiles(t *testing.T) {
 	err := ValidateLocation("../test_data/missing_files")
 

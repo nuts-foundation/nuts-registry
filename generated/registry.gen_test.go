@@ -59,11 +59,11 @@ func TestEndpointsByOrganisationId200(t *testing.T) {
 
 	err := wrapper.EndpointsByOrganisationId(c)
 
-	if (err != nil) {
+	if err != nil {
 		t.Errorf("Got err during call: %s", err.Error())
 	}
 
-	if (rec.Code != http.StatusOK) {
+	if rec.Code != http.StatusOK {
 		t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
 	}
 }
@@ -137,7 +137,7 @@ func TestSearchOrganizations400(t *testing.T) {
 
 	err := wrapper.SearchOrganizations(c)
 
-	if (err == nil) {
+	if err == nil {
 		t.Errorf("Didn't get expected err during call")
 	}
 

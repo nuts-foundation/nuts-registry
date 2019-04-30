@@ -26,18 +26,18 @@ import (
 	"net/http"
 )
 
-type EmptyInterface struct{
-
+type ApiResource struct{
+	Db db.Db
 }
 
-func (e EmptyInterface) EndpointsByOrganisationId(ctx echo.Context, params generated.EndpointsByOrganisationIdParams) error {
+func (apiResource ApiResource) EndpointsByOrganisationId(ctx echo.Context, params generated.EndpointsByOrganisationIdParams) error {
 	var err error
 
 	var dupEndpoints []generated.Endpoint
 	var endpoints []generated.Endpoint
 	endpointIds := make(map[string]bool)
 	for _, id := range params.OrgIds {
-		endpoints, err = db.FindEndpointsByOrganisation(id)
+		endpoints, err = apiResource.Db.FindEndpointsByOrganisation(id)
 
 		if err != nil{
 			glog.Warning(err.Error())
@@ -70,9 +70,9 @@ func (e EmptyInterface) EndpointsByOrganisationId(ctx echo.Context, params gener
 	return ctx.JSON(http.StatusOK, uniqFiltered)
 }
 
-func (e EmptyInterface) SearchOrganizations(ctx echo.Context, params generated.SearchOrganizationsParams) error {
+func (apiResource ApiResource) SearchOrganizations(ctx echo.Context, params generated.SearchOrganizationsParams) error {
 
-	result := db.SearchOrganizations(params.Query)
+	result := apiResource.Db.SearchOrganizations(params.Query)
 
 	if result == nil {
 		result = []generated.Organization{}
