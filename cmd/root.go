@@ -39,7 +39,7 @@ var rootCmd = &cobra.Command{
 
 		// load static db
 		memoryDb := db.New()
-		err := memoryDb.Load()
+		err := memoryDb.Load(viper.GetString(db.CONF_DATA_DIR))
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(1)

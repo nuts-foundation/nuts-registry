@@ -34,6 +34,14 @@ The generated code requires another dependency
 
    go get github.com/labstack/ech0
 
+Display help
+------------
+
+.. code-block:: shell
+
+   go run main.go help
+
+
 Run the server
 --------------
 

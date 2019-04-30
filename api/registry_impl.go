@@ -37,7 +37,7 @@ func (apiResource ApiResource) EndpointsByOrganisationId(ctx echo.Context, param
 	var endpoints []generated.Endpoint
 	endpointIds := make(map[string]bool)
 	for _, id := range params.OrgIds {
-		endpoints, err = apiResource.Db.FindEndpointsByOrganisation(id)
+		endpoints, err = apiResource.Db.FindEndpointsByOrganization(id)
 
 		if err != nil{
 			glog.Warning(err.Error())

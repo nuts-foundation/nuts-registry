@@ -48,7 +48,7 @@ type MockDb struct {
 	endpointsError error
 }
 
-func (db *MockDb) FindEndpointsByOrganisation(organizationIdentifier string) ([]generated.Endpoint, error) {
+func (db *MockDb) FindEndpointsByOrganization(organizationIdentifier string) ([]generated.Endpoint, error) {
 	if db.endpointsError != nil {
 		return nil, db.endpointsError
 	}
@@ -56,7 +56,7 @@ func (db *MockDb) FindEndpointsByOrganisation(organizationIdentifier string) ([]
 	return db.endpoints, nil
 }
 
-func (db *MockDb) Load() error {
+func (db *MockDb) Load(location string) error {
 	return nil
 }
 

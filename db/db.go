@@ -21,8 +21,8 @@ package db
 import "github.com/nuts-foundation/nuts-registry/generated"
 
 type Db interface {
-	FindEndpointsByOrganisation(organizationIdentifier string) ([]generated.Endpoint, error)
-	Load() error
+	FindEndpointsByOrganization(organizationIdentifier string) ([]generated.Endpoint, error)
+	Load(location string) error
 	SearchOrganizations(query string) []generated.Organization
 }
 

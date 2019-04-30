@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"github.com/golang/glog"
 	"github.com/nuts-foundation/nuts-registry/generated"
-	"github.com/spf13/viper"
 	"strings"
 )
 
@@ -77,30 +76,28 @@ func (i *MemoryDb) appendOrganization(o generated.Organization) {
 	i.organizationToEndpointIndex[o.Identifier.String()] = []generated.EndpointOrganization{}
 }
 
-func (db *MemoryDb) Load() error {
-	location := viper.GetString(CONF_DATA_DIR)
-
-	err := ValidateLocation(location)
+func (db *MemoryDb) Load(location string) error {
+	err := validateLocation(location)
 
 	if err != nil {
 		return err
 	}
 
-	err = db.loadEndpoints()
+	err = db.loadEndpoints(location)
 	if err != nil {
 		return err
 	}
 
-	err = db.loadOrganizations()
+	err = db.loadOrganizations(location)
 	if err != nil {
 		return err
 	}
 
-	err = db.loadEndpointsOrganizations()
+	err = db.loadEndpointsOrganizations(location)
 	return err
 }
 
-func (db *MemoryDb) FindEndpointsByOrganisation(organizationIdentifier string) ([]generated.Endpoint, error) {
+func (db *MemoryDb) FindEndpointsByOrganization(organizationIdentifier string) ([]generated.Endpoint, error) {
 
 	_, exists := db.organizationIndex[organizationIdentifier]
 
@@ -109,12 +106,7 @@ func (db *MemoryDb) FindEndpointsByOrganisation(organizationIdentifier string) (
 		return nil, newDbError(fmt.Sprintf("Organization with identifier [%s] does not exist", organizationIdentifier))
 	}
 
-	mappings, exists := db.organizationToEndpointIndex[organizationIdentifier]
-
-	// not found
-	if !exists {
-		return nil, newDbError(fmt.Sprintf("Organization with identifier [%s] does not have any endpoints", organizationIdentifier))
-	}
+	mappings := db.organizationToEndpointIndex[organizationIdentifier]
 
 	// filter inactive mappings
 	filtered := mappings[:0]
@@ -125,7 +117,7 @@ func (db *MemoryDb) FindEndpointsByOrganisation(organizationIdentifier string) (
 	}
 
 	if len(filtered) == 0 {
-		return nil, newDbError(fmt.Sprintf("Organization with identifier [%s] does not have any active endpoints", organizationIdentifier))
+		return []generated.Endpoint{}, nil
 	}
 
 	// map to endpoints
@@ -175,9 +167,9 @@ func searchRecursive(query []string, orgName []string) bool {
 	}
 }
 
-func (db *MemoryDb) loadEndpoints() error {
+func (db *MemoryDb) loadEndpoints(location string) error {
 
-	data, err := ReadFile(viper.GetString(CONF_DATA_DIR), FILE_ENDPOINTS)
+	data, err := ReadFile(location, FILE_ENDPOINTS)
 
 	if err != nil {
 		return err
@@ -199,9 +191,9 @@ func (db *MemoryDb) loadEndpoints() error {
 	return nil
 }
 
-func (db *MemoryDb) loadOrganizations() error {
+func (db *MemoryDb) loadOrganizations(location string) error {
 
-	data, err := ReadFile(viper.GetString(CONF_DATA_DIR), FILE_ORGANIZATIONS)
+	data, err := ReadFile(location, FILE_ORGANIZATIONS)
 
 	if err != nil {
 		return err
@@ -223,8 +215,8 @@ func (db *MemoryDb) loadOrganizations() error {
 	return nil
 }
 
-func (db *MemoryDb) loadEndpointsOrganizations() error {
-	data, err := ReadFile(viper.GetString(CONF_DATA_DIR), FILE_ENDPOINTS_ORGANIZATIONS)
+func (db *MemoryDb) loadEndpointsOrganizations(location string) error {
+	data, err := ReadFile(location, FILE_ENDPOINTS_ORGANIZATIONS)
 
 	if err != nil {
 		return err

@@ -42,7 +42,7 @@ func (e *fileError) Error() string {
 // - endpoints.json
 // - organisations.json
 // - endpoints_organisations.json
-func ValidateLocation(location string) error {
+func validateLocation(location string) error {
 	sLocation := sanitizeLocation(location)
 	files, err := ioutil.ReadDir(sLocation)
 

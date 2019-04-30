@@ -21,7 +21,7 @@ package db
 import "testing"
 
 func TestIncorrectDir(t *testing.T) {
-	err := ValidateLocation("./does_not_exist")
+	err := validateLocation("./does_not_exist")
 
 	expected := "open ./does_not_exist: no such file or directory"
 	if err == nil {
@@ -32,7 +32,7 @@ func TestIncorrectDir(t *testing.T) {
 }
 
 func TestMissingFiles(t *testing.T) {
-	err := ValidateLocation("../test_data/missing_files")
+	err := validateLocation("../test_data/missing_files")
 
 	expected := "../test_data/missing_files is missing required files: endpoints.json, endpoints_organizations.json"
 	if err == nil {
@@ -43,7 +43,7 @@ func TestMissingFiles(t *testing.T) {
 }
 
 func TestAllFilesPresent(t *testing.T) {
-	err := ValidateLocation("../test_data/all_empty_files")
+	err := validateLocation("../test_data/all_empty_files")
 
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
@@ -51,7 +51,7 @@ func TestAllFilesPresent(t *testing.T) {
 }
 
 func TestAllFilesPresentTrailingSlash(t *testing.T) {
-	err := ValidateLocation("../test_data/all_empty_files/")
+	err := validateLocation("../test_data/all_empty_files/")
 
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
