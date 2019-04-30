@@ -35,6 +35,12 @@ func (e RestInterfaceStub) EndpointsByOrganisationId(ctx echo.Context, params En
 	return err
 }
 
+func (e RestInterfaceStub) SearchOrganizations(ctx echo.Context, params SearchOrganizationsParams) error {
+	var err error
+
+	return err
+}
+
 func TestEndpointsByOrganisationId200(t *testing.T) {
 	e := echo.New()
 	stub:= RestInterfaceStub{}
@@ -84,6 +90,59 @@ func TestEndpointsByOrganisationId400(t *testing.T) {
 
 	expected := "code=400, message=Invalid format for parameter orgIds: code=400, message=query parameter 'orgIds' is required"
 	if (err != nil && err.Error() != expected) {
+		t.Errorf("Got message=%s, want %s", err.Error(), expected)
+	}
+}
+
+func TestSearchOrganizations200(t *testing.T) {
+	e := echo.New()
+	stub:= RestInterfaceStub{}
+	wrapper := &ServerInterfaceWrapper{
+		Handler: stub,
+	}
+	e.GET("/api/organizations", wrapper.SearchOrganizations)
+
+	q := make(url.Values)
+	q.Set("query", "system#value")
+
+	req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/organizations")
+
+	err := wrapper.SearchOrganizations(c)
+
+	if err != nil {
+		t.Errorf("Got err during call: %s", err.Error())
+	}
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+	}
+}
+
+func TestSearchOrganizations400(t *testing.T) {
+	e := echo.New()
+	stub:= RestInterfaceStub{}
+	wrapper := &ServerInterfaceWrapper{
+		Handler: stub,
+	}
+
+	e.GET("/api/organizations", wrapper.SearchOrganizations)
+
+	req := httptest.NewRequest(echo.GET, "/" , nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/organizations")
+
+	err := wrapper.SearchOrganizations(c)
+
+	if (err == nil) {
+		t.Errorf("Didn't get expected err during call")
+	}
+
+	expected := "code=400, message=Invalid format for parameter query: code=400, message=query parameter 'query' is required"
+	if err != nil && err.Error() != expected {
 		t.Errorf("Got message=%s, want %s", err.Error(), expected)
 	}
 }

@@ -21,8 +21,8 @@ package api
 import (
 	"github.com/golang/glog"
 	"github.com/labstack/echo"
-	"github.com/nuts-foundation/nuts-registry/generated"
 	"github.com/nuts-foundation/nuts-registry/db"
+	"github.com/nuts-foundation/nuts-registry/generated"
 	"net/http"
 )
 
