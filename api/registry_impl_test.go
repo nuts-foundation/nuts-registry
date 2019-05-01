@@ -111,247 +111,251 @@ func deserializeOrganizations(data *bytes.Buffer) ([]generated.Organization, err
 	return stub, err
 }
 
-func TestEndpointsByOrganisationId200(t *testing.T) {
-	e, wrapper := initEcho(&MockDb{endpoints:endpoints})
+func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
+	t.Run("200", func(t *testing.T){
+		e, wrapper := initEcho(&MockDb{endpoints:endpoints})
 
-	q := make(url.Values)
-	q.Set("orgIds", "1")
+		q := make(url.Values)
+		q.Set("orgIds", "1")
 
-	req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/api/endpoints")
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/endpoints")
 
-	err := wrapper.EndpointsByOrganisationId(c)
+		err := wrapper.EndpointsByOrganisationId(c)
 
-	if err != nil {
-		t.Errorf("Got err during call: %s", err.Error())
-	}
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-	}
+		if rec.Code != http.StatusOK {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
 
-	var result []generated.Endpoint
-	result, err = deserializeEndpoints(rec.Body)
+		var result []generated.Endpoint
+		result, err = deserializeEndpoints(rec.Body)
 
-	if err != nil {
-		t.Errorf("Got err during deserialization: %s", err.Error())
-	}
+		if err != nil {
+			t.Errorf("Got err during deserialization: %s", err.Error())
+		}
 
-	if len(result) != 1 {
-		t.Errorf("Got result size: %d, want 1", len(result))
-	}
+		if len(result) != 1 {
+			t.Errorf("Got result size: %d, want 1", len(result))
+		}
 
-	if result[0].Identifier.String() != "system#value" {
-		t.Errorf("Got result with Identifier: [%s], want [system#value]", result[0].Identifier.String())
-	}
+		if result[0].Identifier.String() != "system#value" {
+			t.Errorf("Got result with Identifier: [%s], want [system#value]", result[0].Identifier.String())
+		}
+	})
+
+	t.Run("by Id and type 200", func(t *testing.T){
+		e, wrapper := initEcho(&MockDb{endpoints:endpoints})
+
+		q := make(url.Values)
+		q.Set("orgIds", "1")
+		q.Set("type", "type#value")
+
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/endpoints")
+
+		err := wrapper.EndpointsByOrganisationId(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
+
+		var result []generated.Endpoint
+		result, err = deserializeEndpoints(rec.Body)
+
+		if err != nil {
+			t.Errorf("Got err during deserialization: %s", err.Error())
+		}
+
+		if len(result) != 1 {
+			t.Errorf("Got result size: %d, want 1", len(result))
+		}
+
+		if result[0].Identifier.String() != "system#value" {
+			t.Errorf("Got result with Identifier: [%s], want [system#value]", result[0].Identifier.String())
+		}
+	})
+
+	t.Run("by Id and type 200 empty result", func(t *testing.T){
+		e, wrapper := initEcho(&MockDb{endpoints:endpoints})
+
+		q := make(url.Values)
+		q.Set("orgIds", "1")
+		q.Set("type", "otherType#value")
+
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/endpoints")
+
+		err := wrapper.EndpointsByOrganisationId(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
+
+		var result []generated.Endpoint
+		result, err = deserializeEndpoints(rec.Body)
+
+		if err != nil {
+			t.Errorf("Got err during deserialization: %s", err.Error())
+		}
+
+		if len(result) != 0 {
+			t.Errorf("Got result size: %d, want 0", len(result))
+		}
+	})
+
+	t.Run("by Id 200 empty result", func(t *testing.T){
+		e, wrapper := initEcho(&MockDb{})
+
+		q := make(url.Values)
+		q.Set("orgIds", "1")
+
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/endpoints")
+
+		err := wrapper.EndpointsByOrganisationId(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
+
+		var result []generated.Endpoint
+		result, err = deserializeEndpoints(rec.Body)
+
+		if err != nil {
+			t.Errorf("Got err during deserialization: %s", err.Error())
+		}
+
+		if len(result) != 0 {
+			t.Errorf("Got result size: %d, want 0", len(result))
+		}
+	})
+
+	t.Run("internal error on missing organization returns empty 200 result", func(t *testing.T){
+		e, wrapper := initEcho(&MockDb{endpointsError: newTestError("error")})
+
+		q := make(url.Values)
+		q.Set("orgIds", "1")
+
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/endpoints")
+
+		err := wrapper.EndpointsByOrganisationId(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
+
+		var result []generated.Endpoint
+		result, err = deserializeEndpoints(rec.Body)
+
+		if err != nil {
+			t.Errorf("Got err during deserialization: %s", err.Error())
+		}
+
+		if len(result) != 0 {
+			t.Errorf("Got result size: %d, want 0", len(result))
+		}
+	})
 }
 
-func TestEndpointsByOrganisationIdAndType200(t *testing.T) {
-	e, wrapper := initEcho(&MockDb{endpoints:endpoints})
+func TestApiResource_SearchOrganizations(t *testing.T) {
+	t.Run("200", func(t *testing.T){
+		e, wrapper := initEcho(&MockDb{organizations:organizations})
 
-	q := make(url.Values)
-	q.Set("orgIds", "1")
-	q.Set("type", "type#value")
+		q := make(url.Values)
+		q.Set("query", "system#value")
 
-	req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/api/endpoints")
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organizations")
 
-	err := wrapper.EndpointsByOrganisationId(c)
+		err := wrapper.SearchOrganizations(c)
 
-	if err != nil {
-		t.Errorf("Got err during call: %s", err.Error())
-	}
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-	}
+		if rec.Code != http.StatusOK {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
 
-	var result []generated.Endpoint
-	result, err = deserializeEndpoints(rec.Body)
+		var result []generated.Organization
+		result, err = deserializeOrganizations(rec.Body)
 
-	if err != nil {
-		t.Errorf("Got err during deserialization: %s", err.Error())
-	}
+		if err != nil {
+			t.Errorf("Got err during deserialization: %s", err.Error())
+		}
 
-	if len(result) != 1 {
-		t.Errorf("Got result size: %d, want 1", len(result))
-	}
+		if len(result) != 1 {
+			t.Errorf("Got result size: %d, want 1", len(result))
+		}
 
-	if result[0].Identifier.String() != "system#value" {
-		t.Errorf("Got result with Identifier: [%s], want [system#value]", result[0].Identifier.String())
-	}
-}
+		if result[0].Identifier.String() != "system#value" {
+			t.Errorf("Got result with Identifier: [%s], want [system#value]", result[0].Identifier.String())
+		}
+	})
 
-func TestEndpointsByOrganisationIdAndType200Empty(t *testing.T) {
-	e, wrapper := initEcho(&MockDb{endpoints:endpoints})
+	t.Run("200 with empty list", func(t *testing.T){
+		e, wrapper := initEcho(&MockDb{})
 
-	q := make(url.Values)
-	q.Set("orgIds", "1")
-	q.Set("type", "otherType#value")
+		q := make(url.Values)
+		q.Set("query", "system#value")
 
-	req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/api/endpoints")
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organizations")
 
-	err := wrapper.EndpointsByOrganisationId(c)
+		err := wrapper.SearchOrganizations(c)
 
-	if err != nil {
-		t.Errorf("Got err during call: %s", err.Error())
-	}
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-	}
+		if rec.Code != http.StatusOK {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
 
-	var result []generated.Endpoint
-	result, err = deserializeEndpoints(rec.Body)
+		var result []generated.Organization
+		result, err = deserializeOrganizations(rec.Body)
 
-	if err != nil {
-		t.Errorf("Got err during deserialization: %s", err.Error())
-	}
+		if err != nil {
+			t.Errorf("Got err during deserialization: %s", err.Error())
+		}
 
-	if len(result) != 0 {
-		t.Errorf("Got result size: %d, want 0", len(result))
-	}
-}
-
-func TestEndpointsByOrganisationId200Empty(t *testing.T) {
-	e, wrapper := initEcho(&MockDb{endpoints:[]generated.Endpoint{}})
-
-	q := make(url.Values)
-	q.Set("orgIds", "1")
-
-	req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/api/endpoints")
-
-	err := wrapper.EndpointsByOrganisationId(c)
-
-	if err != nil {
-		t.Errorf("Got err during call: %s", err.Error())
-	}
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-	}
-
-	var result []generated.Endpoint
-	result, err = deserializeEndpoints(rec.Body)
-
-	if err != nil {
-		t.Errorf("Got err during deserialization: %s", err.Error())
-	}
-
-	if len(result) != 0 {
-		t.Errorf("Got result size: %d, want 0", len(result))
-	}
-}
-
-func TestEndpointsByOrganisationId200EmptyWithError(t *testing.T) {
-	e, wrapper := initEcho(&MockDb{endpointsError: newTestError("error")})
-
-	q := make(url.Values)
-	q.Set("orgIds", "1")
-
-	req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/api/endpoints")
-
-	err := wrapper.EndpointsByOrganisationId(c)
-
-	if err != nil {
-		t.Errorf("Got err during call: %s", err.Error())
-	}
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-	}
-
-	var result []generated.Endpoint
-	result, err = deserializeEndpoints(rec.Body)
-
-	if err != nil {
-		t.Errorf("Got err during deserialization: %s", err.Error())
-	}
-
-	if len(result) != 0 {
-		t.Errorf("Got result size: %d, want 0", len(result))
-	}
-}
-
-func TestSearchOrganizations200(t *testing.T) {
-	e, wrapper := initEcho(&MockDb{organizations:organizations})
-
-	q := make(url.Values)
-	q.Set("query", "system#value")
-
-	req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/api/organizations")
-
-	err := wrapper.SearchOrganizations(c)
-
-	if err != nil {
-		t.Errorf("Got err during call: %s", err.Error())
-	}
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-	}
-
-	var result []generated.Organization
-	result, err = deserializeOrganizations(rec.Body)
-
-	if err != nil {
-		t.Errorf("Got err during deserialization: %s", err.Error())
-	}
-
-	if len(result) != 1 {
-		t.Errorf("Got result size: %d, want 1", len(result))
-	}
-
-	if result[0].Identifier.String() != "system#value" {
-		t.Errorf("Got result with Identifier: [%s], want [system#value]", result[0].Identifier.String())
-	}
-}
-
-func TestSearchOrganizations200Empty(t *testing.T) {
-	e, wrapper := initEcho(&MockDb{})
-
-	q := make(url.Values)
-	q.Set("query", "system#value")
-
-	req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/api/organizations")
-
-	err := wrapper.SearchOrganizations(c)
-
-	if err != nil {
-		t.Errorf("Got err during call: %s", err.Error())
-	}
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-	}
-
-	var result []generated.Organization
-	result, err = deserializeOrganizations(rec.Body)
-
-	if err != nil {
-		t.Errorf("Got err during deserialization: %s", err.Error())
-	}
-
-	if len(result) != 0 {
-		t.Errorf("Got result size: %d, want 0", len(result))
-	}
+		if len(result) != 0 {
+			t.Errorf("Got result size: %d, want 0", len(result))
+		}
+	})
 }

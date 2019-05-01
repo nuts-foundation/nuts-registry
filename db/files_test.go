@@ -20,43 +20,46 @@ package db
 
 import "testing"
 
-func TestIncorrectDir(t *testing.T) {
-	err := validateLocation("./does_not_exist")
+func TestValidateLocation(t *testing.T) {
+	t.Run("Incorrect dir gives err", func(t *testing.T) {
+		err := validateLocation("./does_not_exist")
 
-	expected := "open ./does_not_exist: no such file or directory"
-	if err == nil {
-		t.Errorf("Expected error with: %s", expected)
-	} else if err.Error() != expected {
-		t.Errorf("Expected error with: [%s], got [%s]", expected, err.Error())
-	}
+		expected := "open ./does_not_exist: no such file or directory"
+		if err == nil {
+			t.Errorf("Expected error with: %s", expected)
+		} else if err.Error() != expected {
+			t.Errorf("Expected error with: [%s], got [%s]", expected, err.Error())
+		}
+	})
+
+	t.Run("Missing files gives err", func(t *testing.T) {
+		err := validateLocation("../test_data/missing_files")
+
+		expected := "../test_data/missing_files is missing required files: endpoints.json, endpoints_organizations.json"
+		if err == nil {
+			t.Errorf("Expected error with: %s", expected)
+		} else if err.Error() != expected {
+			t.Errorf("Expected error with: [%s], got [%s]", expected, err.Error())
+		}
+	})
+
+	t.Run("All files present", func(t *testing.T) {
+		err := validateLocation("../test_data/all_empty_files")
+
+		if err != nil {
+			t.Errorf("Unexpected error: %s", err.Error())
+		}
+	})
+
+	t.Run("All files present with trailing slash", func(t *testing.T) {
+		err := validateLocation("../test_data/all_empty_files/")
+
+		if err != nil {
+			t.Errorf("Unexpected error: %s", err.Error())
+		}
+	})
 }
 
-func TestMissingFiles(t *testing.T) {
-	err := validateLocation("../test_data/missing_files")
-
-	expected := "../test_data/missing_files is missing required files: endpoints.json, endpoints_organizations.json"
-	if err == nil {
-		t.Errorf("Expected error with: %s", expected)
-	} else if err.Error() != expected {
-		t.Errorf("Expected error with: [%s], got [%s]", expected, err.Error())
-	}
-}
-
-func TestAllFilesPresent(t *testing.T) {
-	err := validateLocation("../test_data/all_empty_files")
-
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
-	}
-}
-
-func TestAllFilesPresentTrailingSlash(t *testing.T) {
-	err := validateLocation("../test_data/all_empty_files/")
-
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
-	}
-}
 
 func TestReadFile(t *testing.T) {
 	data, err := ReadFile("../test_data/all_empty_files", "endpoints.json")

@@ -61,157 +61,164 @@ func TestNew(t *testing.T) {
 }
 
 func TestMemoryDb_Load(t *testing.T) {
-	validDb := New()
-	err := validDb.Load("../test_data/valid_files")
+	t.Run("Complete valid example", func(t *testing.T) {
+		validDb := New()
+		err := validDb.Load("../test_data/valid_files")
 
-	if err != nil {
-		t.Errorf("Expected no error, got: %s", err.Error())
-	}
-}
+		if err != nil {
+			t.Errorf("Expected no error, got: %s", err.Error())
+		}
+	})
 
-func TestMemoryDb_LoadInvalidLocation(t *testing.T) {
-	validDb := New()
-	err := validDb.Load("../test_data/missing_files/")
+	t.Run("Loading from location with missing files gives err", func(t *testing.T) {
+		validDb := New()
+		err := validDb.Load("../test_data/missing_files/")
 
-	if err == nil {
-		t.Errorf("Expected error")
-	}
+		if err == nil {
+			t.Errorf("Expected error")
+		}
 
-	expected := "../test_data/missing_files is missing required files: endpoints.json, endpoints_organizations.json"
-	if err.Error() != expected {
-		t.Errorf("Expected [%s], got [%s]", expected, err.Error())
-	}
-}
+		expected := "../test_data/missing_files is missing required files: endpoints.json, endpoints_organizations.json"
+		if err.Error() != expected {
+			t.Errorf("Expected [%s], got [%s]", expected, err.Error())
+		}
+	})
 
-func TestMemoryDb_LoadInvalidEndpoints(t *testing.T) {
-	validDb := New()
-	err := validDb.Load("../test_data/invalid_files/invalid_endpoints")
+	t.Run("Loading from location with invalid endpoints json gives err", func(t *testing.T) {
+		validDb := New()
+		err := validDb.Load("../test_data/invalid_files/invalid_endpoints")
 
-	if err == nil {
-		t.Errorf("Expected error")
-	}
+		if err == nil {
+			t.Errorf("Expected error")
+		}
 
-	expected := "invalid character '[' looking for beginning of object key string"
-	if err.Error() != expected {
-		t.Errorf("Expected [%s], got [%s]", expected, err.Error())
-	}
-}
+		expected := "invalid character '[' looking for beginning of object key string"
+		if err.Error() != expected {
+			t.Errorf("Expected [%s], got [%s]", expected, err.Error())
+		}
+	})
 
-func TestMemoryDb_LoadInvalidOrganizations(t *testing.T) {
-	validDb := New()
-	err := validDb.Load("../test_data/invalid_files/invalid_organizations")
+	t.Run("Loading from location with invalid organization json gives err", func(t *testing.T) {
+		validDb := New()
+		err := validDb.Load("../test_data/invalid_files/invalid_organizations")
 
-	if err == nil {
-		t.Errorf("Expected error")
-	}
+		if err == nil {
+			t.Errorf("Expected error")
+		}
 
-	expected := "invalid character '{' looking for beginning of object key string"
-	if err.Error() != expected {
-		t.Errorf("Expected [%s], got [%s]", expected, err.Error())
-	}
-}
+		expected := "invalid character '{' looking for beginning of object key string"
+		if err.Error() != expected {
+			t.Errorf("Expected [%s], got [%s]", expected, err.Error())
+		}
+	})
 
-func TestMemoryDb_LoadInvalidMappings(t *testing.T) {
-	validDb := New()
-	err := validDb.Load("../test_data/invalid_files/invalid_mappings")
+	t.Run("Loading from location with missing mappings json gives err", func(t *testing.T) {
+		validDb := New()
+		err := validDb.Load("../test_data/invalid_files/invalid_mappings")
 
-	if err == nil {
-		t.Errorf("Expected error")
-	}
+		if err == nil {
+			t.Errorf("Expected error")
+		}
 
-	expected := "invalid character '{' looking for beginning of object key string"
-	if err.Error() != expected {
-		t.Errorf("Expected [%s], got [%s]", expected, err.Error())
-	}
+		expected := "invalid character '{' looking for beginning of object key string"
+		if err.Error() != expected {
+			t.Errorf("Expected [%s], got [%s]", expected, err.Error())
+		}
+	})
 }
 
 func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
-	validDb := New()
-	validDb.appendOrganization(organization)
-	validDb.appendEndpoint(endpoint)
-	validDb.appendEO(mapping)
 
-	result, err := validDb.FindEndpointsByOrganization("system#value")
+	t.Run("Valid example", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(organization)
+		validDb.appendEndpoint(endpoint)
+		validDb.appendEO(mapping)
 
-	if err != nil {
-		t.Errorf("Expected no error, got: %s", err.Error())
-	}
+		result, err := validDb.FindEndpointsByOrganization("system#value")
 
-	if len(result) != 1 {
-		t.Errorf("Expected 1 result, got: %d", len(result))
-	}
+		if err != nil {
+			t.Errorf("Expected no error, got: %s", err.Error())
+		}
+
+		if len(result) != 1 {
+			t.Errorf("Expected 1 result, got: %d", len(result))
+		}
+	})
+
+	t.Run("Inactive mappings are not returned", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(organization)
+		validDb.appendEndpoint(endpoint)
+		mappingCopy := generated.EndpointOrganization(mapping)
+		mappingCopy.Status = "inactive"
+		validDb.appendEO(mappingCopy)
+
+		result, err := validDb.FindEndpointsByOrganization("system#value")
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %s", err.Error())
+		}
+
+		if len(result) != 0 {
+			t.Errorf("Expected 0 result, got: %d", len(result))
+		}
+	})
+
+	t.Run("Inactive organizations are not returned", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(organization)
+		endpointCopy := generated.Endpoint(endpoint)
+		endpointCopy.Status = "inactive"
+		validDb.appendEndpoint(endpointCopy)
+		validDb.appendEO(mapping)
+
+		result, err := validDb.FindEndpointsByOrganization("system#value")
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %s", err.Error())
+		}
+
+		if len(result) != 0 {
+			t.Errorf("Expected 0 result, got: %d", len(result))
+		}
+	})
 }
 
-func TestMemoryDb_FindEndpointsByOrganizationInactiveMapping(t *testing.T) {
-	validDb := New()
-	validDb.appendOrganization(organization)
-	validDb.appendEndpoint(endpoint)
-	mappingCopy := generated.EndpointOrganization(mapping)
-	mappingCopy.Status = "inactive"
-	validDb.appendEO(mappingCopy)
+func TestMemoryDb_appendEO(t *testing.T) {
+	t.Run("Appending mappings for unknown endpoint gives err", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(organization)
+		validDb.appendEO(mapping)
 
-	result, err := validDb.FindEndpointsByOrganization("system#value")
+		err := validDb.appendEO(mapping)
 
-	if err != nil {
-		t.Errorf("Expected no error, got: %s", err.Error())
-	}
+		if err == nil {
+			t.Errorf("Expected error")
+		}
 
-	if len(result) != 0 {
-		t.Errorf("Expected 0 result, got: %d", len(result))
-	}
-}
+		expected := "Endpoint <> Organization mapping references unknown endpoint with identifier [system#value]"
+		if err.Error() != expected {
+			t.Errorf("Expected [%s], got: [%s]", expected,  err.Error())
+		}
+	})
 
-func TestMemoryDb_FindEndpointsByOrganizationInactiveEndpoint(t *testing.T) {
-	validDb := New()
-	validDb.appendOrganization(organization)
-	endpointCopy := generated.Endpoint(endpoint)
-	endpointCopy.Status = "inactive"
-	validDb.appendEndpoint(endpointCopy)
-	validDb.appendEO(mapping)
+	t.Run("Appending mappings for unknown organization gives err", func(t *testing.T) {
+		validDb := New()
+		validDb.appendEndpoint(endpoint)
+		validDb.appendEO(mapping)
 
-	result, err := validDb.FindEndpointsByOrganization("system#value")
+		err := validDb.appendEO(mapping)
 
-	if err != nil {
-		t.Errorf("Expected no error, got: %s", err.Error())
-	}
+		if err == nil {
+			t.Errorf("Expected error")
+		}
 
-	if len(result) != 0 {
-		t.Errorf("Expected 0 result, got: %d", len(result))
-	}
-}
-
-func TestMemoryDb_appendEOMissingEndpoints(t *testing.T) {
-	validDb := New()
-	validDb.appendOrganization(organization)
-	validDb.appendEO(mapping)
-
-	err := validDb.appendEO(mapping)
-
-	if err == nil {
-		t.Errorf("Expected error")
-	}
-
-	expected := "Endpoint <> Organization mapping references unknown endpoint with identifier [system#value]"
-	if err.Error() != expected {
-		t.Errorf("Expected [%s], got: [%s]", expected,  err.Error())
-	}
-}
-
-func TestMemoryDb_appendEOMissingOrg(t *testing.T) {
-	validDb := New()
-	validDb.appendEndpoint(endpoint)
-	validDb.appendEO(mapping)
-
-	err := validDb.appendEO(mapping)
-
-	if err == nil {
-		t.Errorf("Expected error")
-	}
-
-	expected := "Endpoint <> Organization mapping references unknown organization with identifier [system#value]"
-	if err.Error() != expected {
-		t.Errorf("Expected [%s], got: [%s]", expected,  err.Error())
-	}
+		expected := "Endpoint <> Organization mapping references unknown organization with identifier [system#value]"
+		if err.Error() != expected {
+			t.Errorf("Expected [%s], got: [%s]", expected,  err.Error())
+		}
+	})
 }
 
 func TestMemoryDb_FindEndpointsByOrganizationNoMapping(t *testing.T) {
@@ -246,34 +253,37 @@ func TestMemoryDb_FindEndpointsByOrganizationUnknown(t *testing.T) {
 }
 
 func TestMemoryDb_SearchOrganizations(t *testing.T) {
-	validDb := New()
-	validDb.appendOrganization(organization)
+	t.Run("complete valid example", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(organization)
 
-	result := validDb.SearchOrganizations("test")
+		result := validDb.SearchOrganizations("test")
 
-	if len(result) != 1 {
-		t.Errorf("Expected 1 result, got: %d", len(result))
-	}
-}
+		if len(result) != 1 {
+			t.Errorf("Expected 1 result, got: %d", len(result))
+		}
+	})
 
-func TestMemoryDb_SearchOrganizationsPartialHit(t *testing.T) {
-	validDb := New()
-	validDb.appendOrganization(organization)
+	t.Run("partial match returns organization", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(organization)
 
-	result := validDb.SearchOrganizations("ts")
+		result := validDb.SearchOrganizations("ts")
 
-	if len(result) != 1 {
-		t.Errorf("Expected 1 result, got: %d", len(result))
-	}
-}
+		if len(result) != 1 {
+			t.Errorf("Expected 1 result, got: %d", len(result))
+		}
+	})
 
-func TestMemoryDb_SearchOrganizationsUnknown(t *testing.T) {
-	validDb := New()
-	validDb.appendOrganization(organization)
 
-	result := validDb.SearchOrganizations("tset")
+	t.Run("searching for unknown organization returns empty list", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(organization)
 
-	if len(result) != 0 {
-		t.Errorf("Expected 0 result, got: %d", len(result))
-	}
+		result := validDb.SearchOrganizations("tset")
+
+		if len(result) != 0 {
+			t.Errorf("Expected 0 result, got: %d", len(result))
+		}
+	})
 }

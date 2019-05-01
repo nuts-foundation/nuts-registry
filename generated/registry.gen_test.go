@@ -41,108 +41,113 @@ func (e RestInterfaceStub) SearchOrganizations(ctx echo.Context, params SearchOr
 	return err
 }
 
-func TestEndpointsByOrganisationId200(t *testing.T) {
-	e := echo.New()
-	stub:= RestInterfaceStub{}
-	wrapper := &ServerInterfaceWrapper{
-		Handler: stub,
-	}
-	e.GET("/api/endpoints", wrapper.EndpointsByOrganisationId)
 
-	q := make(url.Values)
-	q.Set("orgIds", "1")
+func TestServerInterfaceWrapper_EndpointsByOrganisationId(t *testing.T) {
+	t.Run("200", func(t *testing.T){
+		e := echo.New()
+		stub:= RestInterfaceStub{}
+		wrapper := &ServerInterfaceWrapper{
+			Handler: stub,
+		}
+		e.GET("/api/endpoints", wrapper.EndpointsByOrganisationId)
 
-	req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/api/endpoints")
+		q := make(url.Values)
+		q.Set("orgIds", "1")
 
-	err := wrapper.EndpointsByOrganisationId(c)
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/endpoints")
 
-	if err != nil {
-		t.Errorf("Got err during call: %s", err.Error())
-	}
+		err := wrapper.EndpointsByOrganisationId(c)
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-	}
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
+	})
+
+	t.Run("400", func(t *testing.T){
+		e := echo.New()
+		stub:= RestInterfaceStub{}
+		wrapper := &ServerInterfaceWrapper{
+			Handler: stub,
+		}
+
+		e.GET("/api/endpoints", wrapper.EndpointsByOrganisationId)
+
+		req := httptest.NewRequest(echo.GET, "/" , nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/endpoints")
+
+		err := wrapper.EndpointsByOrganisationId(c)
+
+		if (err == nil) {
+			t.Errorf("Didn't get expected err during call")
+		}
+
+		expected := "code=400, message=Invalid format for parameter orgIds: code=400, message=query parameter 'orgIds' is required"
+		if (err != nil && err.Error() != expected) {
+			t.Errorf("Got message=%s, want %s", err.Error(), expected)
+		}
+	})
 }
 
-func TestEndpointsByOrganisationId400(t *testing.T) {
-	e := echo.New()
-	stub:= RestInterfaceStub{}
-	wrapper := &ServerInterfaceWrapper{
-		Handler: stub,
-	}
+func TestServerInterfaceWrapper_SearchOrganizations(t *testing.T) {
+	t.Run("200", func(t *testing.T){
+		e := echo.New()
+		stub:= RestInterfaceStub{}
+		wrapper := &ServerInterfaceWrapper{
+			Handler: stub,
+		}
+		e.GET("/api/organizations", wrapper.SearchOrganizations)
 
-	e.GET("/api/endpoints", wrapper.EndpointsByOrganisationId)
+		q := make(url.Values)
+		q.Set("query", "system#value")
 
-	req := httptest.NewRequest(echo.GET, "/" , nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/api/endpoints")
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organizations")
 
-	err := wrapper.EndpointsByOrganisationId(c)
+		err := wrapper.SearchOrganizations(c)
 
-	if (err == nil) {
-		t.Errorf("Didn't get expected err during call")
-	}
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
 
-	expected := "code=400, message=Invalid format for parameter orgIds: code=400, message=query parameter 'orgIds' is required"
-	if (err != nil && err.Error() != expected) {
-		t.Errorf("Got message=%s, want %s", err.Error(), expected)
-	}
-}
+		if rec.Code != http.StatusOK {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
+	})
 
-func TestSearchOrganizations200(t *testing.T) {
-	e := echo.New()
-	stub:= RestInterfaceStub{}
-	wrapper := &ServerInterfaceWrapper{
-		Handler: stub,
-	}
-	e.GET("/api/organizations", wrapper.SearchOrganizations)
+	t.Run("400", func(t *testing.T){
+		e := echo.New()
+		stub:= RestInterfaceStub{}
+		wrapper := &ServerInterfaceWrapper{
+			Handler: stub,
+		}
 
-	q := make(url.Values)
-	q.Set("query", "system#value")
+		e.GET("/api/organizations", wrapper.SearchOrganizations)
 
-	req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/api/organizations")
+		req := httptest.NewRequest(echo.GET, "/" , nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organizations")
 
-	err := wrapper.SearchOrganizations(c)
+		err := wrapper.SearchOrganizations(c)
 
-	if err != nil {
-		t.Errorf("Got err during call: %s", err.Error())
-	}
+		if err == nil {
+			t.Errorf("Didn't get expected err during call")
+		}
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-	}
-}
-
-func TestSearchOrganizations400(t *testing.T) {
-	e := echo.New()
-	stub:= RestInterfaceStub{}
-	wrapper := &ServerInterfaceWrapper{
-		Handler: stub,
-	}
-
-	e.GET("/api/organizations", wrapper.SearchOrganizations)
-
-	req := httptest.NewRequest(echo.GET, "/" , nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("/api/organizations")
-
-	err := wrapper.SearchOrganizations(c)
-
-	if err == nil {
-		t.Errorf("Didn't get expected err during call")
-	}
-
-	expected := "code=400, message=Invalid format for parameter query: code=400, message=query parameter 'query' is required"
-	if err != nil && err.Error() != expected {
-		t.Errorf("Got message=%s, want %s", err.Error(), expected)
-	}
+		expected := "code=400, message=Invalid format for parameter query: code=400, message=query parameter 'query' is required"
+		if err != nil && err.Error() != expected {
+			t.Errorf("Got message=%s, want %s", err.Error(), expected)
+		}
+	})
 }
