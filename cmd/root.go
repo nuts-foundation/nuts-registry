@@ -26,15 +26,15 @@ import (
 	"github.com/nuts-foundation/nuts-registry/db"
 	"github.com/nuts-foundation/nuts-registry/generated"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	flag "github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"os"
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "nuts-registry",
 	Short: "The Nuts registry",
-	Long: `The Nuts registry, containing Organisation to endpoint mappings`,
+	Long:  `The Nuts registry, containing Organisation to endpoint mappings`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// load static db

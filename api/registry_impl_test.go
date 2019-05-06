@@ -43,8 +43,8 @@ func (e *testError) Error() string {
 }
 
 type MockDb struct {
-	endpoints []generated.Endpoint
-	organizations []generated.Organization
+	endpoints      []generated.Endpoint
+	organizations  []generated.Organization
 	endpointsError error
 }
 
@@ -66,20 +66,20 @@ func (db *MockDb) SearchOrganizations(query string) []generated.Organization {
 
 var endpoints = []generated.Endpoint{
 	{
-		Identifier:generated.Identifier{System:"system", Value:"value"},
+		Identifier:   generated.Identifier{System: "system", Value: "value"},
 		EndpointType: "type#value",
 	},
 }
 
 var organizations = []generated.Organization{
 	{
-		Identifier:generated.Identifier{System:"system", Value:"value"},
+		Identifier: generated.Identifier{System: "system", Value: "value"},
 	},
 }
 
 func initEcho(db *MockDb) (*echo.Echo, *generated.ServerInterfaceWrapper) {
 	e := echo.New()
-	stub:= ApiResource{Db: db}
+	stub := ApiResource{Db: db}
 	wrapper := &generated.ServerInterfaceWrapper{
 		Handler: stub,
 	}
@@ -112,8 +112,8 @@ func deserializeOrganizations(data *bytes.Buffer) ([]generated.Organization, err
 }
 
 func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
-	t.Run("200", func(t *testing.T){
-		e, wrapper := initEcho(&MockDb{endpoints:endpoints})
+	t.Run("200", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{endpoints: endpoints})
 
 		q := make(url.Values)
 		q.Set("orgIds", "1")
@@ -149,8 +149,8 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		}
 	})
 
-	t.Run("by Id and type 200", func(t *testing.T){
-		e, wrapper := initEcho(&MockDb{endpoints:endpoints})
+	t.Run("by Id and type 200", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{endpoints: endpoints})
 
 		q := make(url.Values)
 		q.Set("orgIds", "1")
@@ -187,8 +187,8 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		}
 	})
 
-	t.Run("by Id and type 200 empty result", func(t *testing.T){
-		e, wrapper := initEcho(&MockDb{endpoints:endpoints})
+	t.Run("by Id and type 200 empty result", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{endpoints: endpoints})
 
 		q := make(url.Values)
 		q.Set("orgIds", "1")
@@ -221,7 +221,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		}
 	})
 
-	t.Run("by Id 200 empty result", func(t *testing.T){
+	t.Run("by Id 200 empty result", func(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{})
 
 		q := make(url.Values)
@@ -254,7 +254,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		}
 	})
 
-	t.Run("internal error on missing organization returns empty 200 result", func(t *testing.T){
+	t.Run("internal error on missing organization returns empty 200 result", func(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{endpointsError: newTestError("error")})
 
 		q := make(url.Values)
@@ -289,8 +289,8 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 }
 
 func TestApiResource_SearchOrganizations(t *testing.T) {
-	t.Run("200", func(t *testing.T){
-		e, wrapper := initEcho(&MockDb{organizations:organizations})
+	t.Run("200", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{organizations: organizations})
 
 		q := make(url.Values)
 		q.Set("query", "system#value")
@@ -326,7 +326,7 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 		}
 	})
 
-	t.Run("200 with empty list", func(t *testing.T){
+	t.Run("200 with empty list", func(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{})
 
 		q := make(url.Values)

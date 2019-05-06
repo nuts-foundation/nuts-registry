@@ -24,20 +24,20 @@ import (
 )
 
 var endpoint = generated.Endpoint{
-	Identifier:generated.Identifier{System:"system", Value:"value"},
+	Identifier:   generated.Identifier{System: "system", Value: "value"},
 	EndpointType: "type#value",
-	Status: generated.STATUS_ACTIVE,
+	Status:       generated.STATUS_ACTIVE,
 }
 
-var organization = generated.Organization {
-	Identifier:generated.Identifier{System:"system", Value:"value"},
-	Name: "test",
+var organization = generated.Organization{
+	Identifier: generated.Identifier{System: "system", Value: "value"},
+	Name:       "test",
 }
 
-var mapping = generated.EndpointOrganization {
-	EndpointIdentifier: generated.Identifier{System:"system", Value:"value"},
-	OrganizationIdentifier: generated.Identifier{System:"system", Value:"value"},
-	Status: generated.STATUS_ACTIVE,
+var mapping = generated.EndpointOrganization{
+	EndpointIdentifier:     generated.Identifier{System: "system", Value: "value"},
+	OrganizationIdentifier: generated.Identifier{System: "system", Value: "value"},
+	Status:                 generated.STATUS_ACTIVE,
 }
 
 func TestNew(t *testing.T) {
@@ -199,7 +199,7 @@ func TestMemoryDb_appendEO(t *testing.T) {
 
 		expected := "Endpoint <> Organization mapping references unknown endpoint with identifier [system#value]"
 		if err.Error() != expected {
-			t.Errorf("Expected [%s], got: [%s]", expected,  err.Error())
+			t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
 		}
 	})
 
@@ -216,7 +216,7 @@ func TestMemoryDb_appendEO(t *testing.T) {
 
 		expected := "Endpoint <> Organization mapping references unknown organization with identifier [system#value]"
 		if err.Error() != expected {
-			t.Errorf("Expected [%s], got: [%s]", expected,  err.Error())
+			t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
 		}
 	})
 }
@@ -248,7 +248,7 @@ func TestMemoryDb_FindEndpointsByOrganizationUnknown(t *testing.T) {
 
 	expected := "Organization with identifier [system#value] does not exist"
 	if err.Error() != expected {
-		t.Errorf("Expected [%s], got: [%s]", expected,  err.Error())
+		t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
 	}
 }
 
@@ -274,7 +274,6 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 			t.Errorf("Expected 1 result, got: %d", len(result))
 		}
 	})
-
 
 	t.Run("searching for unknown organization returns empty list", func(t *testing.T) {
 		validDb := New()

@@ -21,8 +21,8 @@ package db
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"github.com/golang/glog"
+	"io/ioutil"
 	"sort"
 )
 
@@ -73,12 +73,12 @@ func validateLocation(location string) error {
 		sort.Strings(keys)
 
 		buf := new(bytes.Buffer)
-		fmt.Fprintf(buf,"%s is missing required files: ", sLocation)
+		fmt.Fprintf(buf, "%s is missing required files: ", sLocation)
 		for i, k := range keys {
-			if i == len(keys) - 1 {
-				fmt.Fprintf(buf,"%s", k)
+			if i == len(keys)-1 {
+				fmt.Fprintf(buf, "%s", k)
 			} else {
-				fmt.Fprintf(buf,"%s, ", k)
+				fmt.Fprintf(buf, "%s, ", k)
 			}
 		}
 
@@ -96,7 +96,7 @@ func ReadFile(location string, file string) ([]byte, error) {
 }
 
 func sanitizeLocation(dirty string) string {
-	iLast := len(dirty)-1
+	iLast := len(dirty) - 1
 	if dirty[iLast:] == "/" {
 		return dirty[:iLast]
 	}

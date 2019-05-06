@@ -26,4 +26,3 @@ func (i Identifier) String() string {
 
 // from api spec
 const STATUS_ACTIVE = "active"
-

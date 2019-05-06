@@ -21,7 +21,7 @@ package generated
 import "testing"
 
 func TestIdentifier_String(t *testing.T) {
-	i := Identifier{System:"system", Value:"value"}
+	i := Identifier{System: "system", Value: "value"}
 
 	if i.String() != "system#value" {
 		t.Errorf("Expected [system#value], got [%s]", i.String())

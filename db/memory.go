@@ -27,8 +27,8 @@ import (
 )
 
 type MemoryDb struct {
-	endpointIndex map[string]generated.Endpoint
-	organizationIndex map[string]generated.Organization
+	endpointIndex               map[string]generated.Endpoint
+	organizationIndex           map[string]generated.Organization
 	endpointToOrganizationIndex map[string][]generated.EndpointOrganization
 	organizationToEndpointIndex map[string][]generated.EndpointOrganization
 }

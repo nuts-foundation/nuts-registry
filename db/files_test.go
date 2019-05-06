@@ -60,7 +60,6 @@ func TestValidateLocation(t *testing.T) {
 	})
 }
 
-
 func TestReadFile(t *testing.T) {
 	data, err := ReadFile("../test_data/all_empty_files", "endpoints.json")
 

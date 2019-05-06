@@ -25,11 +25,9 @@ import (
 	"testing"
 )
 
-
-
 func newVersionCommand(writer io.Writer) *cobra.Command {
 	testRootCommand := &cobra.Command{
-		Use:   "root",
+		Use: "root",
 		Run: func(cmd *cobra.Command, args []string) {
 
 		},
@@ -49,12 +47,12 @@ func TestVersion(t *testing.T) {
 
 	err := root.Execute()
 
-	if (err != nil) {
+	if err != nil {
 		t.Errorf("Expected no error, got %s", err.Error())
 	}
 
 	result := buf.String()
-	if (result != VERSION + "\n") {
+	if result != VERSION+"\n" {
 		t.Errorf("Expected: [%s], got: [%s]", VERSION, result)
 	}
 }

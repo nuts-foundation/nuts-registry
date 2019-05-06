@@ -26,7 +26,7 @@ import (
 	"net/http"
 )
 
-type ApiResource struct{
+type ApiResource struct {
 	Db db.Db
 }
 
@@ -39,7 +39,7 @@ func (apiResource ApiResource) EndpointsByOrganisationId(ctx echo.Context, param
 	for _, id := range params.OrgIds {
 		endpoints, err = apiResource.Db.FindEndpointsByOrganization(id)
 
-		if err != nil{
+		if err != nil {
 			glog.Warning(err.Error())
 		} else {
 			dupEndpoints = append(dupEndpoints, endpoints...)

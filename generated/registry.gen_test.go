@@ -41,11 +41,10 @@ func (e RestInterfaceStub) SearchOrganizations(ctx echo.Context, params SearchOr
 	return err
 }
 
-
 func TestServerInterfaceWrapper_EndpointsByOrganisationId(t *testing.T) {
-	t.Run("200", func(t *testing.T){
+	t.Run("200", func(t *testing.T) {
 		e := echo.New()
-		stub:= RestInterfaceStub{}
+		stub := RestInterfaceStub{}
 		wrapper := &ServerInterfaceWrapper{
 			Handler: stub,
 		}
@@ -70,37 +69,37 @@ func TestServerInterfaceWrapper_EndpointsByOrganisationId(t *testing.T) {
 		}
 	})
 
-	t.Run("400", func(t *testing.T){
+	t.Run("400", func(t *testing.T) {
 		e := echo.New()
-		stub:= RestInterfaceStub{}
+		stub := RestInterfaceStub{}
 		wrapper := &ServerInterfaceWrapper{
 			Handler: stub,
 		}
 
 		e.GET("/api/endpoints", wrapper.EndpointsByOrganisationId)
 
-		req := httptest.NewRequest(echo.GET, "/" , nil)
+		req := httptest.NewRequest(echo.GET, "/", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 		c.SetPath("/api/endpoints")
 
 		err := wrapper.EndpointsByOrganisationId(c)
 
-		if (err == nil) {
+		if err == nil {
 			t.Errorf("Didn't get expected err during call")
 		}
 
 		expected := "code=400, message=Invalid format for parameter orgIds: code=400, message=query parameter 'orgIds' is required"
-		if (err != nil && err.Error() != expected) {
+		if err != nil && err.Error() != expected {
 			t.Errorf("Got message=%s, want %s", err.Error(), expected)
 		}
 	})
 }
 
 func TestServerInterfaceWrapper_SearchOrganizations(t *testing.T) {
-	t.Run("200", func(t *testing.T){
+	t.Run("200", func(t *testing.T) {
 		e := echo.New()
-		stub:= RestInterfaceStub{}
+		stub := RestInterfaceStub{}
 		wrapper := &ServerInterfaceWrapper{
 			Handler: stub,
 		}
@@ -125,16 +124,16 @@ func TestServerInterfaceWrapper_SearchOrganizations(t *testing.T) {
 		}
 	})
 
-	t.Run("400", func(t *testing.T){
+	t.Run("400", func(t *testing.T) {
 		e := echo.New()
-		stub:= RestInterfaceStub{}
+		stub := RestInterfaceStub{}
 		wrapper := &ServerInterfaceWrapper{
 			Handler: stub,
 		}
 
 		e.GET("/api/organizations", wrapper.SearchOrganizations)
 
-		req := httptest.NewRequest(echo.GET, "/" , nil)
+		req := httptest.NewRequest(echo.GET, "/", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 		c.SetPath("/api/organizations")
