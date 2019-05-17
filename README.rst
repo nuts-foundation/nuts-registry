@@ -26,7 +26,7 @@ Then run
 
 .. code-block:: shell
 
-   oapi-codegen PATH_TO_NUTS_SPEC/nuts-registry.yaml > generated/registry.gen.go
+   oapi-codegen -generate server PATH_TO_NUTS_SPEC/nuts-registry.yaml > generated/registry.gen.go
 
 The generated code requires another dependency
 
