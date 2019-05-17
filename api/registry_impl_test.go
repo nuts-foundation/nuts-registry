@@ -21,7 +21,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/generated"
 	"net/url"
 

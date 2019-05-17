@@ -19,11 +19,10 @@
 package generated
 
 import (
-	"github.com/labstack/echo"
-	"net/url"
-
+	"github.com/labstack/echo/v4"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
@@ -89,7 +88,7 @@ func TestServerInterfaceWrapper_EndpointsByOrganisationId(t *testing.T) {
 			t.Errorf("Didn't get expected err during call")
 		}
 
-		expected := "code=400, message=Invalid format for parameter orgIds: code=400, message=query parameter 'orgIds' is required"
+		expected := "code=400, message=Query argument orgIds is required, but not found"
 		if err != nil && err.Error() != expected {
 			t.Errorf("Got message=%s, want %s", err.Error(), expected)
 		}
@@ -144,7 +143,7 @@ func TestServerInterfaceWrapper_SearchOrganizations(t *testing.T) {
 			t.Errorf("Didn't get expected err during call")
 		}
 
-		expected := "code=400, message=Invalid format for parameter query: code=400, message=query parameter 'query' is required"
+		expected := "code=400, message=Query argument query is required, but not found"
 		if err != nil && err.Error() != expected {
 			t.Errorf("Got message=%s, want %s", err.Error(), expected)
 		}

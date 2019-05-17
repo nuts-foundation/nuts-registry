@@ -6,7 +6,6 @@ package generated
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"encoding/base64"
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
@@ -184,4 +183,3 @@ func GetSwagger() (*openapi3.Swagger, error) {
 	}
 	return swagger, nil
 }
-
