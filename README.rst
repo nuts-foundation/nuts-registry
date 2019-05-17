@@ -18,6 +18,8 @@ Distributed registry for storing and querying healthcare care providers their ve
 
 To generate the Server stub install some dependencies:
 
+(We used version 1.1.3 of oapi-codegen)
+
 .. code-block:: shell
 
    go get github.com/deepmap/oapi-codegen/cmd/oapi-codegen
@@ -26,7 +28,7 @@ Then run
 
 .. code-block:: shell
 
-   oapi-codegen -generate server PATH_TO_NUTS_SPEC/nuts-registry.yaml > generated/registry.gen.go
+   oapi-codegen -generate server -package generated PATH_TO_NUTS_SPEC/nuts-registry.yaml > generated/registry.gen.go
 
 The generated code requires another dependency
 
