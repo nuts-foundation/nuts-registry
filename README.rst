@@ -32,7 +32,7 @@ The generated code requires another dependency
 
 .. code-block:: shell
 
-   go get github.com/labstack/ech0
+   go get github.com/labstack/echo
 
 Display help
 ------------
