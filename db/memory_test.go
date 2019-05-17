@@ -286,3 +286,32 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 		}
 	})
 }
+
+func TestMemoryDb_OrganizationById(t *testing.T) {
+	t.Run("organization is found", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(organization)
+
+		result, err := validDb.OrganizationById("system#value")
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %s", err.Error())
+		}
+
+		if result.Name != "test" {
+			t.Errorf("Expected 1 result with name test, got: %s", result.Name)
+		}
+	})
+
+	t.Run("organization is not found", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(organization)
+
+		_, err := validDb.OrganizationById("test")
+
+		expected := "organization not found"
+		if err.Error() != expected {
+			t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
+		}
+	})
+}

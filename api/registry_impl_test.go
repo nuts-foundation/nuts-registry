@@ -64,6 +64,10 @@ func (db *MockDb) SearchOrganizations(query string) []generated.Organization {
 	return db.organizations
 }
 
+func (db *MockDb) OrganizationById(id string) (*generated.Organization, error) {
+	return &db.organizations[0], nil
+}
+
 var endpoints = []generated.Endpoint{
 	{
 		Identifier:   generated.Identifier{System: "system", Value: "value"},
@@ -74,6 +78,7 @@ var endpoints = []generated.Endpoint{
 var organizations = []generated.Organization{
 	{
 		Identifier: generated.Identifier{System: "system", Value: "value"},
+		Name: "test",
 	},
 }
 
@@ -84,6 +89,7 @@ func initEcho(db *MockDb) (*echo.Echo, *generated.ServerInterfaceWrapper) {
 		Handler: stub,
 	}
 	e.GET("/api/endpoints", wrapper.EndpointsByOrganisationId)
+	e.GET("/api/organization/:id", wrapper.OrganizationById)
 	e.GET("/api/organizations", wrapper.SearchOrganizations)
 
 	return e, wrapper
@@ -103,6 +109,17 @@ func deserializeEndpoints(data *bytes.Buffer) ([]generated.Endpoint, error) {
 func deserializeOrganizations(data *bytes.Buffer) ([]generated.Organization, error) {
 	var stub []generated.Organization
 	err := json.Unmarshal(data.Bytes(), &stub)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return stub, err
+}
+
+func deserializeOrganization(data *bytes.Buffer) (*generated.Organization, error) {
+	stub := &generated.Organization{}
+	err := json.Unmarshal(data.Bytes(), stub)
 
 	if err != nil {
 		return nil, err
@@ -356,6 +373,43 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 
 		if len(result) != 0 {
 			t.Errorf("Got result size: %d, want 0", len(result))
+		}
+	})
+}
+
+func TestApiResource_OrganizationById(t *testing.T) {
+	t.Run("200", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{organizations: organizations})
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organization/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("system#value")
+
+		err := wrapper.OrganizationById(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
+
+		result, err := deserializeOrganization(rec.Body)
+
+		if err != nil {
+			t.Errorf("Got err during deserialization: %s", err.Error())
+		}
+
+		if result == nil {
+			t.Error("Got nil from deserialization")
+		}
+
+		if result.Name != "test" {
+			t.Errorf("Got result with Name: [%s], want [test]", result.Name)
 		}
 	})
 }

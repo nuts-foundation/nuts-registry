@@ -40,6 +40,12 @@ func (e RestInterfaceStub) SearchOrganizations(ctx echo.Context, params SearchOr
 	return err
 }
 
+func (e RestInterfaceStub) OrganizationById(ctx echo.Context, id string) error {
+	var err error
+
+	return err
+}
+
 func TestServerInterfaceWrapper_EndpointsByOrganisationId(t *testing.T) {
 	t.Run("200", func(t *testing.T) {
 		e := echo.New()
@@ -144,6 +150,59 @@ func TestServerInterfaceWrapper_SearchOrganizations(t *testing.T) {
 		}
 
 		expected := "code=400, message=Query argument query is required, but not found"
+		if err != nil && err.Error() != expected {
+			t.Errorf("Got message=%s, want %s", err.Error(), expected)
+		}
+	})
+}
+
+func TestServerInterfaceWrapper_OrganizationById(t *testing.T) {
+	t.Run("200", func(t *testing.T) {
+		e := echo.New()
+		stub := RestInterfaceStub{}
+		wrapper := &ServerInterfaceWrapper{
+			Handler: stub,
+		}
+		e.GET("/api/organization/:id", wrapper.OrganizationById)
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organization/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("1")
+
+		err := wrapper.OrganizationById(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
+	})
+
+	t.Run("400", func(t *testing.T) {
+		e := echo.New()
+		stub := RestInterfaceStub{}
+		wrapper := &ServerInterfaceWrapper{
+			Handler: stub,
+		}
+		e.GET("/api/organization/:id", wrapper.OrganizationById)
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organization/:id")
+
+		err := wrapper.OrganizationById(c)
+
+		if err == nil {
+			t.Errorf("Didn't get expected err during call")
+		}
+
+		expected := "code=400, message=Invalid format for parameter id: code=400, message=parameter '%s' is empty, can't bind its value"
 		if err != nil && err.Error() != expected {
 			t.Errorf("Got message=%s, want %s", err.Error(), expected)
 		}

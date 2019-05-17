@@ -24,6 +24,7 @@ type Db interface {
 	FindEndpointsByOrganization(organizationIdentifier string) ([]generated.Endpoint, error)
 	Load(location string) error
 	SearchOrganizations(query string) []generated.Organization
+	OrganizationById(id string) (*generated.Organization, error)
 }
 
 type dbError struct {

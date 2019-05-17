@@ -149,6 +149,16 @@ func (db *MemoryDb) SearchOrganizations(query string) []generated.Organization {
 	return matches
 }
 
+func (db *MemoryDb) OrganizationById(id string) (*generated.Organization, error) {
+
+	for _, o := range db.organizationIndex {
+		if id == o.Identifier.String() {
+			return &o, nil
+		}
+	}
+	return nil, newDbError("organization not found")
+}
+
 func searchRecursive(query []string, orgName []string) bool {
 	// search string empty, return match
 	if len(query) == 0 {

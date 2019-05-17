@@ -30,6 +30,16 @@ type ApiResource struct {
 	Db db.Db
 }
 
+func (apiResource ApiResource) OrganizationById(ctx echo.Context, id string) error {
+	result, err := apiResource.Db.OrganizationById(id)
+
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(http.StatusOK, result)
+}
+
 func (apiResource ApiResource) EndpointsByOrganisationId(ctx echo.Context, params generated.EndpointsByOrganisationIdParams) error {
 	var err error
 
