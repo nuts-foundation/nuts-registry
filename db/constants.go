@@ -18,9 +18,11 @@
 
 package db
 
-const FileEndpoints = "endpoints.json"
-const FileOrganizations = "organizations.json"
-const FileEndpointsOrganizations = "endpoints_organizations.json"
+const fileEndpoints = "endpoints.json"
+const fileOrganizations = "organizations.json"
+const fileEndpointsOrganizations = "endpoints_organizations.json"
+
+// ConfDataDir is the config name for specifiying the data location of the requiredFiles
 const ConfDataDir = "data"
 
-var RequiredFiles = [3]string{FileEndpoints, FileOrganizations, FileEndpointsOrganizations}
+var requiredFiles = [3]string{fileEndpoints, fileOrganizations, fileEndpointsOrganizations}
