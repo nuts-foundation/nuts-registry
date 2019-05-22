@@ -15,6 +15,11 @@ import (
 	"strings"
 )
 
+// Actor defines component schema for Actor.
+type Actor struct {
+	Identifier Identifier `json:"identifier"`
+}
+
 // Endpoint defines component schema for Endpoint.
 type Endpoint struct {
 	URL          string     `json:"URL"`
@@ -39,6 +44,7 @@ type Identifier struct {
 
 // Organization defines component schema for Organization.
 type Organization struct {
+	Actors     []Actor    `json:"actors,omitempty"`
 	Identifier Identifier `json:"identifier"`
 	Name       string     `json:"name"`
 }
@@ -47,6 +53,11 @@ type Organization struct {
 type EndpointsByOrganisationIdParams struct {
 	OrgIds []string `json:"orgIds"`
 	Type   *string  `json:"type,omitempty"`
+}
+
+// OrganizationActorsParams defines parameters for OrganizationActors.
+type OrganizationActorsParams struct {
+	ActorId string `json:"actorId"`
 }
 
 // SearchOrganizationsParams defines parameters for SearchOrganizations.
@@ -60,6 +71,8 @@ type ServerInterface interface {
 	EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error
 	// Get organization bij id (GET /api/organization/{id})
 	OrganizationById(ctx echo.Context, id string) error
+	// get actors for given organization, the main question that is answered by this api: may the professional represent the organization? (GET /api/organization/{id}/actors)
+	OrganizationActors(ctx echo.Context, id string, params OrganizationActorsParams) error
 	// Search for organizations (GET /api/organizations)
 	SearchOrganizations(ctx echo.Context, params SearchOrganizationsParams) error
 }
@@ -119,6 +132,37 @@ func (w *ServerInterfaceWrapper) OrganizationById(ctx echo.Context) error {
 	return err
 }
 
+// OrganizationActors converts echo context to params.
+func (w *ServerInterfaceWrapper) OrganizationActors(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameter("simple", false, "id", ctx.Param("id"), &id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
+	}
+
+	// Parameter object where we will unmarshal all parameters from the
+	// context.
+	var params OrganizationActorsParams
+	// ------------- Required query parameter "actorId" -------------
+	if paramValue := ctx.QueryParam("actorId"); paramValue != "" {
+
+	} else {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Query argument actorId is required, but not found"))
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "actorId", ctx.QueryParams(), &params.ActorId)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter actorId: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.OrganizationActors(ctx, id, params)
+	return err
+}
+
 // SearchOrganizations converts echo context to params.
 func (w *ServerInterfaceWrapper) SearchOrganizations(ctx echo.Context) error {
 	var err error
@@ -152,6 +196,7 @@ func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
 
 	router.GET("/api/endpoints", wrapper.EndpointsByOrganisationId)
 	router.GET("/api/organization/:id", wrapper.OrganizationById)
+	router.GET("/api/organization/:id/actors", wrapper.OrganizationActors)
 	router.GET("/api/organizations", wrapper.SearchOrganizations)
 
 }
@@ -159,26 +204,30 @@ func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/8yWbW/bNhDHv8qBHbANUP3QFMgmwC/WYE2NZUmQhzcrgoCWzjI3iWTJk1Mv8HcfjrJs",
-	"SbaStHvAXlkWRd7/7n53x0eRmMIajZq8iB+FTxZYyPD4s06tUZr42Tpj0ZHCsHJ7dcY/KfrEKUvKaBGL",
-	"3CSSH8HMgRYIMqFS5oAacHMQGB1WlCZ0GklEAj/LwuYoYkGJjYfD8ZvjwWgwGozj8ZujtxEsiKyPh0Nd",
-	"kh/ofFgfJSJBK8v7PDmlM7GORL12Exa68m6vprUy3snPjcN2OroWT0yK1ytPWGyNv+YDXiVGezysRKWo",
-	"Sc0VOtbxjcO5iMWr4S7Sw02Yh9Pdl+tIeJJU+n3t1ftaflO2LgsRfxQyIbVEEYlUeTnLMRV3B2Qt0flw",
-	"YPf8zQLospih69qJoPSYAhlIlSels1L5BcyQHhA1lDZzMkXfCWjH+DoSDj+VymHKelupasVrG4Sd3Cjw",
-	"dreOtkReuExq9aekg978Kq1VOtsqrHd5kDqF5l620ia7Fjb9ygyaxunT/yMFPYmYNjPQ48RWGaei7Vw7",
-	"iD6Uy74DLDsxKUL1QYXV3DighfLQgmBXj6XTsUKax26exOPj4x8PFdxS5iUeNhiWIv5RKTwoWqiqCTWE",
-	"tOxdTM4xlTaCi9vJB5Q5LRLpMIKTyflZBNc3k1PMU3S51GkEZ5NTZ1DnJoKT8wm3jPvEuFTep7jE3NgC",
-	"Nd3rZXL0w3j0bFFsxVTecJS7oLfj/LVtRsuiJ1gPmOev/9DmQQN/tEkOQpOIVrR+My7LnEEL5yX5Z10M",
-	"llv1frfmb5Sem31FP11OwVtM1FxtRgvrubo8AY9uqRL0IJdS5cw6SApKOQevHWbKk1uJSOQqQe2Du5Xb",
-	"4vTybHnEYSBFwQdWDvUWqI02GlAsRoPxYBTq26KWVolYHPGc4v4haRGyMZRWbUdEeJNhmJ2csk0tiXhb",
-	"cf7dqsqur9f4LCcLJHRexB/3ogG58sTlbxr7GmXjuUV/KtGtOE6D1op0CLdX0299KAGoOAL0ieRWySlh",
-	"E2GzqAHhPjBNOam7FJIrMdpcEgKChIU/PGzDlG1oOFS3mxfSObliWLrn3ByY1sBq0BOmEWAWuAPj4P2H",
-	"6VWPH1RNmZ0Xc5n7lhtdau/4a295wgfv3oxG/JMYTVhdiAg/09DmUundrakVkKfKcXuz2g/BOuqE4OIX",
-	"qKVUuaspqDraFqeoWijkCmYIWFha8fFvn1G+K+Vz0w9WppbIhd8fsT3dSifGOUwIPEqXLCoyQ0fwZVFI",
-	"txKxeK90wwWYSZ4IfIXsE8ITfA+I70wwKvPvmTGZ+eZk43G1jqrqbLax4aNK171V2vzy3er54mTgWwMs",
-	"cMi9YYehSp8spX+OwafQa02UL8etGZd+5N6+UOizEN3qahiZtuomQqdIrWWYqd8hhLomoaW5h4b+fl3R",
-	"u3drfAqG6wr4jVuHe1L997/g4UU9qQ3G3+5LLwPlC3pTs4v8a/1okzm+ZphOxntpWq//CgAA//9h8+fO",
-	"RA8AAA==",
+	"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",
 }
 
 // GetSwagger returns the Swagger specification corresponding to the generated code

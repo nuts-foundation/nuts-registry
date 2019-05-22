@@ -30,6 +30,24 @@ type ApiResource struct {
 	Db db.Db
 }
 
+func (apiResource ApiResource) OrganizationActors(ctx echo.Context, id string, params generated.OrganizationActorsParams) error {
+	result, err := apiResource.Db.OrganizationById(id)
+
+	if err != nil {
+		return err
+	}
+
+	actors := []generated.Actor{}
+
+	for _, a := range result.Actors {
+		if params.ActorId == a.Identifier.String() {
+			actors = append(actors, a)
+		}
+	}
+
+	return ctx.JSON(http.StatusOK, actors)
+}
+
 func (apiResource ApiResource) OrganizationById(ctx echo.Context, id string) error {
 	result, err := apiResource.Db.OrganizationById(id)
 
@@ -90,3 +108,5 @@ func (apiResource ApiResource) SearchOrganizations(ctx echo.Context, params gene
 
 	return ctx.JSON(http.StatusOK, result)
 }
+
+

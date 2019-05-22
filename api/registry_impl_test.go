@@ -79,6 +79,11 @@ var organizations = []generated.Organization{
 	{
 		Identifier: generated.Identifier{System: "system", Value: "value"},
 		Name: "test",
+		Actors: []generated.Actor{
+			{
+				Identifier: generated.Identifier{System: "system", Value: "value"},
+			},
+		},
 	},
 }
 
@@ -88,9 +93,6 @@ func initEcho(db *MockDb) (*echo.Echo, *generated.ServerInterfaceWrapper) {
 	wrapper := &generated.ServerInterfaceWrapper{
 		Handler: stub,
 	}
-	e.GET("/api/endpoints", wrapper.EndpointsByOrganisationId)
-	e.GET("/api/organization/:id", wrapper.OrganizationById)
-	e.GET("/api/organizations", wrapper.SearchOrganizations)
 
 	return e, wrapper
 }
@@ -108,6 +110,17 @@ func deserializeEndpoints(data *bytes.Buffer) ([]generated.Endpoint, error) {
 
 func deserializeOrganizations(data *bytes.Buffer) ([]generated.Organization, error) {
 	var stub []generated.Organization
+	err := json.Unmarshal(data.Bytes(), &stub)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return stub, err
+}
+
+func deserializeActors(data *bytes.Buffer) ([]generated.Actor, error) {
+	var stub []generated.Actor
 	err := json.Unmarshal(data.Bytes(), &stub)
 
 	if err != nil {
@@ -410,6 +423,84 @@ func TestApiResource_OrganizationById(t *testing.T) {
 
 		if result.Name != "test" {
 			t.Errorf("Got result with Name: [%s], want [test]", result.Name)
+		}
+	})
+}
+
+func TestApiResource_OrganizationActors(t *testing.T) {
+	t.Run("200 with single result", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{organizations: organizations})
+
+		q := make(url.Values)
+		q.Set("actorId", "system#value")
+
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organization/:id/actors")
+		c.SetParamNames("id")
+		c.SetParamValues("system#value")
+
+		err := wrapper.OrganizationActors(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
+
+		result, err := deserializeActors(rec.Body)
+
+		if err != nil {
+			t.Errorf("Got err during deserialization: %s", err.Error())
+		}
+
+		if result == nil {
+			t.Error("Got nil from deserialization")
+		}
+
+		if len(result) != 1 {
+			t.Errorf("Got %d results want [1]", len(result))
+		}
+	})
+
+	t.Run("200 with empty result", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{organizations: organizations})
+
+		q := make(url.Values)
+		q.Set("actorId", "system#value2")
+
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organization/:id/actors")
+		c.SetParamNames("id")
+		c.SetParamValues("system#value")
+
+		err := wrapper.OrganizationActors(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
+
+		result, err := deserializeActors(rec.Body)
+
+		if err != nil {
+			t.Errorf("Got err during deserialization: %s", err.Error())
+		}
+
+		if result == nil {
+			t.Error("Got nil from deserialization")
+		}
+
+		if len(result) != 0 {
+			t.Errorf("Got %d results want [0]", len(result))
 		}
 	})
 }

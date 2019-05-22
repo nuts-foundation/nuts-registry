@@ -4,6 +4,14 @@
     "identifier": {
       "system": "https://nuts.nl/CodeSystem/agbcode",
       "value": "00000000"
-    }
+    },
+    "actors": [
+      {
+        "identifier": {
+          "system": "https://nuts.nl/CodeSystem/agbcode",
+          "value": "00000007"
+        }
+      }
+    ]
   }
 ]

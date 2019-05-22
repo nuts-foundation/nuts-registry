@@ -28,6 +28,12 @@ import (
 
 type RestInterfaceStub struct{}
 
+func (e RestInterfaceStub) OrganizationActors(ctx echo.Context, id string, params OrganizationActorsParams) error {
+	var err error
+
+	return err
+}
+
 func (e RestInterfaceStub) EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error {
 	var err error
 
@@ -45,6 +51,8 @@ func (e RestInterfaceStub) OrganizationById(ctx echo.Context, id string) error {
 
 	return err
 }
+
+
 
 func TestServerInterfaceWrapper_EndpointsByOrganisationId(t *testing.T) {
 	t.Run("200", func(t *testing.T) {

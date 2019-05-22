@@ -30,12 +30,6 @@ Then run
 
    oapi-codegen -generate server -package generated PATH_TO_NUTS_SPEC/nuts-registry.yaml > generated/registry.gen.go
 
-The generated code requires another dependency
-
-.. code-block:: shell
-
-   go get github.com/labstack/echo
-
 Display help
 ------------
 
