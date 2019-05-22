@@ -13,6 +13,11 @@ Distributed registry for storing and querying healthcare care providers their ve
 
 .. image:: https://codecov.io/gh/nuts-foundation/nuts-registry/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/nuts-foundation/nuts-registry
+    :alt: Code coverage
+
+.. image:: https://api.codacy.com/project/badge/Grade/919adb72a4564722851c7db0ccbec558
+    :target: https://www.codacy.com/app/nuts-foundation/nuts-registry
+    :alt: Code style
 
 .. inclusion-marker-for-contribution
 
