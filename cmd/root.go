@@ -39,7 +39,7 @@ var rootCmd = &cobra.Command{
 
 		// load static db
 		memoryDb := db.New()
-		err := memoryDb.Load(viper.GetString(db.CONF_DATA_DIR))
+		err := memoryDb.Load(viper.GetString(db.ConfDataDir))
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(1)
@@ -54,18 +54,18 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	//commands
-	rootCmd.Flags().StringP(CONF_PORT, "p", "1323", "Server listen port")
-	rootCmd.Flags().String(CONF_INTERFACE, "localhost", "Server interface binding")
-	rootCmd.Flags().String(db.CONF_DATA_DIR, "./data", "Location of data files")
+	rootCmd.Flags().StringP(ConfPort, "p", "1323", "Server listen port")
+	rootCmd.Flags().String(ConfInterface, "localhost", "Server interface binding")
+	rootCmd.Flags().String(db.ConfDataDir, "./data", "Location of data files")
 
-	viper.BindPFlag(CONF_PORT, rootCmd.Flags().Lookup(CONF_PORT))
-	viper.BindPFlag(CONF_INTERFACE, rootCmd.Flags().Lookup(CONF_INTERFACE))
-	viper.BindPFlag(db.CONF_DATA_DIR, rootCmd.Flags().Lookup(db.CONF_DATA_DIR))
+	viper.BindPFlag(ConfPort, rootCmd.Flags().Lookup(ConfPort))
+	viper.BindPFlag(ConfInterface, rootCmd.Flags().Lookup(ConfInterface))
+	viper.BindPFlag(db.ConfDataDir, rootCmd.Flags().Lookup(db.ConfDataDir))
 
 	viper.SetEnvPrefix("NUTS_REGISTRY")
-	viper.BindEnv(CONF_PORT)
-	viper.BindEnv(CONF_INTERFACE)
-	viper.BindEnv(db.CONF_DATA_DIR)
+	viper.BindEnv(ConfPort)
+	viper.BindEnv(ConfInterface)
+	viper.BindEnv(db.ConfDataDir)
 
 	rootCmd.AddCommand(NewVersionCmd())
 

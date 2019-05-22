@@ -18,7 +18,7 @@
 
 package cmd
 
-const CONF_PORT = "port"
-const CONF_INTERFACE = "interface"
+const ConfPort = "port"
+const ConfInterface = "interface"
 
-const VERSION = `Nuts registry v0.1 -- HEAD`
+const Version = `Nuts registry v0.1 -- HEAD`

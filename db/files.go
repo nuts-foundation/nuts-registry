@@ -52,7 +52,7 @@ func validateLocation(location string) error {
 
 	m := make(map[string]bool)
 
-	for _, f := range REQUIRED_FILES {
+	for _, f := range RequiredFiles {
 		m[f] = false
 	}
 

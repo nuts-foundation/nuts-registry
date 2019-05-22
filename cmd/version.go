@@ -37,7 +37,7 @@ func newVersionCmd(writer io.Writer) *cobra.Command {
 		Use:   "version",
 		Short: "Print the version number of the Nuts registry",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Fprintln(writer, VERSION)
+			fmt.Fprintln(writer, Version)
 		},
 	}
 }

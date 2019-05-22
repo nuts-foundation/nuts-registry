@@ -18,9 +18,9 @@
 
 package db
 
-const FILE_ENDPOINTS = "endpoints.json"
-const FILE_ORGANIZATIONS = "organizations.json"
-const FILE_ENDPOINTS_ORGANIZATIONS = "endpoints_organizations.json"
-const CONF_DATA_DIR = "data"
+const FileEndpoints = "endpoints.json"
+const FileOrganizations = "organizations.json"
+const FileEndpointsOrganizations = "endpoints_organizations.json"
+const ConfDataDir = "data"
 
-var REQUIRED_FILES = [3]string{FILE_ENDPOINTS, FILE_ORGANIZATIONS, FILE_ENDPOINTS_ORGANIZATIONS}
+var RequiredFiles = [3]string{FileEndpoints, FileOrganizations, FileEndpointsOrganizations}

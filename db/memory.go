@@ -179,7 +179,7 @@ func searchRecursive(query []string, orgName []string) bool {
 
 func (db *MemoryDb) loadEndpoints(location string) error {
 
-	data, err := ReadFile(location, FILE_ENDPOINTS)
+	data, err := ReadFile(location, FileEndpoints)
 
 	if err != nil {
 		return err
@@ -203,7 +203,7 @@ func (db *MemoryDb) loadEndpoints(location string) error {
 
 func (db *MemoryDb) loadOrganizations(location string) error {
 
-	data, err := ReadFile(location, FILE_ORGANIZATIONS)
+	data, err := ReadFile(location, FileOrganizations)
 
 	if err != nil {
 		return err
@@ -226,7 +226,7 @@ func (db *MemoryDb) loadOrganizations(location string) error {
 }
 
 func (db *MemoryDb) loadEndpointsOrganizations(location string) error {
-	data, err := ReadFile(location, FILE_ENDPOINTS_ORGANIZATIONS)
+	data, err := ReadFile(location, FileEndpointsOrganizations)
 
 	if err != nil {
 		return err
