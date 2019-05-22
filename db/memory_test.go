@@ -26,7 +26,7 @@ import (
 var endpoint = generated.Endpoint{
 	Identifier:   generated.Identifier{System: "system", Value: "value"},
 	EndpointType: "type#value",
-	Status:       generated.STATUS_ACTIVE,
+	Status:       generated.StatusActive,
 }
 
 var organization = generated.Organization{
@@ -37,7 +37,7 @@ var organization = generated.Organization{
 var mapping = generated.EndpointOrganization{
 	EndpointIdentifier:     generated.Identifier{System: "system", Value: "value"},
 	OrganizationIdentifier: generated.Identifier{System: "system", Value: "value"},
-	Status:                 generated.STATUS_ACTIVE,
+	Status:                 generated.StatusActive,
 }
 
 func TestNew(t *testing.T) {

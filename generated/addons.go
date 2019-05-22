@@ -20,9 +20,10 @@ package generated
 
 import "fmt"
 
+// String converts an identifier to system#value format
 func (i Identifier) String() string {
 	return fmt.Sprintf("%s#%s", i.System, i.Value)
 }
 
-// from api spec
-const STATUS_ACTIVE = "active"
+// StatusActive represents the "active" status
+const StatusActive = "active"

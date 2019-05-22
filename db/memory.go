@@ -111,7 +111,7 @@ func (db *MemoryDb) FindEndpointsByOrganization(organizationIdentifier string) (
 	// filter inactive mappings
 	filtered := mappings[:0]
 	for _, x := range mappings {
-		if x.Status == generated.STATUS_ACTIVE {
+		if x.Status == generated.StatusActive {
 			filtered = append(filtered, x)
 		}
 	}
@@ -125,7 +125,7 @@ func (db *MemoryDb) FindEndpointsByOrganization(organizationIdentifier string) (
 	for _, f := range filtered {
 		es := db.endpointIndex[f.EndpointIdentifier.String()]
 
-		if es.Status == generated.STATUS_ACTIVE {
+		if es.Status == generated.StatusActive {
 			endpoints = append(endpoints, es)
 		}
 	}
