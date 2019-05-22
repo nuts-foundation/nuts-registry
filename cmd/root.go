@@ -54,17 +54,17 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	//commands
-	rootCmd.Flags().StringP(ConfPort, "p", "1323", "Server listen port")
-	rootCmd.Flags().String(ConfInterface, "localhost", "Server interface binding")
+	rootCmd.Flags().StringP(confPort, "p", "1323", "Server listen port")
+	rootCmd.Flags().String(confInterface, "localhost", "Server interface binding")
 	rootCmd.Flags().String(db.ConfDataDir, "./data", "Location of data files")
 
-	viper.BindPFlag(ConfPort, rootCmd.Flags().Lookup(ConfPort))
-	viper.BindPFlag(ConfInterface, rootCmd.Flags().Lookup(ConfInterface))
+	viper.BindPFlag(confPort, rootCmd.Flags().Lookup(confPort))
+	viper.BindPFlag(confInterface, rootCmd.Flags().Lookup(confInterface))
 	viper.BindPFlag(db.ConfDataDir, rootCmd.Flags().Lookup(db.ConfDataDir))
 
 	viper.SetEnvPrefix("NUTS_REGISTRY")
-	viper.BindEnv(ConfPort)
-	viper.BindEnv(ConfInterface)
+	viper.BindEnv(confPort)
+	viper.BindEnv(confInterface)
 	viper.BindEnv(db.ConfDataDir)
 
 	rootCmd.AddCommand(NewVersionCmd())

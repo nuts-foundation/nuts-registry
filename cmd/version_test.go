@@ -52,7 +52,7 @@ func TestVersion(t *testing.T) {
 	}
 
 	result := buf.String()
-	if result != Version+"\n" {
-		t.Errorf("Expected: [%s], got: [%s]", Version, result)
+	if result != version+"\n" {
+		t.Errorf("Expected: [%s], got: [%s]", version, result)
 	}
 }

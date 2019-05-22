@@ -26,18 +26,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Creates a new Version command printing to Stdout
+// Creates a new version command printing to Stdout
 func NewVersionCmd() *cobra.Command {
 	return newVersionCmd(os.Stdout)
 }
 
-// Creates a new Version command printing to the given writer
+// Creates a new version command printing to the given writer
 func newVersionCmd(writer io.Writer) *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Print the version number of the Nuts registry",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Fprintln(writer, Version)
+			fmt.Fprintln(writer, version)
 		},
 	}
 }
