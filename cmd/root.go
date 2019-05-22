@@ -53,12 +53,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	// initialize logging
-	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
-	goflag.Parse()
-
 	//commands
-	rootCmd.AddCommand(NewVersionCmd())
 	rootCmd.Flags().StringP(CONF_PORT, "p", "1323", "Server listen port")
 	rootCmd.Flags().String(CONF_INTERFACE, "localhost", "Server interface binding")
 	rootCmd.Flags().String(db.CONF_DATA_DIR, "./data", "Location of data files")
@@ -71,6 +66,11 @@ func init() {
 	viper.BindEnv(CONF_PORT)
 	viper.BindEnv(CONF_INTERFACE)
 	viper.BindEnv(db.CONF_DATA_DIR)
+
+	rootCmd.AddCommand(NewVersionCmd())
+
+	// initialize logging
+	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 }
 
 func Execute() {
