@@ -399,7 +399,7 @@ func TestApiResource_OrganizationById(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.SetPath("/api/organization/:id")
 		c.SetParamNames("id")
-		c.SetParamValues("system#value")
+		c.SetParamValues("https%3A//system%23value")
 
 		err := wrapper.OrganizationById(c)
 

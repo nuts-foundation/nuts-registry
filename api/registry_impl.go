@@ -24,6 +24,7 @@ import (
 	"github.com/nuts-foundation/nuts-registry/db"
 	"github.com/nuts-foundation/nuts-registry/generated"
 	"net/http"
+	"net/url"
 )
 
 type ApiResource struct {
@@ -49,7 +50,14 @@ func (apiResource ApiResource) OrganizationActors(ctx echo.Context, id string, p
 }
 
 func (apiResource ApiResource) OrganizationById(ctx echo.Context, id string) error {
-	result, err := apiResource.Db.OrganizationById(id)
+
+	unescaped, err := url.PathUnescape(id)
+
+	if err != nil {
+		return err
+	}
+
+	result, err := apiResource.Db.OrganizationById(unescaped)
 
 	if err != nil {
 		return err
