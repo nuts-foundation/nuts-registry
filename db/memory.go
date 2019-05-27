@@ -43,8 +43,8 @@ func New() *MemoryDb {
 }
 
 func (i *MemoryDb) appendEO(eo generated.EndpointOrganization) error {
-	ois := eo.OrganizationIdentifier.String()
-	eis := eo.EndpointIdentifier.String()
+	ois := eo.Organization.String()
+	eis := eo.Endpoint.String()
 
 	_, f := i.organizationToEndpointIndex[ois]
 	if !f {
@@ -123,7 +123,7 @@ func (db *MemoryDb) FindEndpointsByOrganization(organizationIdentifier string) (
 	// map to endpoints
 	var endpoints []generated.Endpoint
 	for _, f := range filtered {
-		es := db.endpointIndex[f.EndpointIdentifier.String()]
+		es := db.endpointIndex[f.Endpoint.String()]
 
 		if es.Status == generated.StatusActive {
 			endpoints = append(endpoints, es)

@@ -1,9 +1,6 @@
 [
   {
     "name": "Zorggroep Nuts",
-    "identifier": {
-      "system": "https://nuts.nl/CodeSystem/agbcode",
-      "value": "00000000"
-    }
+    "identifier": "urn:nuts:agbcode::00000000"
   }
 ]

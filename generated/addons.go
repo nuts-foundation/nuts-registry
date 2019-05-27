@@ -18,11 +18,9 @@
 
 package generated
 
-import "fmt"
-
-// String converts an identifier to system#value format
+// String converts an identifier to string
 func (i Identifier) String() string {
-	return fmt.Sprintf("%s#%s", i.System, i.Value)
+	return string(i)
 }
 
 // StatusActive represents the "active" status

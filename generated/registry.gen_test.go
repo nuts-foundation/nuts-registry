@@ -119,7 +119,7 @@ func TestServerInterfaceWrapper_SearchOrganizations(t *testing.T) {
 		e.GET("/api/organizations", wrapper.SearchOrganizations)
 
 		q := make(url.Values)
-		q.Set("query", "system#value")
+		q.Set("query", "whatever")
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
 		rec := httptest.NewRecorder()

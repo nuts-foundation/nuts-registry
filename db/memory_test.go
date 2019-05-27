@@ -24,20 +24,20 @@ import (
 )
 
 var endpoint = generated.Endpoint{
-	Identifier:   generated.Identifier{System: "system", Value: "value"},
-	EndpointType: "type#value",
+	Identifier:   generated.Identifier("urn:nuts:system::value"),
+	EndpointType: "urn:nuts:endpoint::type",
 	Status:       generated.StatusActive,
 }
 
 var organization = generated.Organization{
-	Identifier: generated.Identifier{System: "system", Value: "value"},
+	Identifier: generated.Identifier("urn:nuts:system::value"),
 	Name:       "test",
 }
 
 var mapping = generated.EndpointOrganization{
-	EndpointIdentifier:     generated.Identifier{System: "system", Value: "value"},
-	OrganizationIdentifier: generated.Identifier{System: "system", Value: "value"},
-	Status:                 generated.StatusActive,
+	Endpoint:     generated.Identifier("urn:nuts:system::value"),
+	Organization: generated.Identifier("urn:nuts:system::value"),
+	Status:       generated.StatusActive,
 }
 
 func TestNew(t *testing.T) {
@@ -135,7 +135,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		validDb.appendEndpoint(endpoint)
 		validDb.appendEO(mapping)
 
-		result, err := validDb.FindEndpointsByOrganization("system#value")
+		result, err := validDb.FindEndpointsByOrganization("urn:nuts:system::value")
 
 		if err != nil {
 			t.Errorf("Expected no error, got: %s", err.Error())
@@ -154,7 +154,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		mappingCopy.Status = "inactive"
 		validDb.appendEO(mappingCopy)
 
-		result, err := validDb.FindEndpointsByOrganization("system#value")
+		result, err := validDb.FindEndpointsByOrganization("urn:nuts:system::value")
 
 		if err != nil {
 			t.Errorf("Expected no error, got: %s", err.Error())
@@ -173,7 +173,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		validDb.appendEndpoint(endpointCopy)
 		validDb.appendEO(mapping)
 
-		result, err := validDb.FindEndpointsByOrganization("system#value")
+		result, err := validDb.FindEndpointsByOrganization("urn:nuts:system::value")
 
 		if err != nil {
 			t.Errorf("Expected no error, got: %s", err.Error())
@@ -197,7 +197,7 @@ func TestMemoryDb_appendEO(t *testing.T) {
 			t.Errorf("Expected error")
 		}
 
-		expected := "Endpoint <> Organization mapping references unknown endpoint with identifier [system#value]"
+		expected := "Endpoint <> Organization mapping references unknown endpoint with identifier [urn:nuts:system::value]"
 		if err.Error() != expected {
 			t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
 		}
@@ -214,7 +214,7 @@ func TestMemoryDb_appendEO(t *testing.T) {
 			t.Errorf("Expected error")
 		}
 
-		expected := "Endpoint <> Organization mapping references unknown organization with identifier [system#value]"
+		expected := "Endpoint <> Organization mapping references unknown organization with identifier [urn:nuts:system::value]"
 		if err.Error() != expected {
 			t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
 		}
@@ -226,7 +226,7 @@ func TestMemoryDb_FindEndpointsByOrganizationNoMapping(t *testing.T) {
 	validDb.appendOrganization(organization)
 	validDb.appendEndpoint(endpoint)
 
-	result, err := validDb.FindEndpointsByOrganization("system#value")
+	result, err := validDb.FindEndpointsByOrganization("urn:nuts:system::value")
 
 	if err != nil {
 		t.Errorf("Expected no error, got: %s", err.Error())
@@ -240,13 +240,13 @@ func TestMemoryDb_FindEndpointsByOrganizationNoMapping(t *testing.T) {
 func TestMemoryDb_FindEndpointsByOrganizationUnknown(t *testing.T) {
 	validDb := New()
 
-	_, err := validDb.FindEndpointsByOrganization("system#value")
+	_, err := validDb.FindEndpointsByOrganization("urn:nuts:system::value")
 
 	if err == nil {
 		t.Errorf("Expected error")
 	}
 
-	expected := "Organization with identifier [system#value] does not exist"
+	expected := "Organization with identifier [urn:nuts:system::value] does not exist"
 	if err.Error() != expected {
 		t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
 	}
@@ -292,7 +292,7 @@ func TestMemoryDb_OrganizationById(t *testing.T) {
 		validDb := New()
 		validDb.appendOrganization(organization)
 
-		result, err := validDb.OrganizationById("system#value")
+		result, err := validDb.OrganizationById("urn:nuts:system::value")
 
 		if err != nil {
 			t.Errorf("Expected no error, got: %s", err.Error())

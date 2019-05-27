@@ -70,18 +70,18 @@ func (db *MockDb) OrganizationById(id string) (*generated.Organization, error) {
 
 var endpoints = []generated.Endpoint{
 	{
-		Identifier:   generated.Identifier{System: "system", Value: "value"},
+		Identifier:   generated.Identifier("urn:nuts:system::value"),
 		EndpointType: "type#value",
 	},
 }
 
 var organizations = []generated.Organization{
 	{
-		Identifier: generated.Identifier{System: "system", Value: "value"},
+		Identifier: generated.Identifier("urn:nuts:system::value"),
 		Name: "test",
 		Actors: []generated.Actor{
 			{
-				Identifier: generated.Identifier{System: "system", Value: "value"},
+				Identifier: generated.Identifier("urn:nuts:system::value"),
 			},
 		},
 	},
@@ -174,8 +174,8 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 			t.Errorf("Got result size: %d, want 1", len(result))
 		}
 
-		if result[0].Identifier.String() != "system#value" {
-			t.Errorf("Got result with Identifier: [%s], want [system#value]", result[0].Identifier.String())
+		if result[0].Identifier.String() != "urn:nuts:system::value" {
+			t.Errorf("Got result with Identifier: [%s], want [urn:nuts:system::value]", result[0].Identifier.String())
 		}
 	})
 
@@ -212,8 +212,8 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 			t.Errorf("Got result size: %d, want 1", len(result))
 		}
 
-		if result[0].Identifier.String() != "system#value" {
-			t.Errorf("Got result with Identifier: [%s], want [system#value]", result[0].Identifier.String())
+		if result[0].Identifier.String() != "urn:nuts:system::value" {
+			t.Errorf("Got result with Identifier: [%s], want [urn:nuts:system::value]", result[0].Identifier.String())
 		}
 	})
 
@@ -323,7 +323,7 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{organizations: organizations})
 
 		q := make(url.Values)
-		q.Set("query", "system#value")
+		q.Set("query", "urn:nuts:system::value")
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
 		rec := httptest.NewRecorder()
@@ -351,8 +351,8 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 			t.Errorf("Got result size: %d, want 1", len(result))
 		}
 
-		if result[0].Identifier.String() != "system#value" {
-			t.Errorf("Got result with Identifier: [%s], want [system#value]", result[0].Identifier.String())
+		if result[0].Identifier.String() != "urn:nuts:system::value" {
+			t.Errorf("Got result with Identifier: [%s], want [urn:nuts:system::value]", result[0].Identifier.String())
 		}
 	})
 
@@ -360,7 +360,7 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{})
 
 		q := make(url.Values)
-		q.Set("query", "system#value")
+		q.Set("query", "urn:nuts:system::value")
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
 		rec := httptest.NewRecorder()
@@ -432,14 +432,14 @@ func TestApiResource_OrganizationActors(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{organizations: organizations})
 
 		q := make(url.Values)
-		q.Set("actorId", "system#value")
+		q.Set("actorId", "urn:nuts:system::value")
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 		c.SetPath("/api/organization/:id/actors")
 		c.SetParamNames("id")
-		c.SetParamValues("system#value")
+		c.SetParamValues("urn:nuts:system::value")
 
 		err := wrapper.OrganizationActors(c)
 

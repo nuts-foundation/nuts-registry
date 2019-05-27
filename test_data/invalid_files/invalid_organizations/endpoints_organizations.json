@@ -1,13 +1,7 @@
 [
   {
     "status": "active",
-    "organizationIdentifier": {
-      "system": "https://nuts.nl/CodeSystem/agbcode",
-      "value": "00000000"
-    },
-    "endpointIdentifier": {
-      "system": "urn:ietf:rfc:1779",
-      "value": "O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local"
-    }
+    "organization": "urn:nuts:agbcode::00000000",
+    "endpoint": "urn:ietf:rfc:1779::O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local"
   }
 ]
