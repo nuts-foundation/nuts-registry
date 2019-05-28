@@ -21,9 +21,9 @@ package generated
 import "testing"
 
 func TestIdentifier_String(t *testing.T) {
-	i := Identifier("urn:nuts:system::value")
+	i := Identifier("urn:nuts:system:value")
 
-	if i.String() != "urn:nuts:system::value" {
-		t.Errorf("Expected [urn:nuts:system::value], got [%s]", i.String())
+	if i.String() != "urn:nuts:system:value" {
+		t.Errorf("Expected [urn:nuts:system:value], got [%s]", i.String())
 	}
 }
