@@ -6,6 +6,7 @@ package generated
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
@@ -45,6 +46,180 @@ type Organization struct {
 	Identifier Identifier `json:"identifier"`
 	Name       string     `json:"name"`
 	PublicKey  *string    `json:"publicKey,omitempty"`
+}
+
+// Client which conforms to the OpenAPI3 specification for this service. The
+// server should be fully qualified with shema and server, ie,
+// https://deepmap.com.
+type Client struct {
+	Server string
+	Client http.Client
+}
+
+// EndpointsByOrganisationId request
+func (c *Client) EndpointsByOrganisationId(ctx context.Context, params *EndpointsByOrganisationIdParams) (*http.Response, error) {
+	req, err := NewEndpointsByOrganisationIdRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	return c.Client.Do(req)
+}
+
+// OrganizationById request
+func (c *Client) OrganizationById(ctx context.Context, id string) (*http.Response, error) {
+	req, err := NewOrganizationByIdRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	return c.Client.Do(req)
+}
+
+// OrganizationActors request
+func (c *Client) OrganizationActors(ctx context.Context, id string, params *OrganizationActorsParams) (*http.Response, error) {
+	req, err := NewOrganizationActorsRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	return c.Client.Do(req)
+}
+
+// SearchOrganizations request
+func (c *Client) SearchOrganizations(ctx context.Context, params *SearchOrganizationsParams) (*http.Response, error) {
+	req, err := NewSearchOrganizationsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	return c.Client.Do(req)
+}
+
+// NewEndpointsByOrganisationIdRequest generates requests for EndpointsByOrganisationId
+func NewEndpointsByOrganisationIdRequest(server string, params *EndpointsByOrganisationIdParams) (*http.Request, error) {
+	var err error
+
+	queryURL := fmt.Sprintf("%s/api/endpoints", server)
+
+	var queryStrings []string
+
+	var queryParam0 string
+
+	queryParam0, err = runtime.StyleParam("form", true, "orgIds", params.OrgIds)
+	if err != nil {
+		return nil, err
+	}
+
+	queryStrings = append(queryStrings, queryParam0)
+
+	var queryParam1 string
+	if params.Type != nil {
+
+		queryParam1, err = runtime.StyleParam("form", true, "type", *params.Type)
+		if err != nil {
+			return nil, err
+		}
+
+		queryStrings = append(queryStrings, queryParam1)
+	}
+
+	if len(queryStrings) != 0 {
+		queryURL += "?" + strings.Join(queryStrings, "&")
+	}
+
+	req, err := http.NewRequest("GET", queryURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewOrganizationByIdRequest generates requests for OrganizationById
+func NewOrganizationByIdRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "id", id)
+	if err != nil {
+		return nil, err
+	}
+
+	queryURL := fmt.Sprintf("%s/api/organization/%s", server, pathParam0)
+
+	req, err := http.NewRequest("GET", queryURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewOrganizationActorsRequest generates requests for OrganizationActors
+func NewOrganizationActorsRequest(server string, id string, params *OrganizationActorsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "id", id)
+	if err != nil {
+		return nil, err
+	}
+
+	queryURL := fmt.Sprintf("%s/api/organization/%s/actors", server, pathParam0)
+
+	var queryStrings []string
+
+	var queryParam0 string
+
+	queryParam0, err = runtime.StyleParam("form", true, "actorId", params.ActorId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryStrings = append(queryStrings, queryParam0)
+
+	if len(queryStrings) != 0 {
+		queryURL += "?" + strings.Join(queryStrings, "&")
+	}
+
+	req, err := http.NewRequest("GET", queryURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSearchOrganizationsRequest generates requests for SearchOrganizations
+func NewSearchOrganizationsRequest(server string, params *SearchOrganizationsParams) (*http.Request, error) {
+	var err error
+
+	queryURL := fmt.Sprintf("%s/api/organizations", server)
+
+	var queryStrings []string
+
+	var queryParam0 string
+
+	queryParam0, err = runtime.StyleParam("form", true, "query", params.Query)
+	if err != nil {
+		return nil, err
+	}
+
+	queryStrings = append(queryStrings, queryParam0)
+
+	if len(queryStrings) != 0 {
+		queryURL += "?" + strings.Join(queryStrings, "&")
+	}
+
+	req, err := http.NewRequest("GET", queryURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // EndpointsByOrganisationIdParams defines parameters for EndpointsByOrganisationId.
@@ -202,31 +377,32 @@ func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"d7Jpufw7AAD//95tWrT+FAAA",
 }
 
 // GetSwagger returns the Swagger specification corresponding to the generated code

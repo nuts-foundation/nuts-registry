@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/golang/glog"
-	"github.com/nuts-foundation/nuts-registry/generated"
+	"github.com/nuts-foundation/nuts-registry/pkg/generated"
 	"strings"
 )
 

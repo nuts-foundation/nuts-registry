@@ -24,7 +24,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/api"
 	"github.com/nuts-foundation/nuts-registry/db"
-	"github.com/nuts-foundation/nuts-registry/generated"
+	"github.com/nuts-foundation/nuts-registry/pkg/generated"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"

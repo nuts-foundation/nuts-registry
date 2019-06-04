@@ -18,7 +18,7 @@
 
 package db
 
-import "github.com/nuts-foundation/nuts-registry/generated"
+import "github.com/nuts-foundation/nuts-registry/pkg/generated"
 
 type Db interface {
 	FindEndpointsByOrganization(organizationIdentifier string) ([]generated.Endpoint, error)

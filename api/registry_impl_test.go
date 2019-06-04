@@ -22,7 +22,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/labstack/echo/v4"
-	"github.com/nuts-foundation/nuts-registry/generated"
+	"github.com/nuts-foundation/nuts-registry/pkg/generated"
 	"net/url"
 
 	"net/http"
@@ -78,7 +78,7 @@ var endpoints = []generated.Endpoint{
 var organizations = []generated.Organization{
 	{
 		Identifier: generated.Identifier("urn:nuts:system:value"),
-		Name: "test",
+		Name:       "test",
 		Actors: []generated.Actor{
 			{
 				Identifier: generated.Identifier("urn:nuts:system:value"),
