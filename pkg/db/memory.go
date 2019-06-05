@@ -21,28 +21,27 @@ package db
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/golang/glog"
-	"github.com/nuts-foundation/nuts-registry/pkg/generated"
+	"github.com/sirupsen/logrus"
 	"strings"
 )
 
 type MemoryDb struct {
-	endpointIndex               map[string]generated.Endpoint
-	organizationIndex           map[string]generated.Organization
-	endpointToOrganizationIndex map[string][]generated.EndpointOrganization
-	organizationToEndpointIndex map[string][]generated.EndpointOrganization
+	endpointIndex               map[string]Endpoint
+	organizationIndex           map[string]Organization
+	endpointToOrganizationIndex map[string][]EndpointOrganization
+	organizationToEndpointIndex map[string][]EndpointOrganization
 }
 
 func New() *MemoryDb {
 	return &MemoryDb{
-		make(map[string]generated.Endpoint),
-		make(map[string]generated.Organization),
-		make(map[string][]generated.EndpointOrganization),
-		make(map[string][]generated.EndpointOrganization),
+		make(map[string]Endpoint),
+		make(map[string]Organization),
+		make(map[string][]EndpointOrganization),
+		make(map[string][]EndpointOrganization),
 	}
 }
 
-func (i *MemoryDb) appendEO(eo generated.EndpointOrganization) error {
+func (i *MemoryDb) appendEO(eo EndpointOrganization) error {
 	ois := eo.Organization.String()
 	eis := eo.Endpoint.String()
 
@@ -62,20 +61,21 @@ func (i *MemoryDb) appendEO(eo generated.EndpointOrganization) error {
 	return nil
 }
 
-func (i *MemoryDb) appendEndpoint(e generated.Endpoint) {
+func (i *MemoryDb) appendEndpoint(e Endpoint) {
 	i.endpointIndex[e.Identifier.String()] = e
 
-	// also create empty slice at this map Db
-	i.endpointToOrganizationIndex[e.Identifier.String()] = []generated.EndpointOrganization{}
+	// also create empty slice at this map R
+	i.endpointToOrganizationIndex[e.Identifier.String()] = []EndpointOrganization{}
 }
 
-func (i *MemoryDb) appendOrganization(o generated.Organization) {
+func (i *MemoryDb) appendOrganization(o Organization) {
 	i.organizationIndex[o.Identifier.String()] = o
 
-	// also create empty slice at this map Db
-	i.organizationToEndpointIndex[o.Identifier.String()] = []generated.EndpointOrganization{}
+	// also create empty slice at this map R
+	i.organizationToEndpointIndex[o.Identifier.String()] = []EndpointOrganization{}
 }
 
+// Load the db files from the configured datadir
 func (db *MemoryDb) Load(location string) error {
 	err := validateLocation(location)
 
@@ -97,7 +97,7 @@ func (db *MemoryDb) Load(location string) error {
 	return err
 }
 
-func (db *MemoryDb) FindEndpointsByOrganization(organizationIdentifier string) ([]generated.Endpoint, error) {
+func (db *MemoryDb) FindEndpointsByOrganization(organizationIdentifier string) ([]Endpoint, error) {
 
 	_, exists := db.organizationIndex[organizationIdentifier]
 
@@ -111,21 +111,21 @@ func (db *MemoryDb) FindEndpointsByOrganization(organizationIdentifier string) (
 	// filter inactive mappings
 	filtered := mappings[:0]
 	for _, x := range mappings {
-		if x.Status == generated.StatusActive {
+		if x.Status == StatusActive {
 			filtered = append(filtered, x)
 		}
 	}
 
 	if len(filtered) == 0 {
-		return []generated.Endpoint{}, nil
+		return []Endpoint{}, nil
 	}
 
 	// map to endpoints
-	var endpoints []generated.Endpoint
+	var endpoints []Endpoint
 	for _, f := range filtered {
 		es := db.endpointIndex[f.Endpoint.String()]
 
-		if es.Status == generated.StatusActive {
+		if es.Status == StatusActive {
 			endpoints = append(endpoints, es)
 		}
 	}
@@ -133,14 +133,14 @@ func (db *MemoryDb) FindEndpointsByOrganization(organizationIdentifier string) (
 	return endpoints, nil
 }
 
-func (db *MemoryDb) SearchOrganizations(query string) []generated.Organization {
+func (db *MemoryDb) SearchOrganizations(query string) []Organization {
 
 	// all organization names to lowercase and to slice
 	// query to slice
 	// compare slices: if both match: pop both, if not pop organization slice
 	// continue until one is empty
 	// if query is empty, match is found
-	var matches []generated.Organization
+	var matches []Organization
 	for _, o := range db.organizationIndex {
 		if searchRecursive(strings.Split(strings.ToLower(query), ""), strings.Split(strings.ToLower(o.Name), "")) {
 			matches = append(matches, o)
@@ -149,7 +149,7 @@ func (db *MemoryDb) SearchOrganizations(query string) []generated.Organization {
 	return matches
 }
 
-func (db *MemoryDb) OrganizationById(id string) (*generated.Organization, error) {
+func (db *MemoryDb) OrganizationById(id string) (*Organization, error) {
 
 	for _, o := range db.organizationIndex {
 		if id == o.Identifier.String() {
@@ -185,7 +185,7 @@ func (db *MemoryDb) loadEndpoints(location string) error {
 		return err
 	}
 
-	var stub []generated.Endpoint
+	var stub []Endpoint
 	err = json.Unmarshal(data, &stub)
 
 	if err != nil {
@@ -196,7 +196,7 @@ func (db *MemoryDb) loadEndpoints(location string) error {
 		db.appendEndpoint(e)
 	}
 
-	glog.V(2).Infof("Added %d Endpoints to db", len(db.endpointIndex))
+	logrus.Infof("Added %d Endpoints to db", len(db.endpointIndex))
 
 	return nil
 }
@@ -209,7 +209,7 @@ func (db *MemoryDb) loadOrganizations(location string) error {
 		return err
 	}
 
-	var stub []generated.Organization
+	var stub []Organization
 	err = json.Unmarshal(data, &stub)
 
 	if err != nil {
@@ -220,7 +220,7 @@ func (db *MemoryDb) loadOrganizations(location string) error {
 		db.appendOrganization(e)
 	}
 
-	glog.V(2).Infof("Added %d Organizations to db", len(db.organizationIndex))
+	logrus.Infof("Added %d Organizations to db", len(db.organizationIndex))
 
 	return nil
 }
@@ -232,7 +232,7 @@ func (db *MemoryDb) loadEndpointsOrganizations(location string) error {
 		return err
 	}
 
-	var stub []generated.EndpointOrganization
+	var stub []EndpointOrganization
 	err = json.Unmarshal(data, &stub)
 
 	if err != nil {
@@ -247,7 +247,7 @@ func (db *MemoryDb) loadEndpointsOrganizations(location string) error {
 		}
 	}
 
-	glog.V(2).Infof("Added %d mappings of endpoint <-> organization to db", len(db.organizationIndex))
+	logrus.Infof("Added %d mappings of endpoint <-> organization to db", len(db.organizationIndex))
 
 	return nil
 }

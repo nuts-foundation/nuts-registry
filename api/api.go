@@ -21,35 +21,42 @@ package api
 import (
 	"github.com/golang/glog"
 	"github.com/labstack/echo/v4"
-	"github.com/nuts-foundation/nuts-registry/db"
-	"github.com/nuts-foundation/nuts-registry/pkg/generated"
+	"github.com/nuts-foundation/nuts-registry/pkg"
 	"net/http"
 	"net/url"
 )
 
-type ApiResource struct {
-	Db db.Db
+// String converts an identifier to string
+func (i Identifier) String() string {
+	return string(i)
 }
 
-func (apiResource ApiResource) OrganizationActors(ctx echo.Context, id string, params generated.OrganizationActorsParams) error {
-	result, err := apiResource.Db.OrganizationById(id)
+// ApiWrapper is needed to connect the implementation to the echo ServiceWrapper
+type ApiWrapper struct {
+	R *pkg.Registry
+}
+
+// OrganizationActors is the Api implementation for finding the actors for a given organization
+func (apiResource ApiWrapper) OrganizationActors(ctx echo.Context, id string, params OrganizationActorsParams) error {
+	result, err := apiResource.R.OrganizationById(id)
 
 	if err != nil {
 		return err
 	}
 
-	actors := []generated.Actor{}
+	actors := []Actor{}
 
 	for _, a := range result.Actors {
 		if params.ActorId == a.Identifier.String() {
-			actors = append(actors, a)
+			actors = append(actors, Actor{}.fromDb(a))
 		}
 	}
 
 	return ctx.JSON(http.StatusOK, actors)
 }
 
-func (apiResource ApiResource) OrganizationById(ctx echo.Context, id string) error {
+// OrganizationById is the Api implementation for getting an organization based on its Id.
+func (apiResource ApiWrapper) OrganizationById(ctx echo.Context, id string) error {
 
 	unescaped, err := url.PathUnescape(id)
 
@@ -57,28 +64,27 @@ func (apiResource ApiResource) OrganizationById(ctx echo.Context, id string) err
 		return err
 	}
 
-	result, err := apiResource.Db.OrganizationById(unescaped)
+	result, err := apiResource.R.OrganizationById(unescaped)
 
 	if err != nil {
 		return err
 	}
 
-	return ctx.JSON(http.StatusOK, result)
+	return ctx.JSON(http.StatusOK, Organization{}.fromDb(*result))
 }
 
-func (apiResource ApiResource) EndpointsByOrganisationId(ctx echo.Context, params generated.EndpointsByOrganisationIdParams) error {
-	var err error
-
-	var dupEndpoints []generated.Endpoint
-	var endpoints []generated.Endpoint
+// EndpointsByOrganisationId is the Api implementation for getting all or certain types of endpoints for an organization
+func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error {
+	var dupEndpoints []Endpoint
+	var endpoints []Endpoint
 	endpointIds := make(map[string]bool)
 	for _, id := range params.OrgIds {
-		endpoints, err = apiResource.Db.FindEndpointsByOrganization(id)
+		dbEndpoints, err := apiResource.R.EndpointsByOrganization(id)
 
 		if err != nil {
 			glog.Warning(err.Error())
 		} else {
-			dupEndpoints = append(dupEndpoints, endpoints...)
+			dupEndpoints = append(endpointsArrayFromDb(dbEndpoints), endpoints...)
 		}
 	}
 
@@ -106,12 +112,22 @@ func (apiResource ApiResource) EndpointsByOrganisationId(ctx echo.Context, param
 	return ctx.JSON(http.StatusOK, uniqFiltered)
 }
 
-func (apiResource ApiResource) SearchOrganizations(ctx echo.Context, params generated.SearchOrganizationsParams) error {
+// SearchOrganizations is the Api implementation for finding organizations by (partial) query
+func (apiResource ApiWrapper) SearchOrganizations(ctx echo.Context, params SearchOrganizationsParams) error {
 
-	result := apiResource.Db.SearchOrganizations(params.Query)
+	searchResult, err := apiResource.R.SearchOrganizations(params.Query)
+
+	if err != nil {
+		return err
+	}
+
+	result := make([]Organization, len(searchResult))
+	for i, o := range searchResult {
+		result[i] = Organization{}.fromDb(o)
+	}
 
 	if result == nil {
-		result = []generated.Organization{}
+		result = []Organization{}
 	}
 
 	return ctx.JSON(http.StatusOK, result)

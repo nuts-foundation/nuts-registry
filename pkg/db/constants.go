@@ -22,7 +22,4 @@ const fileEndpoints = "endpoints.json"
 const fileOrganizations = "organizations.json"
 const fileEndpointsOrganizations = "endpoints_organizations.json"
 
-// ConfDataDir is the config name for specifiying the data location of the requiredFiles
-const ConfDataDir = "data"
-
 var requiredFiles = [3]string{fileEndpoints, fileOrganizations, fileEndpointsOrganizations}

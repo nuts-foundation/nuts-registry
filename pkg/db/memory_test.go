@@ -19,25 +19,24 @@
 package db
 
 import (
-	"github.com/nuts-foundation/nuts-registry/pkg/generated"
 	"testing"
 )
 
-var endpoint = generated.Endpoint{
-	Identifier:   generated.Identifier("urn:nuts:system:value"),
+var endpoint = Endpoint{
+	Identifier:   Identifier("urn:nuts:system:value"),
 	EndpointType: "urn:nuts:endpoint::type",
-	Status:       generated.StatusActive,
+	Status:       StatusActive,
 }
 
-var organization = generated.Organization{
-	Identifier: generated.Identifier("urn:nuts:system:value"),
+var organization = Organization{
+	Identifier: Identifier("urn:nuts:system:value"),
 	Name:       "test",
 }
 
-var mapping = generated.EndpointOrganization{
-	Endpoint:     generated.Identifier("urn:nuts:system:value"),
-	Organization: generated.Identifier("urn:nuts:system:value"),
-	Status:       generated.StatusActive,
+var mapping = EndpointOrganization{
+	Endpoint:     Identifier("urn:nuts:system:value"),
+	Organization: Identifier("urn:nuts:system:value"),
+	Status:       StatusActive,
 }
 
 func TestNew(t *testing.T) {
@@ -63,7 +62,7 @@ func TestNew(t *testing.T) {
 func TestMemoryDb_Load(t *testing.T) {
 	t.Run("Complete valid example", func(t *testing.T) {
 		validDb := New()
-		err := validDb.Load("../test_data/valid_files")
+		err := validDb.Load("../../test_data/valid_files")
 
 		if err != nil {
 			t.Errorf("Expected no error, got: %s", err.Error())
@@ -72,13 +71,13 @@ func TestMemoryDb_Load(t *testing.T) {
 
 	t.Run("Loading from location with missing files gives err", func(t *testing.T) {
 		validDb := New()
-		err := validDb.Load("../test_data/missing_files/")
+		err := validDb.Load("../../test_data/missing_files/")
 
 		if err == nil {
 			t.Errorf("Expected error")
 		}
 
-		expected := "../test_data/missing_files is missing required files: endpoints.json, endpoints_organizations.json"
+		expected := "../../test_data/missing_files is missing required files: endpoints.json, endpoints_organizations.json"
 		if err.Error() != expected {
 			t.Errorf("Expected [%s], got [%s]", expected, err.Error())
 		}
@@ -86,7 +85,7 @@ func TestMemoryDb_Load(t *testing.T) {
 
 	t.Run("Loading from location with invalid endpoints json gives err", func(t *testing.T) {
 		validDb := New()
-		err := validDb.Load("../test_data/invalid_files/invalid_endpoints")
+		err := validDb.Load("../../test_data/invalid_files/invalid_endpoints")
 
 		if err == nil {
 			t.Errorf("Expected error")
@@ -100,7 +99,7 @@ func TestMemoryDb_Load(t *testing.T) {
 
 	t.Run("Loading from location with invalid organization json gives err", func(t *testing.T) {
 		validDb := New()
-		err := validDb.Load("../test_data/invalid_files/invalid_organizations")
+		err := validDb.Load("../../test_data/invalid_files/invalid_organizations")
 
 		if err == nil {
 			t.Errorf("Expected error")
@@ -114,7 +113,7 @@ func TestMemoryDb_Load(t *testing.T) {
 
 	t.Run("Loading from location with missing mappings json gives err", func(t *testing.T) {
 		validDb := New()
-		err := validDb.Load("../test_data/invalid_files/invalid_mappings")
+		err := validDb.Load("../../test_data/invalid_files/invalid_mappings")
 
 		if err == nil {
 			t.Errorf("Expected error")
@@ -150,7 +149,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		validDb := New()
 		validDb.appendOrganization(organization)
 		validDb.appendEndpoint(endpoint)
-		mappingCopy := generated.EndpointOrganization(mapping)
+		mappingCopy := EndpointOrganization(mapping)
 		mappingCopy.Status = "inactive"
 		validDb.appendEO(mappingCopy)
 
@@ -168,7 +167,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 	t.Run("Inactive organizations are not returned", func(t *testing.T) {
 		validDb := New()
 		validDb.appendOrganization(organization)
-		endpointCopy := generated.Endpoint(endpoint)
+		endpointCopy := Endpoint(endpoint)
 		endpointCopy.Status = "inactive"
 		validDb.appendEndpoint(endpointCopy)
 		validDb.appendEO(mapping)

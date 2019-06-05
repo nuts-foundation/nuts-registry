@@ -21,7 +21,7 @@ package db
 import (
 	"bytes"
 	"fmt"
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"sort"
 )
@@ -88,9 +88,10 @@ func validateLocation(location string) error {
 	return nil
 }
 
+// Readfile reads a file relative to datadir
 func ReadFile(location string, file string) ([]byte, error) {
 	finalLocation := fmt.Sprintf("%s/%s", sanitizeLocation(location), file)
-	glog.V(2).Infof("Reading file from %s", finalLocation)
+	logrus.Debugf("Reading file from %s", finalLocation)
 
 	return ioutil.ReadFile(finalLocation)
 }

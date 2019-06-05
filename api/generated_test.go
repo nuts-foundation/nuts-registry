@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package generated
+package api
 
 import (
 	"github.com/labstack/echo/v4"

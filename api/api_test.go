@@ -22,7 +22,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/labstack/echo/v4"
-	"github.com/nuts-foundation/nuts-registry/pkg/generated"
+	"github.com/nuts-foundation/nuts-registry/pkg"
+	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"net/url"
 
 	"net/http"
@@ -43,12 +44,12 @@ func (e *testError) Error() string {
 }
 
 type MockDb struct {
-	endpoints      []generated.Endpoint
-	organizations  []generated.Organization
+	endpoints      []db.Endpoint
+	organizations  []db.Organization
 	endpointsError error
 }
 
-func (db *MockDb) FindEndpointsByOrganization(organizationIdentifier string) ([]generated.Endpoint, error) {
+func (db *MockDb) FindEndpointsByOrganization(organizationIdentifier string) ([]db.Endpoint, error) {
 	if db.endpointsError != nil {
 		return nil, db.endpointsError
 	}
@@ -60,45 +61,45 @@ func (db *MockDb) Load(location string) error {
 	return nil
 }
 
-func (db *MockDb) SearchOrganizations(query string) []generated.Organization {
+func (db *MockDb) SearchOrganizations(query string) []db.Organization {
 	return db.organizations
 }
 
-func (db *MockDb) OrganizationById(id string) (*generated.Organization, error) {
+func (db *MockDb) OrganizationById(id string) (*db.Organization, error) {
 	return &db.organizations[0], nil
 }
 
-var endpoints = []generated.Endpoint{
+var endpoints = []db.Endpoint{
 	{
-		Identifier:   generated.Identifier("urn:nuts:system:value"),
+		Identifier:   db.Identifier("urn:nuts:system:value"),
 		EndpointType: "type#value",
 	},
 }
 
-var organizations = []generated.Organization{
+var organizations = []db.Organization{
 	{
-		Identifier: generated.Identifier("urn:nuts:system:value"),
+		Identifier: db.Identifier("urn:nuts:system:value"),
 		Name:       "test",
-		Actors: []generated.Actor{
+		Actors: []db.Actor{
 			{
-				Identifier: generated.Identifier("urn:nuts:system:value"),
+				Identifier: db.Identifier("urn:nuts:system:value"),
 			},
 		},
 	},
 }
 
-func initEcho(db *MockDb) (*echo.Echo, *generated.ServerInterfaceWrapper) {
+func initEcho(db *MockDb) (*echo.Echo, *ServerInterfaceWrapper) {
 	e := echo.New()
-	stub := ApiResource{Db: db}
-	wrapper := &generated.ServerInterfaceWrapper{
+	stub := ApiWrapper{R: &pkg.Registry{Db: db}}
+	wrapper := &ServerInterfaceWrapper{
 		Handler: stub,
 	}
 
 	return e, wrapper
 }
 
-func deserializeEndpoints(data *bytes.Buffer) ([]generated.Endpoint, error) {
-	var stub []generated.Endpoint
+func deserializeEndpoints(data *bytes.Buffer) ([]Endpoint, error) {
+	var stub []Endpoint
 	err := json.Unmarshal(data.Bytes(), &stub)
 
 	if err != nil {
@@ -108,8 +109,8 @@ func deserializeEndpoints(data *bytes.Buffer) ([]generated.Endpoint, error) {
 	return stub, err
 }
 
-func deserializeOrganizations(data *bytes.Buffer) ([]generated.Organization, error) {
-	var stub []generated.Organization
+func deserializeOrganizations(data *bytes.Buffer) ([]Organization, error) {
+	var stub []Organization
 	err := json.Unmarshal(data.Bytes(), &stub)
 
 	if err != nil {
@@ -119,8 +120,8 @@ func deserializeOrganizations(data *bytes.Buffer) ([]generated.Organization, err
 	return stub, err
 }
 
-func deserializeActors(data *bytes.Buffer) ([]generated.Actor, error) {
-	var stub []generated.Actor
+func deserializeActors(data *bytes.Buffer) ([]Actor, error) {
+	var stub []Actor
 	err := json.Unmarshal(data.Bytes(), &stub)
 
 	if err != nil {
@@ -130,8 +131,8 @@ func deserializeActors(data *bytes.Buffer) ([]generated.Actor, error) {
 	return stub, err
 }
 
-func deserializeOrganization(data *bytes.Buffer) (*generated.Organization, error) {
-	stub := &generated.Organization{}
+func deserializeOrganization(data *bytes.Buffer) (*Organization, error) {
+	stub := &Organization{}
 	err := json.Unmarshal(data.Bytes(), stub)
 
 	if err != nil {
@@ -139,6 +140,15 @@ func deserializeOrganization(data *bytes.Buffer) (*generated.Organization, error
 	}
 
 	return stub, err
+}
+
+
+func TestIdentifier_String(t *testing.T) {
+	i := Identifier("urn:nuts:system:value")
+
+	if i.String() != "urn:nuts:system:value" {
+		t.Errorf("Expected [urn:nuts:system:value], got [%s]", i.String())
+	}
 }
 
 func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
@@ -163,7 +173,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
 		}
 
-		var result []generated.Endpoint
+		var result []Endpoint
 		result, err = deserializeEndpoints(rec.Body)
 
 		if err != nil {
@@ -201,7 +211,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
 		}
 
-		var result []generated.Endpoint
+		var result []Endpoint
 		result, err = deserializeEndpoints(rec.Body)
 
 		if err != nil {
@@ -239,7 +249,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
 		}
 
-		var result []generated.Endpoint
+		var result []Endpoint
 		result, err = deserializeEndpoints(rec.Body)
 
 		if err != nil {
@@ -272,7 +282,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
 		}
 
-		var result []generated.Endpoint
+		var result []Endpoint
 		result, err = deserializeEndpoints(rec.Body)
 
 		if err != nil {
@@ -305,7 +315,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
 		}
 
-		var result []generated.Endpoint
+		var result []Endpoint
 		result, err = deserializeEndpoints(rec.Body)
 
 		if err != nil {
@@ -340,7 +350,7 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
 		}
 
-		var result []generated.Organization
+		var result []Organization
 		result, err = deserializeOrganizations(rec.Body)
 
 		if err != nil {
@@ -377,7 +387,7 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
 		}
 
-		var result []generated.Organization
+		var result []Organization
 		result, err = deserializeOrganizations(rec.Body)
 
 		if err != nil {
