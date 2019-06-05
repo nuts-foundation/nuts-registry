@@ -19,9 +19,9 @@
 package api
 
 import (
-	"github.com/golang/glog"
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
 )
@@ -82,7 +82,7 @@ func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params
 		dbEndpoints, err := apiResource.R.EndpointsByOrganization(id)
 
 		if err != nil {
-			glog.Warning(err.Error())
+			logrus.Warning(err.Error())
 		} else {
 			dupEndpoints = append(endpointsArrayFromDb(dbEndpoints), endpoints...)
 		}
