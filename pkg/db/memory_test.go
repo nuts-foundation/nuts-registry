@@ -69,6 +69,15 @@ func TestMemoryDb_Load(t *testing.T) {
 		}
 	})
 
+	t.Run("from invalid location does not give error", func(t *testing.T) {
+		validDb := New()
+		err := validDb.Load("non-existing")
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %s", err.Error())
+		}
+	})
+
 	t.Run("Loading from location with missing files gives err", func(t *testing.T) {
 		validDb := New()
 		err := validDb.Load("../../test_data/missing_files/")

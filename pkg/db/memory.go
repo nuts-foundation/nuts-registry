@@ -80,6 +80,10 @@ func (db *MemoryDb) Load(location string) error {
 	err := validateLocation(location)
 
 	if err != nil {
+		if err.Error() == fmt.Sprintf("open %s: no such file or directory", location) {
+			logrus.Warnf("No database files found at %s, starting with empty registry", location)
+			return nil
+		}
 		return err
 	}
 
