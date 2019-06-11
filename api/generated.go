@@ -8,10 +8,12 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/labstack/echo/v4"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -43,6 +45,7 @@ type Identifier string
 // Organization defines component schema for Organization.
 type Organization struct {
 	Actors     []Actor    `json:"actors,omitempty"`
+	Endpoints  []Endpoint `json:"endpoints,omitempty"`
 	Identifier Identifier `json:"identifier"`
 	Name       string     `json:"name"`
 	PublicKey  *string    `json:"publicKey,omitempty"`
@@ -59,6 +62,16 @@ type Client struct {
 // EndpointsByOrganisationId request
 func (c *Client) EndpointsByOrganisationId(ctx context.Context, params *EndpointsByOrganisationIdParams) (*http.Response, error) {
 	req, err := NewEndpointsByOrganisationIdRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	return c.Client.Do(req)
+}
+
+// DeregisterOrganization request
+func (c *Client) DeregisterOrganization(ctx context.Context, id string) (*http.Response, error) {
+	req, err := NewDeregisterOrganizationRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +102,16 @@ func (c *Client) OrganizationActors(ctx context.Context, id string, params *Orga
 // SearchOrganizations request
 func (c *Client) SearchOrganizations(ctx context.Context, params *SearchOrganizationsParams) (*http.Response, error) {
 	req, err := NewSearchOrganizationsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	return c.Client.Do(req)
+}
+
+// RegisterOrganization request with JSON body
+func (c *Client) RegisterOrganization(ctx context.Context, body Organization) (*http.Response, error) {
+	req, err := NewRegisterOrganizationRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -129,6 +152,27 @@ func NewEndpointsByOrganisationIdRequest(server string, params *EndpointsByOrgan
 	}
 
 	req, err := http.NewRequest("GET", queryURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDeregisterOrganizationRequest generates requests for DeregisterOrganization
+func NewDeregisterOrganizationRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "id", id)
+	if err != nil {
+		return nil, err
+	}
+
+	queryURL := fmt.Sprintf("%s/api/organization/%s", server, pathParam0)
+
+	req, err := http.NewRequest("DELETE", queryURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -222,6 +266,34 @@ func NewSearchOrganizationsRequest(server string, params *SearchOrganizationsPar
 	return req, nil
 }
 
+// NewRegisterOrganizationRequest generates requests for RegisterOrganization with JSON body
+func NewRegisterOrganizationRequest(server string, body Organization) (*http.Request, error) {
+	var bodyReader io.Reader
+
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+
+	return NewRegisterOrganizationRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewRegisterOrganizationRequestWithBody generates requests for RegisterOrganization with non-JSON body
+func NewRegisterOrganizationRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	queryURL := fmt.Sprintf("%s/api/organizations", server)
+
+	req, err := http.NewRequest("POST", queryURL, body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+	return req, nil
+}
+
 // EndpointsByOrganisationIdParams defines parameters for EndpointsByOrganisationId.
 type EndpointsByOrganisationIdParams struct {
 	OrgIds []string `json:"orgIds"`
@@ -242,12 +314,16 @@ type SearchOrganizationsParams struct {
 type ServerInterface interface {
 	// Find endpoints based on organisation identifiers and type of endpoint (optional) (GET /api/endpoints)
 	EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error
-	// Get organization bij id (GET /api/organization/{id})
+	// Remove organization by id (DELETE /api/organization/{id})
+	DeregisterOrganization(ctx echo.Context, id string) error
+	// Get organization by id (GET /api/organization/{id})
 	OrganizationById(ctx echo.Context, id string) error
 	// get actors for given organization, the main question that is answered by this api: may the professional represent the organization? (GET /api/organization/{id}/actors)
 	OrganizationActors(ctx echo.Context, id string, params OrganizationActorsParams) error
 	// Search for organizations (GET /api/organizations)
 	SearchOrganizations(ctx echo.Context, params SearchOrganizationsParams) error
+	// Add an organization to the registry (POST /api/organizations)
+	RegisterOrganization(ctx echo.Context) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -286,6 +362,22 @@ func (w *ServerInterfaceWrapper) EndpointsByOrganisationId(ctx echo.Context) err
 
 	// Invoke the callback with all the unmarshalled arguments
 	err = w.Handler.EndpointsByOrganisationId(ctx, params)
+	return err
+}
+
+// DeregisterOrganization converts echo context to params.
+func (w *ServerInterfaceWrapper) DeregisterOrganization(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameter("simple", false, "id", ctx.Param("id"), &id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.DeregisterOrganization(ctx, id)
 	return err
 }
 
@@ -360,6 +452,15 @@ func (w *ServerInterfaceWrapper) SearchOrganizations(ctx echo.Context) error {
 	return err
 }
 
+// RegisterOrganization converts echo context to params.
+func (w *ServerInterfaceWrapper) RegisterOrganization(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.RegisterOrganization(ctx)
+	return err
+}
+
 // RegisterHandlers adds each server route to the EchoRouter.
 func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
 
@@ -368,41 +469,45 @@ func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
 	}
 
 	router.GET("/api/endpoints", wrapper.EndpointsByOrganisationId)
+	router.DELETE("/api/organization/:id", wrapper.DeregisterOrganization)
 	router.GET("/api/organization/:id", wrapper.OrganizationById)
 	router.GET("/api/organization/:id/actors", wrapper.OrganizationActors)
 	router.GET("/api/organizations", wrapper.SearchOrganizations)
+	router.POST("/api/organizations", wrapper.RegisterOrganization)
 
 }
 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"d7Jpufw7AAD//95tWrT+FAAA",
+	"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",
 }
 
 // GetSwagger returns the Swagger specification corresponding to the generated code

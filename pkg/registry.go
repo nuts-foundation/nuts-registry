@@ -23,6 +23,12 @@ type RegistryClient interface {
 
 	// OrganizationById returns an Organization given the Id or an error if it doesn't exist
 	OrganizationById(id string) (*db.Organization, error)
+
+	// RemoveOrganization removes the organization identified by id from the registry or returns an error if the organization does not exist
+	RemoveOrganization(id string) error
+
+	// RegisterOrganization adds the organization identified by id to the registry or returns an error if the organization already exists
+	RegisterOrganization(db.Organization) error
 }
 
 // Registry holds the config and Db reference
@@ -75,5 +81,15 @@ func (r *Registry) SearchOrganizations(query string) ([]db.Organization, error) 
 // OrganizationById is a wrapper for sam func on DB
 func (r *Registry) OrganizationById(id string) (*db.Organization, error) {
 	return r.Db.OrganizationById(id)
+}
+
+// RemoveOrganization is a wrapper for sam func on DB
+func (r *Registry) RemoveOrganization(id string) error {
+	return r.Db.RemoveOrganization(id)
+}
+
+// RegisterOrganization is a wrapper for sam func on DB
+func (r *Registry) RegisterOrganization(org db.Organization) error {
+	return r.Db.RegisterOrganization(org)
 }
 

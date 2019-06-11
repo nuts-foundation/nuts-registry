@@ -57,6 +57,14 @@ func (db *MockDb) FindEndpointsByOrganization(organizationIdentifier string) ([]
 	return db.endpoints, nil
 }
 
+func (db *MockDb) RemoveOrganization(id string) error {
+	return nil
+}
+
+func (db *MockDb) RegisterOrganization(org db.Organization) error {
+	return nil
+}
+
 func (db *MockDb) Load(location string) error {
 	return nil
 }

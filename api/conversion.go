@@ -21,6 +21,7 @@ func (o Organization) fromDb(db db.Organization) Organization {
 	o.Identifier = Identifier(db.Identifier)
 	o.Name = db.Name
 	o.PublicKey = db.PublicKey
+	o.Endpoints = endpointsArrayFromDb(db.Endpoints)
 	return o
 }
 
@@ -43,6 +44,7 @@ func (a Organization) toDb() db.Organization {
 		Identifier: db.Identifier(a.Identifier),
 		Name: a.Name,
 		PublicKey: a.PublicKey,
+		Endpoints: endpointsArrayToDb(a.Endpoints),
 	}
 }
 

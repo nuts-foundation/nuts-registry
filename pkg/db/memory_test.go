@@ -139,8 +139,8 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 
 	t.Run("Valid example", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(organization)
-		validDb.appendEndpoint(endpoint)
+		validDb.appendOrganization(&organization)
+		validDb.appendEndpoint(&endpoint)
 		validDb.appendEO(mapping)
 
 		result, err := validDb.FindEndpointsByOrganization("urn:nuts:system:value")
@@ -156,8 +156,8 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 
 	t.Run("Inactive mappings are not returned", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(organization)
-		validDb.appendEndpoint(endpoint)
+		validDb.appendOrganization(&organization)
+		validDb.appendEndpoint(&endpoint)
 		mappingCopy := EndpointOrganization(mapping)
 		mappingCopy.Status = "inactive"
 		validDb.appendEO(mappingCopy)
@@ -175,10 +175,10 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 
 	t.Run("Inactive organizations are not returned", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(organization)
+		validDb.appendOrganization(&organization)
 		endpointCopy := Endpoint(endpoint)
 		endpointCopy.Status = "inactive"
-		validDb.appendEndpoint(endpointCopy)
+		validDb.appendEndpoint(&endpointCopy)
 		validDb.appendEO(mapping)
 
 		result, err := validDb.FindEndpointsByOrganization("urn:nuts:system:value")
@@ -196,7 +196,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 func TestMemoryDb_appendEO(t *testing.T) {
 	t.Run("Appending mappings for unknown endpoint gives err", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(organization)
+		validDb.appendOrganization(&organization)
 		validDb.appendEO(mapping)
 
 		err := validDb.appendEO(mapping)
@@ -213,7 +213,7 @@ func TestMemoryDb_appendEO(t *testing.T) {
 
 	t.Run("Appending mappings for unknown organization gives err", func(t *testing.T) {
 		validDb := New()
-		validDb.appendEndpoint(endpoint)
+		validDb.appendEndpoint(&endpoint)
 		validDb.appendEO(mapping)
 
 		err := validDb.appendEO(mapping)
@@ -231,8 +231,8 @@ func TestMemoryDb_appendEO(t *testing.T) {
 
 func TestMemoryDb_FindEndpointsByOrganizationNoMapping(t *testing.T) {
 	validDb := New()
-	validDb.appendOrganization(organization)
-	validDb.appendEndpoint(endpoint)
+	validDb.appendOrganization(&organization)
+	validDb.appendEndpoint(&endpoint)
 
 	result, err := validDb.FindEndpointsByOrganization("urn:nuts:system:value")
 
@@ -263,7 +263,7 @@ func TestMemoryDb_FindEndpointsByOrganizationUnknown(t *testing.T) {
 func TestMemoryDb_SearchOrganizations(t *testing.T) {
 	t.Run("complete valid example", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(organization)
+		validDb.appendOrganization(&organization)
 
 		result := validDb.SearchOrganizations("test")
 
@@ -274,7 +274,7 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 
 	t.Run("partial match returns organization", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(organization)
+		validDb.appendOrganization(&organization)
 
 		result := validDb.SearchOrganizations("ts")
 
@@ -285,7 +285,7 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 
 	t.Run("searching for unknown organization returns empty list", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(organization)
+		validDb.appendOrganization(&organization)
 
 		result := validDb.SearchOrganizations("tset")
 
@@ -298,7 +298,7 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 func TestMemoryDb_OrganizationById(t *testing.T) {
 	t.Run("organization is found", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(organization)
+		validDb.appendOrganization(&organization)
 
 		result, err := validDb.OrganizationById("urn:nuts:system:value")
 
@@ -313,7 +313,7 @@ func TestMemoryDb_OrganizationById(t *testing.T) {
 
 	t.Run("organization is not found", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(organization)
+		validDb.appendOrganization(&organization)
 
 		_, err := validDb.OrganizationById("test")
 

@@ -19,9 +19,11 @@
 package api
 
 import (
+	"encoding/json"
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/sirupsen/logrus"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 )
@@ -34,6 +36,58 @@ func (i Identifier) String() string {
 // ApiWrapper is needed to connect the implementation to the echo ServiceWrapper
 type ApiWrapper struct {
 	R *pkg.Registry
+}
+
+// DeregisterOrganization is the api implementation of removing an organization from the registry
+func (apiResource ApiWrapper) DeregisterOrganization(ctx echo.Context, id string) error {
+	result, err := apiResource.R.OrganizationById(id)
+
+	if result == nil {
+		return ctx.NoContent(http.StatusNotFound)
+	}
+
+	err = apiResource.R.RemoveOrganization(id)
+
+	if err != nil {
+		return err
+	}
+
+	return ctx.NoContent(http.StatusAccepted)
+}
+
+// RegisterOrganization is the api implementation for adding a new organization to the registry
+func (apiResource ApiWrapper) RegisterOrganization(ctx echo.Context) error {
+	bytes, err := ioutil.ReadAll(ctx.Request().Body)
+
+	if err != nil {
+		return err
+	}
+
+	org := Organization{}
+
+	err = json.Unmarshal(bytes, &org)
+
+	if err != nil {
+		return ctx.String(http.StatusBadRequest, err.Error())
+	}
+
+	if len(org.Identifier) == 0 {
+		return ctx.String(http.StatusBadRequest, "missing identifier on organization")
+	}
+
+	result, err := apiResource.R.OrganizationById(string(org.Identifier))
+
+	if result != nil {
+		return ctx.String(http.StatusBadRequest, "duplicate organization for identifier")
+	}
+
+	err = apiResource.R.RegisterOrganization(org.toDb())
+
+	if result != nil {
+		return ctx.String(http.StatusBadRequest, err.Error())
+	}
+
+	return ctx.NoContent(http.StatusCreated)
 }
 
 // OrganizationActors is the Api implementation for finding the actors for a given organization

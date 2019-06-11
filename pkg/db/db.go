@@ -56,14 +56,17 @@ type Organization struct {
 	Identifier Identifier `json:"identifier"`
 	Name       string     `json:"name"`
 	PublicKey  *string    `json:"publicKey,omitempty"`
+	Endpoints  []Endpoint
 }
 
-// Db temporary abstraction
+// todo: Db temporary abstraction
 type Db interface {
 	FindEndpointsByOrganization(organizationIdentifier string) ([]Endpoint, error)
 	Load(location string) error
 	SearchOrganizations(query string) []Organization
 	OrganizationById(id string) (*Organization, error)
+	RemoveOrganization(id string) error
+	RegisterOrganization(org Organization) error
 }
 
 type dbError struct {

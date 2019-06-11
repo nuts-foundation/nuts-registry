@@ -28,6 +28,18 @@ import (
 
 type RestInterfaceStub struct{}
 
+func (e RestInterfaceStub) DeregisterOrganization(ctx echo.Context, id string) error {
+	var err error
+
+	return err
+}
+
+func (e RestInterfaceStub) RegisterOrganization(ctx echo.Context) error {
+	var err error
+
+	return err
+}
+
 func (e RestInterfaceStub) OrganizationActors(ctx echo.Context, id string, params OrganizationActorsParams) error {
 	var err error
 
@@ -51,6 +63,7 @@ func (e RestInterfaceStub) OrganizationById(ctx echo.Context, id string) error {
 
 	return err
 }
+
 
 
 

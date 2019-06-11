@@ -26,20 +26,67 @@ import (
 )
 
 type MemoryDb struct {
-	endpointIndex               map[string]Endpoint
-	organizationIndex           map[string]Organization
+	endpointIndex               map[string]*Endpoint
+	organizationIndex           map[string]*Organization
 	endpointToOrganizationIndex map[string][]EndpointOrganization
 	organizationToEndpointIndex map[string][]EndpointOrganization
 }
 
+func (db *MemoryDb) RegisterOrganization(org Organization) error {
+	o := db.organizationIndex[string(org.Identifier)]
+
+	if o != nil {
+		return newDbError(fmt.Sprintf("Duplicate organization for id %s", org.Identifier))
+	}
+
+	db.appendOrganization(&org)
+
+	for _, e := range org.Endpoints {
+		db.appendEndpoint(&e)
+		err := db.appendEO(
+			EndpointOrganization{
+				Status:StatusActive,
+				Organization:org.Identifier,
+				Endpoint:e.Identifier,
+			})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (db *MemoryDb) RemoveOrganization(id string) error {
+	o := db.organizationIndex[id]
+	eos := db.organizationToEndpointIndex[id]
+
+	if o == nil {
+		return newDbError(fmt.Sprintf("Unknown organization with id %s", id))
+	}
+
+	for _, v := range eos {
+		delete(db.endpointIndex, string(v.Endpoint))
+		delete(db.endpointToOrganizationIndex, string(v.Endpoint))
+	}
+
+	delete(db.organizationToEndpointIndex, id)
+	delete(db.organizationIndex, id)
+
+	return nil
+}
+
 func New() *MemoryDb {
 	return &MemoryDb{
-		make(map[string]Endpoint),
-		make(map[string]Organization),
+		make(map[string]*Endpoint),
+		make(map[string]*Organization),
 		make(map[string][]EndpointOrganization),
 		make(map[string][]EndpointOrganization),
 	}
 }
+
+
 
 func (i *MemoryDb) appendEO(eo EndpointOrganization) error {
 	ois := eo.Organization.String()
@@ -61,14 +108,14 @@ func (i *MemoryDb) appendEO(eo EndpointOrganization) error {
 	return nil
 }
 
-func (i *MemoryDb) appendEndpoint(e Endpoint) {
+func (i *MemoryDb) appendEndpoint(e *Endpoint) {
 	i.endpointIndex[e.Identifier.String()] = e
 
 	// also create empty slice at this map R
 	i.endpointToOrganizationIndex[e.Identifier.String()] = []EndpointOrganization{}
 }
 
-func (i *MemoryDb) appendOrganization(o Organization) {
+func (i *MemoryDb) appendOrganization(o *Organization) {
 	i.organizationIndex[o.Identifier.String()] = o
 
 	// also create empty slice at this map R
@@ -130,7 +177,7 @@ func (db *MemoryDb) FindEndpointsByOrganization(organizationIdentifier string) (
 		es := db.endpointIndex[f.Endpoint.String()]
 
 		if es.Status == StatusActive {
-			endpoints = append(endpoints, es)
+			endpoints = append(endpoints, *es)
 		}
 	}
 
@@ -147,7 +194,7 @@ func (db *MemoryDb) SearchOrganizations(query string) []Organization {
 	var matches []Organization
 	for _, o := range db.organizationIndex {
 		if searchRecursive(strings.Split(strings.ToLower(query), ""), strings.Split(strings.ToLower(o.Name), "")) {
-			matches = append(matches, o)
+			matches = append(matches, *o)
 		}
 	}
 	return matches
@@ -157,7 +204,7 @@ func (db *MemoryDb) OrganizationById(id string) (*Organization, error) {
 
 	for _, o := range db.organizationIndex {
 		if id == o.Identifier.String() {
-			return &o, nil
+			return o, nil
 		}
 	}
 	return nil, newDbError("organization not found")
@@ -197,7 +244,7 @@ func (db *MemoryDb) loadEndpoints(location string) error {
 	}
 
 	for _, e := range stub {
-		db.appendEndpoint(e)
+		db.appendEndpoint(&e)
 	}
 
 	logrus.Infof("Added %d Endpoints to db", len(db.endpointIndex))
@@ -221,7 +268,7 @@ func (db *MemoryDb) loadOrganizations(location string) error {
 	}
 
 	for _, e := range stub {
-		db.appendOrganization(e)
+		db.appendOrganization(&e)
 	}
 
 	logrus.Infof("Added %d Organizations to db", len(db.organizationIndex))

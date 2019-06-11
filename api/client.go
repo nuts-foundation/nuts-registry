@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/sirupsen/logrus"
+	"go/types"
 	"io/ioutil"
+	"net/http"
 	"strconv"
 	"time"
 )
@@ -21,6 +23,46 @@ func (hb HttpClient) client() *Client {
 	return &Client{
 		Server: fmt.Sprintf("http://%v", hb.ServerAddress),
 	}
+}
+
+// RemoveOrganization removes an organization and its endpoints from the registry
+func (hb HttpClient) RemoveOrganization(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
+	defer cancel()
+
+	result, err := hb.client().DeregisterOrganization(ctx, id)
+	if err != nil {
+		logrus.Error("error while removing organization from registry", err)
+		return err
+	}
+
+	if result.StatusCode != http.StatusAccepted {
+		err := types.Error{Msg: fmt.Sprintf("Non 202 status: [%d] while removing organization from registry\n", result.StatusCode)}
+		logrus.Errorf(err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// RegisterOrganization adds an organization to the registry
+func (hb HttpClient) RegisterOrganization(org db.Organization) error {
+	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
+	defer cancel()
+
+	result, err := hb.client().RegisterOrganization(ctx, Organization{}.fromDb(org))
+	if err != nil {
+		logrus.Error("error while registering organization in registry", err)
+		return err
+	}
+
+	if result.StatusCode != http.StatusCreated {
+		err := types.Error{Msg: fmt.Sprintf("Non 201 status: [%d] while registering organization in registry\n", result.StatusCode)}
+		logrus.Errorf(err.Error())
+		return err
+	}
+
+	return nil
 }
 
 // EndpointsByOrganization is the client Api implementation for getting all or certain types of endpoints for an organization
