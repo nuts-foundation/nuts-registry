@@ -74,7 +74,11 @@ func (db *MockDb) SearchOrganizations(query string) []db.Organization {
 }
 
 func (db *MockDb) OrganizationById(id string) (*db.Organization, error) {
-	return &db.organizations[0], nil
+	if len(db.organizations) > 0 {
+		return &db.organizations[0], nil
+	}
+
+	return nil, nil
 }
 
 var endpoints = []db.Endpoint{
@@ -157,6 +161,50 @@ func TestIdentifier_String(t *testing.T) {
 	if i.String() != "urn:nuts:system:value" {
 		t.Errorf("Expected [urn:nuts:system:value], got [%s]", i.String())
 	}
+}
+
+func TestApiWrapper_RegisterOrganization(t *testing.T) {
+	t.Run("201", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{})
+
+		b, _ := json.Marshal(Organization{}.fromDb(organizations[0]))
+
+		req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organizations")
+
+		err := wrapper.RegisterOrganization(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusCreated {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusCreated)
+		}
+	})
+
+	t.Run("400", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{organizations:organizations})
+
+		b, _ := json.Marshal(Organization{}.fromDb(organizations[0]))
+
+		req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organizations")
+
+		err := wrapper.RegisterOrganization(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
+		}
+	})
 }
 
 func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
@@ -441,6 +489,50 @@ func TestApiResource_OrganizationById(t *testing.T) {
 
 		if result.Name != "test" {
 			t.Errorf("Got result with Name: [%s], want [test]", result.Name)
+		}
+	})
+}
+
+func TestApiResource_DeregisterOrganization(t *testing.T) {
+	t.Run("202", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{organizations: organizations})
+
+		req := httptest.NewRequest(echo.DELETE, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organization/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("https%3A//system%23value")
+
+		err := wrapper.DeregisterOrganization(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusAccepted {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusAccepted)
+		}
+	})
+
+	t.Run("404", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{})
+
+		req := httptest.NewRequest(echo.DELETE, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organization/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("https%3A//system%23value")
+
+		err := wrapper.DeregisterOrganization(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusNotFound)
 		}
 	})
 }
