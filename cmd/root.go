@@ -29,7 +29,7 @@ var rootCmd = e.Cmd
 func Execute() {
 	c := cfg.NewNutsGlobalConfig()
 	c.IgnoredPrefixes = append(c.IgnoredPrefixes, e.ConfigKey)
-	c.RegisterFlags(e)
+	c.RegisterFlags(rootCmd, e)
 	if err := c.Load(rootCmd); err != nil {
 		panic(err)
 	}
