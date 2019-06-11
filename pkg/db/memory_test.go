@@ -135,6 +135,74 @@ func TestMemoryDb_Load(t *testing.T) {
 	})
 }
 
+func TestMemoryDb_RegisterOrganization(t *testing.T) {
+
+	t.Run("Valid example", func(t *testing.T) {
+		validDb := New()
+
+		err := validDb.RegisterOrganization(organization)
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %s", err.Error())
+		}
+
+		if len(validDb.organizationIndex) != 1 {
+			t.Errorf("Expected 1 entry in db, got: %d", len(validDb.organizationIndex))
+		}
+	})
+
+	t.Run("duplicate entry", func(t *testing.T) {
+		validDb := New()
+
+		validDb.RegisterOrganization(organization)
+		err := validDb.RegisterOrganization(organization)
+
+		if err == nil {
+			t.Errorf("Expected error, got nothing")
+			return
+		}
+
+		expected := "Duplicate organization for id urn:nuts:system:value"
+		if err.Error() != expected {
+			t.Errorf("Expected error [%s], got: [%s]", expected, err.Error())
+		}
+	})
+}
+
+func TestMemoryDb_RemoveOrganization(t *testing.T) {
+
+	t.Run("Valid example", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(&organization)
+
+		err := validDb.RemoveOrganization(string(organization.Identifier))
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %s", err.Error())
+		}
+
+		if len(validDb.organizationIndex) != 0 {
+			t.Errorf("Expected 0 entry in db, got: %d", len(validDb.organizationIndex))
+		}
+	})
+
+	t.Run("unknown entry", func(t *testing.T) {
+		validDb := New()
+
+		err := validDb.RemoveOrganization(string(organization.Identifier))
+
+		if err == nil {
+			t.Errorf("Expected error, got nothing")
+			return
+		}
+
+		expected := "Unknown organization with id urn:nuts:system:value"
+		if err.Error() != expected {
+			t.Errorf("Expected error [%s], got: [%s]", expected, err.Error())
+		}
+	})
+}
+
 func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 
 	t.Run("Valid example", func(t *testing.T) {
