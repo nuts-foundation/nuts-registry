@@ -17,9 +17,17 @@ import (
 type HttpClient struct {
 	ServerAddress string
 	Timeout       time.Duration
+	customClient  *http.Client
 }
 
 func (hb HttpClient) client() *Client {
+	if hb.customClient != nil {
+		return &Client{
+			Server: fmt.Sprintf("http://%v", hb.ServerAddress),
+			Client: *hb.customClient,
+		}
+	}
+
 	return &Client{
 		Server: fmt.Sprintf("http://%v", hb.ServerAddress),
 	}
@@ -36,10 +44,16 @@ func (hb HttpClient) RemoveOrganization(id string) error {
 		return err
 	}
 
-	if result.StatusCode != http.StatusAccepted {
-		err := types.Error{Msg: fmt.Sprintf("Non 202 status: [%d] while removing organization from registry\n", result.StatusCode)}
-		logrus.Errorf(err.Error())
+	body, err := ioutil.ReadAll(result.Body)
+	if err != nil {
+		logrus.Error("error while reading response body", err)
 		return err
+	}
+
+	if result.StatusCode != http.StatusAccepted {
+		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", result.StatusCode, body)}
+		logrus.Error(err.Error())
+		return  err
 	}
 
 	return nil
@@ -56,10 +70,16 @@ func (hb HttpClient) RegisterOrganization(org db.Organization) error {
 		return err
 	}
 
-	if result.StatusCode != http.StatusCreated {
-		err := types.Error{Msg: fmt.Sprintf("Non 201 status: [%d] while registering organization in registry\n", result.StatusCode)}
-		logrus.Errorf(err.Error())
+	body, err := ioutil.ReadAll(result.Body)
+	if err != nil {
+		logrus.Error("error while reading response body", err)
 		return err
+	}
+
+	if result.StatusCode != http.StatusCreated {
+		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", result.StatusCode, body)}
+		logrus.Error(err.Error())
+		return  err
 	}
 
 	return nil
@@ -146,6 +166,12 @@ func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, err
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", res.StatusCode, body)}
+		logrus.Error(err.Error())
 		return nil, err
 	}
 
