@@ -77,3 +77,31 @@ func (mr *MockRegistryClientMockRecorder) OrganizationById(id interface{}) *gomo
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OrganizationById", reflect.TypeOf((*MockRegistryClient)(nil).OrganizationById), id)
 }
+
+// RemoveOrganization mocks base method
+func (m *MockRegistryClient) RemoveOrganization(id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveOrganization", id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveOrganization indicates an expected call of RemoveOrganization
+func (mr *MockRegistryClientMockRecorder) RemoveOrganization(id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveOrganization", reflect.TypeOf((*MockRegistryClient)(nil).RemoveOrganization), id)
+}
+
+// RegisterOrganization mocks base method
+func (m *MockRegistryClient) RegisterOrganization(arg0 db.Organization) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RegisterOrganization", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RegisterOrganization indicates an expected call of RegisterOrganization
+func (mr *MockRegistryClientMockRecorder) RegisterOrganization(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterOrganization", reflect.TypeOf((*MockRegistryClient)(nil).RegisterOrganization), arg0)
+}
