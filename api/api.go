@@ -20,6 +20,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/sirupsen/logrus"
@@ -120,7 +121,7 @@ func (apiResource ApiWrapper) OrganizationById(ctx echo.Context, id string) erro
 
 	result, err := apiResource.R.OrganizationById(unescaped)
 	if result == nil {
-		return ctx.JSON(http.StatusNotFound, "Could not find organization")
+		return ctx.JSON(http.StatusNotFound, fmt.Sprintf("Could not find organization with id %v", unescaped))
 	}
 
 	return ctx.JSON(http.StatusOK, Organization{}.fromDb(*result))
