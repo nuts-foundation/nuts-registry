@@ -119,9 +119,8 @@ func (apiResource ApiWrapper) OrganizationById(ctx echo.Context, id string) erro
 	}
 
 	result, err := apiResource.R.OrganizationById(unescaped)
-
-	if err != nil {
-		return err
+	if result == nil {
+		return ctx.JSON(http.StatusNotFound, "Could not find organization")
 	}
 
 	return ctx.JSON(http.StatusOK, Organization{}.fromDb(*result))

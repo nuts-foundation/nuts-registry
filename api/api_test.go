@@ -457,6 +457,26 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 }
 
 func TestApiResource_OrganizationById(t *testing.T) {
+	t.Run("404 when not found", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{organizations: []db.Organization{}})
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organization/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("https%3A//system%23value")
+
+		err := wrapper.OrganizationById(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		}
+	})
 	t.Run("200", func(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{organizations: organizations})
 
