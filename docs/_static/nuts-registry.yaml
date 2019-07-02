@@ -1,0 +1,261 @@
+openapi: "3.0.0"
+info:
+  title: Nuts registry API spec
+  description: API specification for RPC services available at the nuts-registry
+  version: 0.1.0
+  license:
+    name: GPLv3
+paths:
+  /api/organization/{id}/actors:
+    get:
+      summary: "get actors for given organization, the main question that is answered by this api: may the professional represent the organization?"
+      operationId: organizationActors
+      tags:
+        - organizations
+      parameters:
+        - name: id
+          in: path
+          description: "URL encoded Identifier"
+          required: true
+          example: "urn:oid:2.16.840.1.113883.2.4.6.1:00000007"
+          schema:
+            type: string
+        - name: actorId
+          in: query
+          description: "URL encoded Actor identifier"
+          required: true
+          example: "urn:oid:2.16.840.1.113883.2.4.6.1:00000007"
+          schema:
+            type:
+              string
+      responses:
+        '200':
+          description: "Matching records for given identifiers, if no current employment or mandate is present an empty list is returned"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Identifier"
+        '400':
+          description: "Invalid request, when required query params are missing"
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Missing parameter actorId"
+  /api/organization/{id}:
+    get:
+      summary: "Get organization by id"
+      operationId: organizationById
+      tags:
+        - organizations
+      parameters:
+        - name: id
+          in: path
+          description: "URL encoded identifier"
+          required: true
+          example: "urn:oid:2.16.840.1.113883.2.4.6.1:00000007"
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK response with list of valid organizations, list may be empty
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '404':
+          description: Unknown organization
+          content:
+            text/plain:
+              schema:
+                type: string
+    delete:
+      summary: "Remove organization by id"
+      operationId: deregisterOrganization
+      tags:
+        - organizations
+      parameters:
+        - name: id
+          in: path
+          description: "URL encoded identifier"
+          required: true
+          example: "urn:oid:2.16.840.1.113883.2.4.6.1:00000007"
+          schema:
+            type: string
+      responses:
+        '202':
+          description: "OK response"
+        '404':
+          description: "Unknown organization"
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/organizations:
+    get:
+      summary: "Search for organizations"
+      operationId: searchOrganizations
+      tags:
+        - organizations
+      parameters:
+        - name: query
+          in: query
+          description: Search string
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK response with list of valid organizations, list may be empty
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Organization'
+        '400':
+          description: incorrect search query
+          content:
+            text/plain:
+              example: No search query given
+              schema:
+                type: string
+    post:
+      summary: "Add an organization to the registry"
+      operationId: "registerOrganization"
+      tags:
+        - organizations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Organization'
+      responses:
+        '201':
+          description: "Organization has been created successfully"
+        '400':
+          description: "incorrect data"
+          content:
+            text/plain:
+              example:
+                "Organization with identifier 00000007 already registered"
+  /api/endpoints:
+    get:
+      summary: Find endpoints based on organisation identifiers and type of endpoint (optional)
+      operationId: endpointsByOrganisationId
+      tags:
+        - endpoints
+      parameters:
+        - name: orgIds
+          in: query
+          description: A list of organisation identifiers to query for. identifiers are Nuts Identifiers with proper escaping
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+              description: URL encoded Identifiers
+        - name: type
+          in: query
+          description: The type of endpoint requested, eg Nuts or FHIR
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK response with list of valid endpoints, list may be empty
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Endpoint'
+        '400':
+          description: incorrect search query
+          content:
+            text/plain:
+              example: No organisation identifiers given
+              schema:
+                type: string
+components:
+  schemas:
+    Actor:
+      description: "A person that acts on behalf of an organization"
+      required:
+        - identifier
+      properties:
+        identifier:
+          $ref: "#/components/schemas/Identifier"
+      example:
+        identifier: "urn:oid:2.16.840.1.113883.2.4.6.1:00000007"
+    EndpointOrganization:
+      description: "Mapping between Endpoints and Organizations"
+      required:
+        - endpoint
+        - organization
+        - status
+      properties:
+        endpoint:
+          $ref: "#/components/schemas/Identifier"
+        organization:
+          $ref: "#/components/schemas/Identifier"
+        status:
+          type: string
+          enum: ["active", "disabled"]
+          description: status of the endpoint
+    Organization:
+      required:
+        - name
+        - identifier
+      properties:
+        name:
+          type: string
+          description: the well-known name for the organization
+          example: Zorggroep Nuts
+        identifier:
+          $ref: "#/components/schemas/Identifier"
+        actors:
+          type: array
+          items:
+            $ref: "#/components/schemas/Actor"
+        endpoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/Endpoint"
+        publicKey:
+          type: string
+          description: "PEM encoded public key"
+    Endpoint:
+      required:
+        - endpointType
+        - identifier
+        - status
+        - version
+        - URL
+      properties:
+        endpointType:
+          type: string
+          description: URI of the type of endpoint
+          example: "urn:nuts:endpoint:consent"
+        identifier:
+          $ref: "#/components/schemas/Identifier"
+        status:
+          type: string
+          enum: ["active", "disabled"]
+          description: status of the endpoint
+        version:
+          type: string
+          description: version number of the endpoint, used to distinguish between upgrades of endpoint
+        URL:
+          type: string
+          description: location of the actual en endpoint on the internet
+          example: tcp://127.0.0.1:1234, https://nuts.nl/endpoint
+    Identifier:
+      type: string
+      description: >
+        Generic identifier used for representing BSN, agbcode, etc.
+        It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
+      example: urn:oid:2.16.840.1.113883.2.4.6.3:999999990
