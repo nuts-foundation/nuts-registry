@@ -14,7 +14,7 @@ Nuts registry API
             const ui = SwaggerUIBundle({
                 "dom_id": "#swagger-ui",
                 urls: [
-                    {url: "../../_static/nuts-registry.yaml", name: "crypto"},
+                    {url: "../../_static/nuts-registry.yaml", name: "registry"},
                     ],
                 presets: [
                     SwaggerUIBundle.presets.apis,
