@@ -98,6 +98,15 @@ var organizations = []db.Organization{
 			},
 		},
 	},
+	{
+		Identifier: db.Identifier("urn:nuts:hidden"),
+		Name:       "hidden",
+		Actors: []db.Actor{
+			{
+				Identifier: db.Identifier("urn:nuts:hidden"),
+			},
+		},
+	},
 }
 
 func initEcho(db *MockDb) (*echo.Echo, *ServerInterfaceWrapper) {
@@ -413,8 +422,8 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 			t.Errorf("Got err during deserialization: %s", err.Error())
 		}
 
-		if len(result) != 1 {
-			t.Errorf("Got result size: %d, want 1", len(result))
+		if len(result) != 2 {
+			t.Errorf("Got result size: %d, want 2", len(result))
 		}
 
 		if result[0].Identifier.String() != "urn:nuts:system:value" {

@@ -105,21 +105,29 @@ func (i *MemoryDb) appendEO(eo EndpointOrganization) error {
 	i.organizationToEndpointIndex[ois] = append(i.organizationToEndpointIndex[ois], eo)
 	i.endpointToOrganizationIndex[eis] = append(i.endpointToOrganizationIndex[eis], eo)
 
+	logrus.Tracef("Added mapping between: %s <-> %s", ois, eis)
+
 	return nil
 }
 
 func (i *MemoryDb) appendEndpoint(e *Endpoint) {
-	i.endpointIndex[e.Identifier.String()] = e
+	cp := *e
+	i.endpointIndex[e.Identifier.String()] = &cp
 
 	// also create empty slice at this map R
 	i.endpointToOrganizationIndex[e.Identifier.String()] = []EndpointOrganization{}
+
+	logrus.Tracef("Added endpoint: %s", e.Identifier)
 }
 
 func (i *MemoryDb) appendOrganization(o *Organization) {
-	i.organizationIndex[o.Identifier.String()] = o
+	cp := *o
+	i.organizationIndex[o.Identifier.String()] = &cp
 
 	// also create empty slice at this map R
 	i.organizationToEndpointIndex[o.Identifier.String()] = []EndpointOrganization{}
+
+	logrus.Tracef("Added Organization: %s", o.Identifier)
 }
 
 // Load the db files from the configured datadir
@@ -298,7 +306,7 @@ func (db *MemoryDb) loadEndpointsOrganizations(location string) error {
 		}
 	}
 
-	logrus.Infof("Added %d mappings of endpoint <-> organization to db", len(db.organizationIndex))
+	logrus.Infof("Added %d mappings of endpoint <-> organization to db", len(stub))
 
 	return nil
 }

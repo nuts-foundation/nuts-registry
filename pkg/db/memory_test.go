@@ -33,6 +33,11 @@ var organization = Organization{
 	Name:       "test",
 }
 
+var hiddenOrganization = Organization{
+	Identifier: Identifier("urn:nuts:hidden"),
+	Name:       "hidden",
+}
+
 var mapping = EndpointOrganization{
 	Endpoint:     Identifier("urn:nuts:system:value"),
 	Organization: Identifier("urn:nuts:system:value"),
@@ -66,6 +71,19 @@ func TestMemoryDb_Load(t *testing.T) {
 
 		if err != nil {
 			t.Errorf("Expected no error, got: %s", err.Error())
+		}
+
+		if len(validDb.organizationIndex) != 2 {
+			t.Errorf("Expected 2 entries, got: %d", len(validDb.organizationIndex))
+		}
+
+		// bug of duplicate organization
+		if validDb.organizationIndex["urn:oid:2.16.840.1.113883.2.4.6.1:00000001"] == validDb.organizationIndex["urn:oid:2.16.840.1.113883.2.4.6.1:00000000"] {
+			t.Error("Expected 2 different entries")
+		}
+
+		if len(validDb.organizationToEndpointIndex) != 2 {
+			t.Errorf("Expected 2 entry, got: %d", len(validDb.organizationToEndpointIndex))
 		}
 	})
 
@@ -332,6 +350,7 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 	t.Run("complete valid example", func(t *testing.T) {
 		validDb := New()
 		validDb.appendOrganization(&organization)
+		validDb.appendOrganization(&hiddenOrganization)
 
 		result := validDb.SearchOrganizations("test")
 
@@ -348,6 +367,22 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 
 		if len(result) != 1 {
 			t.Errorf("Expected 1 result, got: %d", len(result))
+		}
+	})
+
+	t.Run("wide match returns 2 organization", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(&organization)
+		validDb.appendOrganization(&hiddenOrganization)
+
+		result := validDb.SearchOrganizations("e")
+
+		if len(result) != 2 {
+			t.Errorf("Expected 2 result, got: %d", len(result))
+		}
+
+		if result[0].Name == result[1].Name {
+			t.Error("Expected 2 unique results")
 		}
 	})
 
