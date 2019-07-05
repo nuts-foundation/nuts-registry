@@ -99,7 +99,7 @@ func (i *MemoryDb) appendEO(eo EndpointOrganization) error {
 
 	_, f = i.endpointToOrganizationIndex[eis]
 	if !f {
-		return newDbError(fmt.Sprintf("Endpoint <> Organization mapping references unknown endpoint with identifier [%s]", ois))
+		return newDbError(fmt.Sprintf("Endpoint <> Organization mapping references unknown endpoint with identifier [%s]", eis))
 	}
 
 	i.organizationToEndpointIndex[ois] = append(i.organizationToEndpointIndex[ois], eo)
