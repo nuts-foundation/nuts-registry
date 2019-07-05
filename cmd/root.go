@@ -21,6 +21,7 @@ package cmd
 import (
 	"github.com/nuts-foundation/nuts-registry/engine"
 	cfg "github.com/nuts-foundation/nuts-go/pkg"
+	"github.com/sirupsen/logrus"
 )
 
 var e = engine.NewRegistryEngine()
@@ -34,7 +35,7 @@ func Execute() {
 		panic(err)
 	}
 
-	c.PrintConfig()
+	c.PrintConfig(logrus.StandardLogger())
 
 	if err := c.InjectIntoEngine(e); err != nil {
 		panic(err)
