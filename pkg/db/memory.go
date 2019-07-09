@@ -276,12 +276,6 @@ func (db *MemoryDb) loadOrganizations(location string) error {
 	}
 
 	for _, e := range stub {
-		// replace pub key \n
-		if e.PublicKey != nil {
-			s := strings.ReplaceAll(*e.PublicKey, "\\n", "\n")
-			e.PublicKey = &s
-		}
-
 		db.appendOrganization(&e)
 	}
 

@@ -19,7 +19,6 @@
 package db
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -85,15 +84,6 @@ func TestMemoryDb_Load(t *testing.T) {
 
 		if len(validDb.organizationToEndpointIndex) != 2 {
 			t.Errorf("Expected 2 entry, got: %d", len(validDb.organizationToEndpointIndex))
-		}
-	})
-
-	t.Run("Public keys do not have \\n", func(t *testing.T) {
-		validDb := New()
-		validDb.Load("../../test_data/valid_files")
-
-		if strings.Contains(*validDb.organizationIndex["urn:oid:2.16.840.1.113883.2.4.6.1:00000001"].PublicKey, "\\n") {
-			t.Error("Expected public key to not have json newlines")
 		}
 	})
 
