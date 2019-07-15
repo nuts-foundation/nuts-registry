@@ -88,6 +88,17 @@ var endpoints = []db.Endpoint{
 	},
 }
 
+var multiEndpoints = []db.Endpoint{
+	{
+		Identifier:   db.Identifier("urn:nuts:system:value"),
+		EndpointType: "type#value",
+	},
+	{
+		Identifier:   db.Identifier("urn:nuts:system:value2"),
+		EndpointType: "type#value",
+	},
+}
+
 var organizations = []db.Organization{
 	{
 		Identifier: db.Identifier("urn:nuts:system:value"),
@@ -251,6 +262,28 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 
 		if result[0].Identifier.String() != "urn:nuts:system:value" {
 			t.Errorf("Got result with Identifier: [%s], want [urn:nuts:system:value]", result[0].Identifier.String())
+		}
+	})
+
+	t.Run("200", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{endpoints: multiEndpoints})
+
+		q := make(url.Values)
+		q.Set("orgIds", "1")
+		q.Add("orgIds", "2")
+
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/endpoints")
+
+		wrapper.EndpointsByOrganisationId(c)
+
+		var result []Endpoint
+		result, _ = deserializeEndpoints(rec.Body)
+
+		if len(result) != 2 {
+			t.Errorf("Got result size: %d, want 1", len(result))
 		}
 	})
 

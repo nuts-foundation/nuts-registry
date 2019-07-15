@@ -130,7 +130,6 @@ func (apiResource ApiWrapper) OrganizationById(ctx echo.Context, id string) erro
 // EndpointsByOrganisationId is the Api implementation for getting all or certain types of endpoints for an organization
 func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error {
 	var dupEndpoints []Endpoint
-	var endpoints []Endpoint
 	endpointIds := make(map[string]bool)
 	for _, id := range params.OrgIds {
 		dbEndpoints, err := apiResource.R.EndpointsByOrganization(id)
@@ -138,7 +137,7 @@ func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params
 		if err != nil {
 			logrus.Warning(err.Error())
 		} else {
-			dupEndpoints = append(endpointsArrayFromDb(dbEndpoints), endpoints...)
+			dupEndpoints = append(endpointsArrayFromDb(dbEndpoints), dupEndpoints...)
 		}
 	}
 
