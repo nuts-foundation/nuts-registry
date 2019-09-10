@@ -5,15 +5,11 @@ go 1.12
 require (
 	github.com/deepmap/oapi-codegen v1.1.6
 	github.com/getkin/kin-openapi v0.2.0
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/mock v1.3.1
-	github.com/labstack/echo v3.3.10+incompatible // indirect
-	github.com/labstack/echo/v4 v4.1.5
-	github.com/labstack/gommon v0.2.8
-	github.com/nuts-foundation/nuts-go v0.0.0-20190705132555-65facdebd8b2
+	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
+	github.com/labstack/echo/v4 v4.1.10
+	github.com/nuts-foundation/nuts-go-core v0.0.0-20190910094535-86aabc399861
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.3
-	github.com/spf13/viper v1.4.0
-	golang.org/x/tools v0.0.0-20190425222832-ad9eeb80039a
 )

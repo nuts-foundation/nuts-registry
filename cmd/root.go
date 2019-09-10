@@ -19,8 +19,8 @@
 package cmd
 
 import (
+	cfg "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/engine"
-	cfg "github.com/nuts-foundation/nuts-go/pkg"
 	"github.com/sirupsen/logrus"
 )
 

@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 )
 
@@ -113,10 +114,11 @@ func TestServerInterfaceWrapper_EndpointsByOrganisationId(t *testing.T) {
 
 		if err == nil {
 			t.Errorf("Didn't get expected err during call")
+			return
 		}
 
 		expected := "code=400, message=Query argument orgIds is required, but not found"
-		if err != nil && err.Error() != expected {
+		if !strings.Contains(err.Error(), expected) {
 			t.Errorf("Got message=%s, want %s", err.Error(), expected)
 		}
 	})
@@ -168,10 +170,11 @@ func TestServerInterfaceWrapper_SearchOrganizations(t *testing.T) {
 
 		if err == nil {
 			t.Errorf("Didn't get expected err during call")
+			return
 		}
 
 		expected := "code=400, message=Query argument query is required, but not found"
-		if err != nil && err.Error() != expected {
+		if !strings.Contains(err.Error(), expected) {
 			t.Errorf("Got message=%s, want %s", err.Error(), expected)
 		}
 	})
@@ -221,10 +224,11 @@ func TestServerInterfaceWrapper_OrganizationById(t *testing.T) {
 
 		if err == nil {
 			t.Errorf("Didn't get expected err during call")
+			return
 		}
 
 		expected := "code=400, message=Invalid format for parameter id: code=400, message=parameter '%s' is empty, can't bind its value"
-		if err != nil && err.Error() != expected {
+		if !strings.Contains(err.Error(), expected) {
 			t.Errorf("Got message=%s, want %s", err.Error(), expected)
 		}
 	})
