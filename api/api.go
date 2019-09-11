@@ -152,11 +152,13 @@ func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params
 	}
 
 	// filter on type
-	uniqFiltered := uniq[0:]
-	if params.Type != nil {
-		for i, u := range uniqFiltered {
-			if u.EndpointType != *params.Type {
-				uniqFiltered = append(uniqFiltered[:i], uniqFiltered[i+1:]...)
+	var uniqFiltered []Endpoint
+	if params.Type == nil {
+		uniqFiltered = uniq
+	} else {
+		for _, u := range uniq {
+			if u.EndpointType == *params.Type {
+				uniqFiltered = append(uniqFiltered, u)
 			}
 		}
 	}
