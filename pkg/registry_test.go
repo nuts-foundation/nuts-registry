@@ -1,3 +1,5 @@
+// +build !race
+
 /*
  * Nuts registry
  * Copyright (C) 2019. Nuts community
