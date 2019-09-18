@@ -20,6 +20,9 @@
 package pkg
 
 import (
+	"fmt"
+	"io"
+	"os"
 	"testing"
 	"time"
 )
@@ -124,4 +127,54 @@ func TestRegistry_Configure(t *testing.T) {
 			t.Error("Expected loaded organizations, got 0")
 		}
 	})
+}
+
+func TestRegistry_FileUpdate(t *testing.T) {
+	t.Run("New files are loaded", func(t *testing.T) {
+		registry := Registry{
+			Config: RegistryConfig{
+				Mode:    "server",
+				Datadir: "../tmp",
+				SyncMode: "fs",
+			},
+		}
+
+		os.Mkdir("../tmp", os.ModePerm)
+		copyDir("../test_data/all_empty_files", "../tmp")
+
+		if err := registry.Configure(); err != nil {
+			t.Errorf("Expected no error, got [%v]", err)
+		}
+
+		if err := registry.Start(); err != nil {
+			t.Errorf("Expected no error, got [%v]", err)
+		}
+
+		if len(registry.Db.SearchOrganizations("")) != 0 {
+			t.Error("Expected empty db")
+		}
+
+		// copy valid files
+		copyDir("../test_data/valid_files", "../tmp")
+
+		time.Sleep(time.Millisecond * 100)
+
+		if len(registry.Db.SearchOrganizations("")) == 0 {
+			t.Error("Expected loaded organizations, got 0")
+		}
+	})
+}
+
+func copyDir(src string, dst string) {
+	for _, f := range []string{"organizations.json", "endpoints.json", "endpoints_organizations.json"} {
+		src, _ := os.Open(fmt.Sprintf("%s/%s", src, f))
+		dst, _ := os.Create(fmt.Sprintf("%s/%s", dst, f))
+
+		if _, err := io.Copy(dst, src); err != nil {
+			println(err.Error())
+		}
+
+		dst.Close()
+		src.Close()
+	}
 }

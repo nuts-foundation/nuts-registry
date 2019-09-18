@@ -8,6 +8,9 @@
 # the data dir
 data
 
+# used in test
+tmp
+
 # Test binary, build with `go test -c`
 *.test
 
