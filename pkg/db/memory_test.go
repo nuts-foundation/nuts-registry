@@ -97,17 +97,17 @@ func TestMemoryDb_Load(t *testing.T) {
 		}
 	})
 
-	t.Run("Loading from location with missing files gives err", func(t *testing.T) {
+	t.Run("Loading from location with missing files ignores err", func(t *testing.T) {
 		validDb := New()
 		err := validDb.Load("../../test_data/missing_files/")
 
-		if err == nil {
-			t.Errorf("Expected error")
+		if err != nil {
+			t.Errorf("Expected no error, got [%v]", err)
+			return
 		}
 
-		expected := "../../test_data/missing_files is missing required files: endpoints.json, endpoints_organizations.json"
-		if err.Error() != expected {
-			t.Errorf("Expected [%s], got [%s]", expected, err.Error())
+		if len(validDb.organizationIndex) != 0 {
+			t.Error("Expected db to be empty")
 		}
 	})
 

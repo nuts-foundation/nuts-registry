@@ -60,6 +60,7 @@ func flagSet() *pflag.FlagSet {
 	flagSet.String(pkg.ConfAddress, "localhost:1323", "Interface and port for http server to bind to")
 	flagSet.String(pkg.ConfSyncMode, "fs", "The method for updating the data, 'fs' for a filesystem watch or 'github' for a periodic download from github")
 	flagSet.String(pkg.ConfSyncAddress, "https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master", "The remote url to download the latest registry data from github")
+	flagSet.Int(pkg.ConfSyncInterval, 30, "The interval in minutes between looking for updated registry files on github")
 
 	return flagSet
 }

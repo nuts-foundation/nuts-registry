@@ -21,6 +21,7 @@ package pkg
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"testing"
@@ -62,8 +63,8 @@ func TestRegistry_Start(t *testing.T) {
 			t.Errorf("Expected no error, got [%v]", err)
 		}
 
-		if registry.watcher == nil {
-			t.Error("Expected watcher to be set")
+		if len(registry.closers) != 1 {
+			t.Error("Expected watcher to be started")
 		}
 	})
 
@@ -102,11 +103,6 @@ func TestRegistry_Start(t *testing.T) {
 		if err := registry.Shutdown(); err != nil {
 			t.Errorf("Expected no error, got [%v]", err)
 		}
-
-		// stopping the file watcher removes all files from the watch list
-		if len(registry.watcher.WatchedFiles()) > 0 {
-			t.Error("Expected no watched files")
-		}
 	})
 }
 
@@ -114,8 +110,8 @@ func TestRegistry_Configure(t *testing.T) {
 	t.Run("Configure loads the BD", func(t *testing.T) {
 		registry := Registry{
 			Config: RegistryConfig{
-				Mode:     "server",
-				Datadir:  "../test_data/valid_files",
+				Mode:    "server",
+				Datadir: "../test_data/valid_files",
 			},
 		}
 
@@ -130,11 +126,13 @@ func TestRegistry_Configure(t *testing.T) {
 }
 
 func TestRegistry_FileUpdate(t *testing.T) {
+	logrus.StandardLogger().SetLevel(logrus.DebugLevel)
+
 	t.Run("New files are loaded", func(t *testing.T) {
 		registry := Registry{
 			Config: RegistryConfig{
-				Mode:    "server",
-				Datadir: "../tmp",
+				Mode:     "server",
+				Datadir:  "../tmp",
 				SyncMode: "fs",
 			},
 		}
@@ -157,7 +155,7 @@ func TestRegistry_FileUpdate(t *testing.T) {
 		// copy valid files
 		copyDir("../test_data/valid_files", "../tmp")
 
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 200)
 
 		if len(registry.Db.SearchOrganizations("")) == 0 {
 			t.Error("Expected loaded organizations, got 0")
@@ -167,14 +165,24 @@ func TestRegistry_FileUpdate(t *testing.T) {
 
 func copyDir(src string, dst string) {
 	for _, f := range []string{"organizations.json", "endpoints.json", "endpoints_organizations.json"} {
-		src, _ := os.Open(fmt.Sprintf("%s/%s", src, f))
-		dst, _ := os.Create(fmt.Sprintf("%s/%s", dst, f))
-
-		if _, err := io.Copy(dst, src); err != nil {
-			println(err.Error())
-		}
-
-		dst.Close()
-		src.Close()
+		copyFile(fmt.Sprintf("%s/%s", src, f), fmt.Sprintf("%s/%s", dst, f))
 	}
+}
+
+func copyFile(src string, dst string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, srcFile)
+
+	return err
 }

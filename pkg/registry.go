@@ -20,12 +20,17 @@
 package pkg
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/radovskyb/watcher"
 	"github.com/sirupsen/logrus"
-	"regexp"
+	"io"
+	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -44,6 +49,9 @@ const ConfSyncMode = "syncMode"
 
 // ConfSyncAddress is the config name for the remote address used to fetch updated registry files
 const ConfSyncAddress = "syncAddress"
+
+// ConfSyncInterval is the config name for the interval in minutes to look for new registry files online
+const ConfSyncInterval = "syncInterval"
 
 // ModuleName == Registry
 const ModuleName = "Registry"
@@ -69,20 +77,21 @@ type RegistryClient interface {
 
 // RegistryConfig holds the config
 type RegistryConfig struct {
-	Mode        string
-	SyncMode    string
-	SyncAddress string
-	Datadir     string
-	Address     string
+	Mode         string
+	SyncMode     string
+	SyncAddress  string
+	SyncInterval int
+	Datadir      string
+	Address      string
 }
 
 // Registry holds the config and Db reference
 type Registry struct {
-	Config       RegistryConfig
-	Db           db.Db
-	configOnce   sync.Once
-	watcher      *watcher.Watcher
-	_logger       *logrus.Entry
+	Config     RegistryConfig
+	Db         db.Db
+	configOnce sync.Once
+	_logger    *logrus.Entry
+	closers    []chan struct{}
 }
 
 var instance *Registry
@@ -145,6 +154,7 @@ func (r *Registry) Start() error {
 		case "fs":
 			return r.startFileSystemWatcher()
 		case "github":
+			return r.startGithubSync()
 		default:
 			return errors.New(fmt.Sprintf("invalid syncMode: %s", cm))
 		}
@@ -154,56 +164,208 @@ func (r *Registry) Start() error {
 
 // Shutdown cleans up any leftover go routines
 func (r *Registry) Shutdown() error {
-	if r.Config.Mode == "server" && r.watcher != nil {
-		r.logger().Debug("Closing File watcher")
-		r.watcher.Closed <- struct{}{}
-		r.watcher.Close()
-		r.logger().Info("File watcher closed")
+	if r.Config.Mode == "server" {
+		r.logger().Debug("Sending close signal to all routines")
+		for _, ch := range r.closers {
+			ch <- struct{}{}
+		}
+		r.logger().Info("All routines closed")
 	}
 	return nil
 }
 
 func (r *Registry) startFileSystemWatcher() error {
-	r.watcher = watcher.New()
-	r.watcher.SetMaxEvents(1)
-	regex := regexp.MustCompile("^.*\\.json")
-	r.watcher.AddFilterHook(watcher.RegexFilterHook(regex, false))
+	w := watcher.New()
+	w.SetMaxEvents(2)
 
 	go func() {
 		for {
 			select {
-			case event := <-r.watcher.Event:
+			case event := <-w.Event:
+				if event.IsDir() {
+					continue
+				}
+
 				r.logger().Debugf("Received file watcher event: %s", event.String())
+
 				if r.Db != nil {
 					if err := r.Db.Load(r.Config.Datadir); err != nil {
 						r.logger().Errorf("error during reloading of files: %v", err)
 					}
 				}
-			case err := <-r.watcher.Error:
+			case err := <-w.Error:
 				r.logger().Errorf("Received file watcher error: %v", err)
-			case <- r.watcher.Closed:
+			case <-w.Closed:
+				r.logger().Debug("Stopping file watcher")
 				return
 			}
 		}
 	}()
 
-	if err := r.watcher.Add(r.Config.Datadir); err != nil {
+	if err := w.Add(r.Config.Datadir); err != nil {
 		return err
 	}
 
 	// Print a list of all of the files and folders currently
 	// being watched and their paths.
-	for path, _ := range r.watcher.WatchedFiles() {
+	for path, _ := range w.WatchedFiles() {
 		r.logger().Debugf("Watching %s for changes", path)
 	}
 
 	go func() {
-		if err := r.watcher.Start(time.Millisecond * 100); err != nil {
+		if err := w.Start(time.Millisecond * 100); err != nil {
 			r.logger().Error(err)
 		}
 	}()
 
+	// register close channel
+	r.closers = append(r.closers, w.Closed)
+
 	return nil
+}
+
+func (r *Registry) startGithubSync() error {
+	if err := r.startFileSystemWatcher(); err != nil {
+		r.logger().Error("Github sync not started due to file watcher problem")
+		return err
+	}
+
+	close := make(chan struct{})
+	go func(r *Registry, ch chan struct{}) {
+		eTag := ""
+
+		for {
+			var err error
+
+			r.logger().Debugf("Downloading registry files from %s to %s", r.Config.SyncAddress, r.Config.Datadir)
+			if eTag, err = r.downloadAndUnzip(eTag); err != nil {
+				r.logger().Errorf("Error downloading registry files: %v", err)
+			}
+			select {
+			case <-ch:
+				r.logger().Debug("Stopping github download")
+				return
+			case <-time.After(time.Duration(int64(r.Config.SyncInterval) * time.Minute.Nanoseconds())):
+
+			}
+		}
+	}(r, close)
+
+	// register close channel
+	r.closers = append(r.closers, close)
+
+	r.logger().Info("Github sync started")
+
+	return nil
+}
+
+func (r *Registry) downloadAndUnzip(eTag string) (string, error) {
+	newTag, err := r.download(eTag)
+
+	if err != nil {
+		return eTag, err
+	}
+
+	if newTag == eTag {
+		r.logger().Debug("Latest version on github is the same as local, skipping")
+		return eTag, nil
+	}
+
+	return newTag, r.unzip()
+}
+
+func (r *Registry) download(eTag string) (string, error) {
+
+	// Get the data
+	resp, err := http.Get(r.Config.SyncAddress)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	newTag := resp.Header.Get("ETag")
+	if eTag == newTag {
+		return eTag, nil
+	}
+
+	tmpDir := fmt.Sprintf("%s/%s", r.Config.Datadir, "tmp")
+	if _, err := os.Stat(tmpDir); os.IsNotExist(err) {
+		// create and continue
+		os.Mkdir(tmpDir, os.ModePerm)
+	}
+
+	tmpPath := fmt.Sprintf("%s/%s/%s", r.Config.Datadir, "tmp", "registry.tar.gz")
+
+	// Create the file
+	out, err := os.Create(tmpPath)
+	if err != nil {
+		return eTag, err
+	}
+	defer out.Close()
+
+	// Write the body to file
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return eTag, err
+	}
+
+	return newTag, nil
+}
+
+// unzip also strips the directory
+func (r *Registry) unzip() error {
+	tarGzFile := fmt.Sprintf("%s/%s/%s", r.Config.Datadir, "tmp", "registry.tar.gz")
+
+	f, err := os.Open(tarGzFile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	gzf, err := gzip.NewReader(f)
+	if err != nil {
+		return err
+	}
+
+	tarReader := tar.NewReader(gzf)
+
+	for {
+		header, err := tarReader.Next()
+
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return err
+		}
+
+		name := header.Name
+		nameParts := strings.Split(name, "/")
+		name = nameParts[len(nameParts)-1]
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			continue
+		case tar.TypeReg:
+			if strings.Index(name, ".json") > 0 {
+				targetPath := fmt.Sprintf("%s/%s", r.Config.Datadir, name)
+
+				dst, err := os.Create(targetPath)
+				if err != nil {
+					return err
+				}
+
+				if _, err := io.Copy(dst, tarReader); err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	// remove file
+	return os.Remove(tarGzFile)
 }
 
 func (r *Registry) logger() *logrus.Entry {

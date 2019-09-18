@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
+	"os"
 	"sort"
 )
 
@@ -45,6 +46,13 @@ func (e *fileError) Error() string {
 // - endpoints_organisations.json
 func validateLocation(location string) error {
 	sLocation := sanitizeLocation(location)
+
+	if _, err := os.Stat(location); os.IsNotExist(err) {
+		// create and return
+		os.Mkdir(location, os.ModePerm)
+		return nil
+	}
+
 	files, err := ioutil.ReadDir(sLocation)
 
 	if err != nil {

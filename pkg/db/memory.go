@@ -138,6 +138,11 @@ func (db *MemoryDb) Load(location string) error {
 			logrus.Warnf("No database files found at %s, starting with empty registry", location)
 			return nil
 		}
+		if strings.Contains(err.Error(), "is missing required files") {
+			logrus.Warnf("No database files found at %s, starting with empty registry", location)
+			return nil
+		}
+
 		return err
 	}
 
