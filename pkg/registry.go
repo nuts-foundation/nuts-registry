@@ -174,6 +174,11 @@ func (r *Registry) startFileSystemWatcher() error {
 			select {
 			case event := <-r.watcher.Event:
 				r.logger().Debugf("Received file watcher event: %s", event.String())
+				if r.Db != nil {
+					if err := r.Db.Load(r.Config.Datadir); err != nil {
+						r.logger().Errorf("error during reloading of files: %v", err)
+					}
+				}
 			case err := <-r.watcher.Error:
 				r.logger().Errorf("Received file watcher error: %v", err)
 			case <- r.watcher.Closed:

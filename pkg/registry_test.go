@@ -64,25 +64,6 @@ func TestRegistry_Start(t *testing.T) {
 		}
 	})
 
-	t.Run("Double start returns error", func(t *testing.T) {
-		registry := Registry{
-			Config: RegistryConfig{
-				Mode:     "server",
-				SyncMode: "fs",
-				Datadir:  ".",
-			},
-		}
-
-		if err := registry.Start(); err != nil {
-			t.Errorf("Expected no error, got [%v]", err)
-		}
-
-		err := registry.Start()
-		if err == nil {
-			t.Error("Expected error, got nothing")
-		}
-	})
-
 	t.Run("Invalid datadir gives error on Start", func(t *testing.T) {
 		registry := Registry{
 			Config: RegistryConfig{

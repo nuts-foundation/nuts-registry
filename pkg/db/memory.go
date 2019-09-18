@@ -152,6 +152,9 @@ func (db *MemoryDb) Load(location string) error {
 	}
 
 	err = db.loadEndpointsOrganizations(location)
+
+	logrus.Infof("Finished loading registry files from %s", location)
+
 	return err
 }
 
@@ -250,6 +253,8 @@ func (db *MemoryDb) loadEndpoints(location string) error {
 		return err
 	}
 
+	db.endpointIndex = make(map[string]*Endpoint)
+	db.endpointToOrganizationIndex = make(map[string][]EndpointOrganization)
 	for _, e := range stub {
 		db.appendEndpoint(&e)
 	}
@@ -274,6 +279,8 @@ func (db *MemoryDb) loadOrganizations(location string) error {
 		return err
 	}
 
+	db.organizationIndex = make(map[string]*Organization)
+	db.organizationToEndpointIndex = make(map[string][]EndpointOrganization)
 	for _, e := range stub {
 		db.appendOrganization(&e)
 	}
