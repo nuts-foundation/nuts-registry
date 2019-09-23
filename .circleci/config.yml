@@ -23,6 +23,7 @@ jobs:
 
       - run: go test ./... -race
 
-      - run: go test ./... -coverprofile=coverage.txt -covermode=atomic -v
+      - run: go test ./... -coverprofile=coverage.txt
 
-      - run: bash <(curl -s https://codecov.io/bash)
+      - codecov/upload:
+          file: coverage.txt
