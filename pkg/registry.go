@@ -197,9 +197,9 @@ func (r *Registry) startFileSystemWatcher() error {
 		for {
 			select {
 			case event := <-w.Event:
-				if event.IsDir() {
-					continue
-				}
+				//if event.IsDir() {
+				//	continue
+				//}
 
 				r.logger().Debugf("Received file watcher event: %s", event.String())
 
