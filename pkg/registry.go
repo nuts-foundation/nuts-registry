@@ -24,9 +24,9 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/labstack/gommon/random"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
-	"github.com/radovskyb/watcher"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
@@ -190,27 +190,36 @@ func (r *Registry) Load() error {
 }
 
 func (r *Registry) startFileSystemWatcher() error {
-	w := watcher.New()
-	w.SetMaxEvents(1)
+	w, err := fsnotify.NewWatcher()
+
+	if err != nil {
+		return err
+	}
+
+	closer := make(chan struct{})
 
 	go func() {
 		for {
 			select {
-			case event := <-w.Event:
-				//if event.IsDir() {
-				//	continue
-				//}
+			case event, ok := <-w.Events:
+				if !ok {
+					return
+				}
 
 				r.logger().Debugf("Received file watcher event: %s", event.String())
-
-				if r.Db != nil {
-					if err := r.Load(); err != nil {
-						r.logger().Errorf("error during reloading of files: %v", err)
+				if strings.Contains(event.Name, "organizations.json") && event.Op&fsnotify.Write == fsnotify.Write {
+					if r.Db != nil {
+						if err := r.Load(); err != nil {
+							r.logger().Errorf("error during reloading of files: %v", err)
+						}
 					}
 				}
-			case err := <-w.Error:
+			case err, ok := <-w.Errors:
+				if !ok {
+					return
+				}
 				r.logger().Errorf("Received file watcher error: %v", err)
-			case <-w.Closed:
+			case <-closer:
 				r.logger().Debug("Stopping file watcher")
 				return
 			}
@@ -221,20 +230,8 @@ func (r *Registry) startFileSystemWatcher() error {
 		return err
 	}
 
-	// Print a list of all of the files and folders currently
-	// being watched and their paths.
-	for path, _ := range w.WatchedFiles() {
-		r.logger().Debugf("Watching %s for changes", path)
-	}
-
-	go func() {
-		if err := w.Start(time.Millisecond * 100); err != nil {
-			r.logger().Error(err)
-		}
-	}()
-
 	// register close channel
-	r.closers = append(r.closers, w.Closed)
+	r.closers = append(r.closers, closer)
 
 	return nil
 }

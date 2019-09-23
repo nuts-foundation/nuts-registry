@@ -36,7 +36,6 @@ import (
 )
 
 type ZipHandler struct {
-
 }
 
 func (h *ZipHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -208,10 +207,10 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 
 		registry := Registry{
 			Config: RegistryConfig{
-				Mode:     "server",
-				Datadir:  "../tmp",
-				SyncMode: "github",
-				SyncAddress: server.URL,
+				Mode:         "server",
+				Datadir:      "../tmp",
+				SyncMode:     "github",
+				SyncAddress:  server.URL,
 				SyncInterval: 60,
 			},
 			OnChange: func(registry *Registry) {
