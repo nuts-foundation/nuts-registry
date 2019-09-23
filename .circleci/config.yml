@@ -24,7 +24,6 @@ jobs:
             - "/go/pkg/mod"
 
       - run: go test ./... -race
-
       - run: go test ./... -coverprofile=coverage.txt
 
       - codecov/upload:
