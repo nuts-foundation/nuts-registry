@@ -93,6 +93,7 @@ type Registry struct {
 	configOnce sync.Once
 	_logger    *logrus.Entry
 	closers    []chan struct{}
+	OnChange   func(registry *Registry)
 }
 
 var instance *Registry
@@ -175,9 +176,22 @@ func (r *Registry) Shutdown() error {
 	return nil
 }
 
+// Load signals the Db to (re)load sources. On success the OnChange func is called
+func (r *Registry) Load() error {
+	if err := r.Db.Load(r.Config.Datadir); err != nil {
+		return err
+	}
+
+	if r.OnChange != nil {
+		r.OnChange(r)
+	}
+
+	return nil
+}
+
 func (r *Registry) startFileSystemWatcher() error {
 	w := watcher.New()
-	w.SetMaxEvents(2)
+	w.SetMaxEvents(1)
 
 	go func() {
 		for {
@@ -190,7 +204,7 @@ func (r *Registry) startFileSystemWatcher() error {
 				r.logger().Debugf("Received file watcher event: %s", event.String())
 
 				if r.Db != nil {
-					if err := r.Db.Load(r.Config.Datadir); err != nil {
+					if err := r.Load(); err != nil {
 						r.logger().Errorf("error during reloading of files: %v", err)
 					}
 				}

@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync"
 	"testing"
 	"time"
 )
@@ -148,13 +149,22 @@ func TestRegistry_Configure(t *testing.T) {
 
 func TestRegistry_FileUpdate(t *testing.T) {
 	t.Run("New files are loaded", func(t *testing.T) {
+		logrus.StandardLogger().SetLevel(logrus.DebugLevel)
+
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+
 		registry := Registry{
 			Config: RegistryConfig{
 				Mode:     "server",
 				Datadir:  "../tmp",
 				SyncMode: "fs",
 			},
+			OnChange: func(registry *Registry) {
+				wg.Done()
+			},
 		}
+		defer registry.Shutdown()
 
 		os.Mkdir("../tmp", os.ModePerm)
 		copyDir("../test_data/all_empty_files", "../tmp")
@@ -174,7 +184,7 @@ func TestRegistry_FileUpdate(t *testing.T) {
 		// copy valid files
 		copyDir("../test_data/valid_files", "../tmp")
 
-		time.Sleep(time.Millisecond * 1000)
+		wg.Wait()
 
 		if len(registry.Db.SearchOrganizations("")) == 0 {
 			t.Error("Expected loaded organizations, got 0")
@@ -190,6 +200,12 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+
+		os.Mkdir("../tmp", os.ModePerm)
+		copyDir("../test_data/all_empty_files", "../tmp")
+
 		registry := Registry{
 			Config: RegistryConfig{
 				Mode:     "server",
@@ -198,10 +214,12 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 				SyncAddress: server.URL,
 				SyncInterval: 60,
 			},
+			OnChange: func(registry *Registry) {
+				println("EVENT")
+				wg.Done()
+			},
 		}
-
-		os.Mkdir("../tmp", os.ModePerm)
-		copyDir("../test_data/all_empty_files", "../tmp")
+		defer registry.Shutdown()
 
 		if err := registry.Configure(); err != nil {
 			t.Errorf("Expected no error, got [%v]", err)
@@ -212,7 +230,7 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 		}
 
 		// wait for download
-		time.Sleep(time.Millisecond * 1000)
+		wg.Wait()
 
 		if len(registry.Db.SearchOrganizations("")) == 0 {
 			t.Error("Expected loaded organizations, got 0")
