@@ -50,7 +50,7 @@ func validateLocation(location string) error {
 	if _, err := os.Stat(location); os.IsNotExist(err) {
 		// create and return
 		os.Mkdir(location, os.ModePerm)
-		return nil
+		return newFileError(fmt.Sprintf("%s is missing required files: ", sLocation))
 	}
 
 	files, err := ioutil.ReadDir(sLocation)
