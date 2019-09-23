@@ -23,12 +23,31 @@ package pkg
 
 import (
 	"fmt"
+	"github.com/labstack/gommon/random"
 	"github.com/sirupsen/logrus"
 	"io"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 )
+
+type ZipHandler struct {
+
+}
+
+func (h *ZipHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// open zip file
+	bytes, _ := ioutil.ReadFile("../test_data/valid_files.tar.gz")
+
+	// random Etag
+	w.Header().Add("ETag", random.String(8))
+
+	// write bytes to w
+	w.Write(bytes)
+}
 
 func TestRegistry_Start(t *testing.T) {
 	t.Run("Start with an incorrect configuration returns error", func(t *testing.T) {
@@ -128,8 +147,6 @@ func TestRegistry_Configure(t *testing.T) {
 }
 
 func TestRegistry_FileUpdate(t *testing.T) {
-	logrus.StandardLogger().SetLevel(logrus.DebugLevel)
-
 	t.Run("New files are loaded", func(t *testing.T) {
 		registry := Registry{
 			Config: RegistryConfig{
@@ -157,6 +174,44 @@ func TestRegistry_FileUpdate(t *testing.T) {
 		// copy valid files
 		copyDir("../test_data/valid_files", "../tmp")
 
+		time.Sleep(time.Millisecond * 200)
+
+		if len(registry.Db.SearchOrganizations("")) == 0 {
+			t.Error("Expected loaded organizations, got 0")
+		}
+	})
+}
+
+func TestRegistry_GithubUpdate(t *testing.T) {
+	logrus.StandardLogger().SetLevel(logrus.DebugLevel)
+
+	t.Run("New files are downloaded", func(t *testing.T) {
+		handler := &ZipHandler{}
+		server := httptest.NewServer(handler)
+		defer server.Close()
+
+		registry := Registry{
+			Config: RegistryConfig{
+				Mode:     "server",
+				Datadir:  "../tmp",
+				SyncMode: "github",
+				SyncAddress: server.URL,
+				SyncInterval: 60,
+			},
+		}
+
+		os.Mkdir("../tmp", os.ModePerm)
+		copyDir("../test_data/all_empty_files", "../tmp")
+
+		if err := registry.Configure(); err != nil {
+			t.Errorf("Expected no error, got [%v]", err)
+		}
+
+		if err := registry.Start(); err != nil {
+			t.Errorf("Expected no error, got [%v]", err)
+		}
+
+		// wait for download
 		time.Sleep(time.Millisecond * 200)
 
 		if len(registry.Db.SearchOrganizations("")) == 0 {

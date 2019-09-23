@@ -24,6 +24,7 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
+	"github.com/labstack/gommon/random"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/radovskyb/watcher"
 	"github.com/sirupsen/logrus"
@@ -232,7 +233,7 @@ func (r *Registry) startGithubSync() error {
 
 	close := make(chan struct{})
 	go func(r *Registry, ch chan struct{}) {
-		eTag := ""
+		eTag := random.String(32)
 
 		for {
 			var err error

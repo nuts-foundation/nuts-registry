@@ -20,3 +20,6 @@ tmp
 # Editors
 .idea
 nuts-registry
+
+# MacOS
+.DS_Store
