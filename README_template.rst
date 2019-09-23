@@ -3,8 +3,8 @@ nuts-registry
 
 Distributed registry for storing and querying health care providers their vendors and technical endpoints.
 
-.. image:: https://travis-ci.org/nuts-foundation/nuts-registry.svg?branch=master
-    :target: https://travis-ci.org/nuts-foundation/nuts-registry
+.. image:: https://circleci.com/gh/nuts-foundation/nuts-registry.svg?style=svg
+    :target: https://circleci.com/gh/nuts-foundation/nuts-registry
     :alt: Build Status
 
 .. image:: https://readthedocs.org/projects/nuts-registry/badge/?version=latest
