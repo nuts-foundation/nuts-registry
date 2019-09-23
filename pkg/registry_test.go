@@ -174,7 +174,7 @@ func TestRegistry_FileUpdate(t *testing.T) {
 		// copy valid files
 		copyDir("../test_data/valid_files", "../tmp")
 
-		time.Sleep(time.Millisecond * 500)
+		time.Sleep(time.Millisecond * 1000)
 
 		if len(registry.Db.SearchOrganizations("")) == 0 {
 			t.Error("Expected loaded organizations, got 0")
@@ -212,7 +212,7 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 		}
 
 		// wait for download
-		time.Sleep(time.Millisecond * 500)
+		time.Sleep(time.Millisecond * 1000)
 
 		if len(registry.Db.SearchOrganizations("")) == 0 {
 			t.Error("Expected loaded organizations, got 0")
