@@ -1,6 +1,6 @@
 /*
  * Nuts registry
- * Copyright (C) 2019 Nuts community
+ * Copyright (C) 2019. Nuts community
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
  */
 
 package db
@@ -21,17 +22,6 @@ package db
 import "testing"
 
 func TestValidateLocation(t *testing.T) {
-	t.Run("Incorrect dir gives err", func(t *testing.T) {
-		err := validateLocation("./does_not_exist")
-
-		expected := "open ./does_not_exist: no such file or directory"
-		if err == nil {
-			t.Errorf("Expected error with: %s", expected)
-		} else if err.Error() != expected {
-			t.Errorf("Expected error with: [%s], got [%s]", expected, err.Error())
-		}
-	})
-
 	t.Run("Missing files gives err", func(t *testing.T) {
 		err := validateLocation("../../test_data/missing_files")
 

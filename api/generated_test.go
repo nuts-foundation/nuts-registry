@@ -1,6 +1,6 @@
 /*
  * Nuts registry
- * Copyright (C) 2019 Nuts community
+ * Copyright (C) 2019. Nuts community
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
  */
 
 package api
@@ -64,9 +65,6 @@ func (e RestInterfaceStub) OrganizationById(ctx echo.Context, id string) error {
 
 	return err
 }
-
-
-
 
 func TestServerInterfaceWrapper_EndpointsByOrganisationId(t *testing.T) {
 	t.Run("200", func(t *testing.T) {

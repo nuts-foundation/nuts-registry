@@ -1,6 +1,6 @@
 /*
  * Nuts registry
- * Copyright (C) 2019 Nuts community
+ * Copyright (C) 2019. Nuts community
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
  */
 
 package db
@@ -96,17 +97,17 @@ func TestMemoryDb_Load(t *testing.T) {
 		}
 	})
 
-	t.Run("Loading from location with missing files gives err", func(t *testing.T) {
+	t.Run("Loading from location with missing files ignores err", func(t *testing.T) {
 		validDb := New()
 		err := validDb.Load("../../test_data/missing_files/")
 
-		if err == nil {
-			t.Errorf("Expected error")
+		if err != nil {
+			t.Errorf("Expected no error, got [%v]", err)
+			return
 		}
 
-		expected := "../../test_data/missing_files is missing required files: endpoints.json, endpoints_organizations.json"
-		if err.Error() != expected {
-			t.Errorf("Expected [%s], got [%s]", expected, err.Error())
+		if len(validDb.organizationIndex) != 0 {
+			t.Error("Expected db to be empty")
 		}
 	})
 

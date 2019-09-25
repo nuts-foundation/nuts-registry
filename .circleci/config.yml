@@ -1,4 +1,6 @@
-version: 2
+version: 2.1
+orbs:
+  codecov: codecov/codecov@1.0.5
 jobs:
   build:
     docker:
@@ -22,7 +24,7 @@ jobs:
             - "/go/pkg/mod"
 
       - run: go test ./... -race
+      - run: go test ./... -coverprofile=coverage.txt
 
-      - run: go test ./... -coverprofile=coverage.txt -covermode=atomic -v
-
-      - run: bash <(curl -s https://codecov.io/bash)
+      - codecov/upload:
+          file: coverage.txt

@@ -1,6 +1,6 @@
 /*
  * Nuts registry
- * Copyright (C) 2019 Nuts community
+ * Copyright (C) 2019. Nuts community
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
  */
 
 package db
@@ -45,9 +46,9 @@ func (db *MemoryDb) RegisterOrganization(org Organization) error {
 		db.appendEndpoint(&e)
 		err := db.appendEO(
 			EndpointOrganization{
-				Status:StatusActive,
-				Organization:org.Identifier,
-				Endpoint:e.Identifier,
+				Status:       StatusActive,
+				Organization: org.Identifier,
+				Endpoint:     e.Identifier,
 			})
 
 		if err != nil {
@@ -85,8 +86,6 @@ func New() *MemoryDb {
 		make(map[string][]EndpointOrganization),
 	}
 }
-
-
 
 func (i *MemoryDb) appendEO(eo EndpointOrganization) error {
 	ois := eo.Organization.String()
@@ -139,6 +138,11 @@ func (db *MemoryDb) Load(location string) error {
 			logrus.Warnf("No database files found at %s, starting with empty registry", location)
 			return nil
 		}
+		if strings.Contains(err.Error(), "is missing required files") {
+			logrus.Warnf("No database files found at %s, starting with empty registry", location)
+			return nil
+		}
+
 		return err
 	}
 
@@ -153,6 +157,9 @@ func (db *MemoryDb) Load(location string) error {
 	}
 
 	err = db.loadEndpointsOrganizations(location)
+
+	logrus.Infof("Finished loading registry files from %s", location)
+
 	return err
 }
 
@@ -251,11 +258,13 @@ func (db *MemoryDb) loadEndpoints(location string) error {
 		return err
 	}
 
+	db.endpointIndex = make(map[string]*Endpoint)
+	db.endpointToOrganizationIndex = make(map[string][]EndpointOrganization)
 	for _, e := range stub {
 		db.appendEndpoint(&e)
 	}
 
-	logrus.Infof("Added %d Endpoints to db", len(db.endpointIndex))
+	logrus.Debugf("Added %d Endpoints to db", len(db.endpointIndex))
 
 	return nil
 }
@@ -275,11 +284,13 @@ func (db *MemoryDb) loadOrganizations(location string) error {
 		return err
 	}
 
+	db.organizationIndex = make(map[string]*Organization)
+	db.organizationToEndpointIndex = make(map[string][]EndpointOrganization)
 	for _, e := range stub {
 		db.appendOrganization(&e)
 	}
 
-	logrus.Infof("Added %d Organizations to db", len(db.organizationIndex))
+	logrus.Debugf("Added %d Organizations to db", len(db.organizationIndex))
 
 	return nil
 }
@@ -306,7 +317,7 @@ func (db *MemoryDb) loadEndpointsOrganizations(location string) error {
 		}
 	}
 
-	logrus.Infof("Added %d mappings of endpoint <-> organization to db", len(stub))
+	logrus.Debugf("Added %d mappings of endpoint <-> organization to db", len(stub))
 
 	return nil
 }

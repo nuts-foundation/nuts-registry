@@ -1,6 +1,6 @@
 /*
  * Nuts registry
- * Copyright (C) 2019 Nuts community
+ * Copyright (C) 2019. Nuts community
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
  */
 
 package db
@@ -23,6 +24,7 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
+	"os"
 	"sort"
 )
 
@@ -44,6 +46,13 @@ func (e *fileError) Error() string {
 // - endpoints_organisations.json
 func validateLocation(location string) error {
 	sLocation := sanitizeLocation(location)
+
+	if _, err := os.Stat(location); os.IsNotExist(err) {
+		// create and return
+		os.Mkdir(location, os.ModePerm)
+		return newFileError(fmt.Sprintf("%s is missing required files: ", sLocation))
+	}
+
 	files, err := ioutil.ReadDir(sLocation)
 
 	if err != nil {
