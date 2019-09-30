@@ -1,6 +1,6 @@
 module github.com/nuts-foundation/nuts-registry
 
-go 1.12
+go 1.13
 
 require (
 	github.com/deepmap/oapi-codegen v1.1.6
