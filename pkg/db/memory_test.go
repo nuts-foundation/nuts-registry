@@ -20,6 +20,7 @@
 package db
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -181,9 +182,8 @@ func TestMemoryDb_RegisterOrganization(t *testing.T) {
 			return
 		}
 
-		expected := "Duplicate organization for id urn:nuts:system:value"
-		if err.Error() != expected {
-			t.Errorf("Expected error [%s], got: [%s]", expected, err.Error())
+		if !errors.Is(err, ErrDuplicateOrganization) {
+			t.Errorf("Expected error [%v], got: [%v]", ErrDuplicateOrganization, err)
 		}
 	})
 }
@@ -215,9 +215,8 @@ func TestMemoryDb_RemoveOrganization(t *testing.T) {
 			return
 		}
 
-		expected := "Unknown organization with id urn:nuts:system:value"
-		if err.Error() != expected {
-			t.Errorf("Expected error [%s], got: [%s]", expected, err.Error())
+		if !errors.Is(err, ErrUnknownOrganization) {
+			t.Errorf("Expected error [%v], got: [%v]", ErrUnknownOrganization, err)
 		}
 	})
 }

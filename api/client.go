@@ -23,9 +23,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/sirupsen/logrus"
-	"go/types"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -60,7 +60,7 @@ func (hb HttpClient) RemoveOrganization(id string) error {
 	result, err := hb.client().DeregisterOrganization(ctx, id)
 	if err != nil {
 		logrus.Error("error while removing organization from registry", err)
-		return err
+		return core.Wrap(err)
 	}
 
 	body, err := ioutil.ReadAll(result.Body)
@@ -70,8 +70,8 @@ func (hb HttpClient) RemoveOrganization(id string) error {
 	}
 
 	if result.StatusCode != http.StatusAccepted {
-		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", result.StatusCode, body)}
-		logrus.Error(err.Error())
+		err = fmt.Errorf("registry returned %d, reason: %s", result.StatusCode, body)
+		logrus.Error(err)
 		return err
 	}
 
@@ -86,7 +86,7 @@ func (hb HttpClient) RegisterOrganization(org db.Organization) error {
 	result, err := hb.client().RegisterOrganization(ctx, Organization{}.fromDb(org))
 	if err != nil {
 		logrus.Error("error while registering organization in registry", err)
-		return err
+		return core.Wrap(err)
 	}
 
 	body, err := ioutil.ReadAll(result.Body)
@@ -96,8 +96,8 @@ func (hb HttpClient) RegisterOrganization(org db.Organization) error {
 	}
 
 	if result.StatusCode != http.StatusCreated {
-		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", result.StatusCode, body)}
-		logrus.Error(err.Error())
+		err = fmt.Errorf("registry returned %d, reason: %s", result.StatusCode, body)
+		logrus.Error(err)
 		return err
 	}
 
@@ -115,7 +115,7 @@ func (hb HttpClient) EndpointsByOrganization(legalEntity string) ([]db.Endpoint,
 	res, err := hb.client().EndpointsByOrganisationId(ctx, params)
 	if err != nil {
 		logrus.Error("error while getting endpoints by organization", err)
-		return nil, err
+		return nil, core.Wrap(err)
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
@@ -143,7 +143,7 @@ func (hb HttpClient) SearchOrganizations(query string) ([]db.Organization, error
 	res, err := hb.client().SearchOrganizations(ctx, params)
 	if err != nil {
 		logrus.Error("error while searching for organizations", err)
-		return nil, err
+		return nil, core.Wrap(err)
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
@@ -179,7 +179,7 @@ func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, err
 	res, err := hb.client().OrganizationById(ctx, legalEntity)
 	if err != nil {
 		logrus.Error("error while getting endpoints by organization", err)
-		return nil, err
+		return nil, core.Wrap(err)
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
@@ -189,14 +189,14 @@ func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, err
 	}
 
 	if res.StatusCode != http.StatusOK {
-		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", res.StatusCode, body)}
-		logrus.Error(err.Error())
+		err = fmt.Errorf("registry returned %d, reason: %s", res.StatusCode, body)
+		logrus.Error(err)
 		return nil, err
 	}
 
 	var organization Organization
 	if err := json.Unmarshal(body, &organization); err != nil {
-		logrus.Error("could not unmarshal response body")
+		logrus.Errorf("could not unmarshal response body: %v", err)
 		return nil, err
 	}
 	// parse the newlines in the public key

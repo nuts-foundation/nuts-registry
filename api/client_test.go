@@ -57,9 +57,9 @@ func TestHttpClient_OrganizationById(t *testing.T) {
 
 		_, err := client.OrganizationById("id")
 
-		expected := "-: Registry returned 404, reason: error reason"
+		expected := "registry returned 404, reason: error reason"
 		if err.Error() != expected {
-			t.Errorf("Expected error [%s], got [%s]", expected, err.Error())
+			t.Errorf("Expected error [%s], got [%v]", expected, err)
 		}
 	})
 
@@ -79,7 +79,7 @@ func TestHttpClient_OrganizationById(t *testing.T) {
 		res, err := client.OrganizationById("id")
 
 		if err != nil {
-			t.Errorf("Expected no error, got [%s]", err.Error())
+			t.Errorf("Expected no error, got [%v]", err)
 		}
 
 		if res.Identifier != organizations[0].Identifier {
@@ -101,9 +101,9 @@ func TestHttpClient_RegisterOrganization(t *testing.T) {
 
 		err := client.RegisterOrganization(organizations[0])
 
-		expected := "-: Registry returned 400, reason: error reason"
+		expected := "registry returned 400, reason: error reason"
 		if err.Error() != expected {
-			t.Errorf("Expected error [%s], got [%s]", expected, err.Error())
+			t.Errorf("Expected error [%s], got [%v]", expected, err)
 		}
 	})
 
@@ -120,7 +120,7 @@ func TestHttpClient_RegisterOrganization(t *testing.T) {
 		err := client.RegisterOrganization(organizations[0])
 
 		if err != nil {
-			t.Errorf("Expected no error, got [%s]", err.Error())
+			t.Errorf("Expected no error, got [%v]", err)
 		}
 	})
 }
@@ -138,9 +138,9 @@ func TestHttpClient_RemoveOrganization(t *testing.T) {
 
 		err := client.RemoveOrganization("id")
 
-		expected := "-: Registry returned 404, reason: error reason"
+		expected := "registry returned 404, reason: error reason"
 		if err.Error() != expected {
-			t.Errorf("Expected error [%s], got [%s]", expected, err.Error())
+			t.Errorf("Expected error [%s], got [%v]", expected, err)
 		}
 	})
 
@@ -157,7 +157,7 @@ func TestHttpClient_RemoveOrganization(t *testing.T) {
 		err := client.RemoveOrganization("id")
 
 		if err != nil {
-			t.Errorf("Expected no error, got [%s]", err.Error())
+			t.Errorf("Expected no error, got [%v]", err)
 		}
 	})
 }

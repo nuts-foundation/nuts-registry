@@ -208,6 +208,8 @@ func (r *Registry) startFileSystemWatcher() error {
 
 				r.logger().Debugf("Received file watcher event: %s", event.String())
 				if strings.Contains(event.Name, "/organizations.json") && event.Op&fsnotify.Write == fsnotify.Write {
+					// slow down a bit
+					time.Sleep(100 * time.Millisecond)
 					if r.Db != nil {
 						if err := r.Load(); err != nil {
 							r.logger().Errorf("error during reloading of files: %v", err)
