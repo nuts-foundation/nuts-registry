@@ -126,6 +126,12 @@ paths:
           required: false
           schema:
             type: string
+        - name: strict
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: only return successfull result if each given organisation has an endpoint of the requested type, otherwise 400
       responses:
         '200':
           description: OK response with list of valid endpoint-organization tuples, list may be empty
@@ -139,7 +145,11 @@ paths:
           description: incorrect search query
           content:
             text/plain:
-              example: No organisation identifiers given
+              examples:
+                empty:
+                  value: "No organisation identifiers given"
+                strict:
+                  value: "organization with id X does not have an endpoint of type Y"
               schema:
                 type: string
 components:

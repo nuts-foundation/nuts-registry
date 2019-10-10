@@ -61,7 +61,7 @@ const ModuleName = "Registry"
 type RegistryClient interface {
 
 	// EndpointsByOrganization returns all registered endpoints for an organization
-	EndpointsByOrganization(organizationIdentifier string) ([]db.Endpoint, error)
+	EndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error)
 
 	// SearchOrganizations searches the registry for any Organization mathing the given query
 	SearchOrganizations(query string) ([]db.Organization, error)
@@ -125,8 +125,8 @@ func (r *Registry) Configure() error {
 }
 
 // EndpointsByOrganization is a wrapper for sam func on DB
-func (r *Registry) EndpointsByOrganization(organizationIdentifier string) ([]db.Endpoint, error) {
-	return r.Db.FindEndpointsByOrganization(organizationIdentifier)
+func (r *Registry) EndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error) {
+	return r.Db.FindEndpointsByOrganizationAndType(organizationIdentifier, endpointType)
 }
 
 // SearchOrganizations is a wrapper for sam func on DB

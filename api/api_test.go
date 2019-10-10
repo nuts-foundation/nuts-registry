@@ -50,7 +50,7 @@ type MockDb struct {
 	endpointsError error
 }
 
-func (db *MockDb) FindEndpointsByOrganization(organizationIdentifier string) ([]db.Endpoint, error) {
+func (db *MockDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error) {
 	if db.endpointsError != nil {
 		return nil, db.endpointsError
 	}
@@ -345,6 +345,30 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 
 		if len(result) != 0 {
 			t.Errorf("Got result size: %d, want 0", len(result))
+		}
+	})
+
+	t.Run("by Id and type 400 strict", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{})
+
+		q := make(url.Values)
+		q.Set("orgIds", "1")
+		q.Set("type", "otherType#value")
+		q.Set("strict", "true")
+
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/endpoints")
+
+		err := wrapper.EndpointsByOrganisationId(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 

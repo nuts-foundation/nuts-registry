@@ -112,12 +112,13 @@ func (hb HttpClient) RegisterOrganization(org db.Organization) error {
 }
 
 // EndpointsByOrganization is the client Api implementation for getting all or certain types of endpoints for an organization
-func (hb HttpClient) EndpointsByOrganization(legalEntity string) ([]db.Endpoint, error) {
+func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpointType *string) ([]db.Endpoint, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 
 	params := &EndpointsByOrganisationIdParams{
 		OrgIds: []string{legalEntity},
+		Type:endpointType,
 	}
 	res, err := hb.client().EndpointsByOrganisationId(ctx, params)
 	if err != nil {
