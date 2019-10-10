@@ -30,17 +30,12 @@ func (e Endpoint) fromDb(db db.Endpoint) Endpoint {
 	return e
 }
 
-func (a Actor) fromDb(db db.Actor) Actor {
-	a.Identifier = Identifier(db.Identifier)
-	return a
-}
-
 func (o Organization) fromDb(db db.Organization) Organization {
-	o.Actors = actorsArrayFromDb(db.Actors)
+	e := endpointsArrayFromDb(db.Endpoints)
 	o.Identifier = Identifier(db.Identifier)
 	o.Name = db.Name
 	o.PublicKey = db.PublicKey
-	o.Endpoints = endpointsArrayFromDb(db.Endpoints)
+	o.Endpoints = &e
 	return o
 }
 
@@ -51,20 +46,18 @@ func (eo EndpointOrganization) fromDb(db db.EndpointOrganization) EndpointOrgani
 	return eo
 }
 
-func (a Actor) toDb() db.Actor {
-	return db.Actor{
-		Identifier: db.Identifier(a.Identifier),
-	}
-}
-
 func (a Organization) toDb() db.Organization {
-	return db.Organization{
-		Actors:     actorsArrayToDb(a.Actors),
+	org :=  db.Organization{
 		Identifier: db.Identifier(a.Identifier),
 		Name:       a.Name,
 		PublicKey:  a.PublicKey,
-		Endpoints:  endpointsArrayToDb(a.Endpoints),
 	}
+
+	if a.Endpoints != nil {
+		org.Endpoints =  endpointsArrayToDb(*a.Endpoints)
+	}
+
+	return org
 }
 
 func (a Endpoint) toDb() db.Endpoint {
@@ -75,14 +68,6 @@ func (a Endpoint) toDb() db.Endpoint {
 		Status:       a.Status,
 		Version:      a.Version,
 	}
-}
-
-func actorsArrayFromDb(actorsIn []db.Actor) []Actor {
-	as := make([]Actor, len(actorsIn))
-	for i, a := range actorsIn {
-		as[i] = Actor{}.fromDb(a)
-	}
-	return as
 }
 
 func organizationsArrayFromDb(organizationsIn []db.Organization) []Organization {
@@ -99,14 +84,6 @@ func endpointsArrayFromDb(endpointsIn []db.Endpoint) []Endpoint {
 		es[i] = Endpoint{}.fromDb(a)
 	}
 	return es
-}
-
-func actorsArrayToDb(actorsIn []Actor) []db.Actor {
-	as := make([]db.Actor, len(actorsIn))
-	for i, a := range actorsIn {
-		as[i] = a.toDb()
-	}
-	return as
 }
 
 func organizationsToFromDb(organizationsIn []Organization) []db.Organization {

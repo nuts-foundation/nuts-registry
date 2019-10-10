@@ -153,17 +153,6 @@ func deserializeOrganizations(data *bytes.Buffer) ([]Organization, error) {
 	return stub, err
 }
 
-func deserializeActors(data *bytes.Buffer) ([]Actor, error) {
-	var stub []Actor
-	err := json.Unmarshal(data.Bytes(), &stub)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return stub, err
-}
-
 func deserializeOrganization(data *bytes.Buffer) (*Organization, error) {
 	stub := &Organization{}
 	err := json.Unmarshal(data.Bytes(), stub)
@@ -595,84 +584,6 @@ func TestApiResource_DeregisterOrganization(t *testing.T) {
 
 		if rec.Code != http.StatusNotFound {
 			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusNotFound)
-		}
-	})
-}
-
-func TestApiResource_OrganizationActors(t *testing.T) {
-	t.Run("200 with single result", func(t *testing.T) {
-		e, wrapper := initEcho(&MockDb{organizations: organizations})
-
-		q := make(url.Values)
-		q.Set("actorId", "urn:nuts:system:value")
-
-		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetPath("/api/organization/:id/actors")
-		c.SetParamNames("id")
-		c.SetParamValues("urn:nuts:system:value")
-
-		err := wrapper.OrganizationActors(c)
-
-		if err != nil {
-			t.Errorf("Got err during call: %s", err.Error())
-		}
-
-		if rec.Code != http.StatusOK {
-			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-		}
-
-		result, err := deserializeActors(rec.Body)
-
-		if err != nil {
-			t.Errorf("Got err during deserialization: %s", err.Error())
-		}
-
-		if result == nil {
-			t.Error("Got nil from deserialization")
-		}
-
-		if len(result) != 1 {
-			t.Errorf("Got %d results want [1]", len(result))
-		}
-	})
-
-	t.Run("200 with empty result", func(t *testing.T) {
-		e, wrapper := initEcho(&MockDb{organizations: organizations})
-
-		q := make(url.Values)
-		q.Set("actorId", "system#value2")
-
-		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetPath("/api/organization/:id/actors")
-		c.SetParamNames("id")
-		c.SetParamValues("system#value")
-
-		err := wrapper.OrganizationActors(c)
-
-		if err != nil {
-			t.Errorf("Got err during call: %s", err.Error())
-		}
-
-		if rec.Code != http.StatusOK {
-			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-		}
-
-		result, err := deserializeActors(rec.Body)
-
-		if err != nil {
-			t.Errorf("Got err during deserialization: %s", err.Error())
-		}
-
-		if result == nil {
-			t.Error("Got nil from deserialization")
-		}
-
-		if len(result) != 0 {
-			t.Errorf("Got %d results want [0]", len(result))
 		}
 	})
 }

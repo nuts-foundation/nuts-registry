@@ -83,7 +83,14 @@ func (hb HttpClient) RegisterOrganization(org db.Organization) error {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 
-	result, err := hb.client().RegisterOrganization(ctx, Organization{}.fromDb(org))
+	e := endpointsArrayFromDb(org.Endpoints)
+	req := RegisterOrganizationJSONRequestBody{
+		Endpoints:  &e,
+		Identifier: Identifier(string(org.Identifier)),
+		Name:       org.Name,
+		PublicKey:  org.PublicKey,
+	}
+	result, err := hb.client().RegisterOrganization(ctx, req)
 	if err != nil {
 		logrus.Error("error while registering organization in registry", err)
 		return err

@@ -6,44 +6,6 @@ info:
   license:
     name: GPLv3
 paths:
-  /api/organization/{id}/actors:
-    get:
-      summary: "get actors for given organization, the main question that is answered by this api: may the professional represent the organization?"
-      operationId: organizationActors
-      tags:
-        - organizations
-      parameters:
-        - name: id
-          in: path
-          description: "URL encoded Identifier"
-          required: true
-          example: "urn:oid:2.16.840.1.113883.2.4.6.1:00000007"
-          schema:
-            type: string
-        - name: actorId
-          in: query
-          description: "URL encoded Actor identifier"
-          required: true
-          example: "urn:oid:2.16.840.1.113883.2.4.6.1:00000007"
-          schema:
-            type:
-              string
-      responses:
-        '200':
-          description: "Matching records for given identifiers, if no current employment or mandate is present an empty list is returned"
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Identifier"
-        '400':
-          description: "Invalid request, when required query params are missing"
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: "Missing parameter actorId"
   /api/organization/{id}:
     get:
       summary: "Get organization by id"
@@ -166,7 +128,7 @@ paths:
             type: string
       responses:
         '200':
-          description: OK response with list of valid endpoints, list may be empty
+          description: OK response with list of valid endpoint-organization tuples, list may be empty
           content:
             text/plain:
               schema:
@@ -182,15 +144,6 @@ paths:
                 type: string
 components:
   schemas:
-    Actor:
-      description: "A person that acts on behalf of an organization"
-      required:
-        - identifier
-      properties:
-        identifier:
-          $ref: "#/components/schemas/Identifier"
-      example:
-        identifier: "urn:oid:2.16.840.1.113883.2.4.6.1:00000007"
     EndpointOrganization:
       description: "Mapping between Endpoints and Organizations"
       required:
@@ -217,10 +170,6 @@ components:
           example: Zorggroep Nuts
         identifier:
           $ref: "#/components/schemas/Identifier"
-        actors:
-          type: array
-          items:
-            $ref: "#/components/schemas/Actor"
         endpoints:
           type: array
           items:
