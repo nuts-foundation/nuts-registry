@@ -118,7 +118,9 @@ func (r *Registry) Configure() error {
 		if r.Config.Mode == "server" {
 			// load static Db
 			r.Db = db.New()
-			err = r.Db.Load(r.Config.Datadir)
+			if err := r.Db.Load(r.Config.Datadir); err != nil {
+				r.logger().WithError(err).Warn("unable to load registry files")
+			}
 		}
 	})
 	return err
