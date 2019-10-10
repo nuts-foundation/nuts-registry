@@ -261,7 +261,7 @@ func (r *Registry) startGithubSync() error {
 
 	close := make(chan struct{})
 	go func(r *Registry, ch chan struct{}) {
-		eTag := random.String(32)
+		var eTag string
 
 		for {
 			var err error
