@@ -44,7 +44,7 @@ The server and client API is generated from the open-api spec:
 
 .. code-block:: shell
 
-    oapi-codegen -package api docs/_static/nuts-registry.yaml > api/generated.go
+    oapi-codegen -generate types,client,server -package api docs/_static/nuts-registry.yaml > api/generated.go
 
 README
 ******
