@@ -161,3 +161,55 @@ func TestHttpClient_RemoveOrganization(t *testing.T) {
 		}
 	})
 }
+
+func TestHttpClient_SearchOrganizations(t *testing.T) {
+	t.Run("200", func(t *testing.T) {
+		org, _ := json.Marshal(organizations)
+		client := newTestClient(func(req *http.Request) *http.Response {
+			// Test request parameters
+			return &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(bytes.NewReader(org)),
+				Header: http.Header{
+					"Content-Type": []string{"application/json"},
+				},
+			}
+		})
+
+		res, err := client.SearchOrganizations("query")
+
+		if err != nil {
+			t.Errorf("Expected no error, got [%s]", err.Error())
+		}
+
+		if len(res) != 2 {
+			t.Errorf("Expected 2 Organizations in return, got [%d]", len(res))
+		}
+	})
+}
+
+func TestHttpClient_EndpointsByOrganizationAndType(t *testing.T) {
+	t.Run("200", func(t *testing.T) {
+		org, _ := json.Marshal(endpoints)
+		client := newTestClient(func(req *http.Request) *http.Response {
+			// Test request parameters
+			return &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(bytes.NewReader(org)),
+				Header: http.Header{
+					"Content-Type": []string{"application/json"},
+				},
+			}
+		})
+
+		res, err := client.EndpointsByOrganizationAndType("entity", nil)
+
+		if err != nil {
+			t.Errorf("Expected no error, got [%s]", err.Error())
+		}
+
+		if len(res) != 1 {
+			t.Errorf("Expected 1 Endpoint in return, got [%d]", len(res))
+		}
+	})
+}
