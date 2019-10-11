@@ -305,9 +305,11 @@ func (r *Registry) downloadAndUnzip(eTag string) (string, error) {
 }
 
 func (r *Registry) download(eTag string) (string, error) {
+	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+	httpClient := &http.Client{Timeout: 30 * time.Second}
 
 	// Get the data
-	resp, err := http.Get(r.Config.SyncAddress)
+	resp, err := httpClient.Get(r.Config.SyncAddress)
 	if err != nil {
 		return "", err
 	}
