@@ -42,12 +42,6 @@ func (e RestInterfaceStub) RegisterOrganization(ctx echo.Context) error {
 	return err
 }
 
-func (e RestInterfaceStub) OrganizationActors(ctx echo.Context, id string, params OrganizationActorsParams) error {
-	var err error
-
-	return err
-}
-
 func (e RestInterfaceStub) EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error {
 	var err error
 

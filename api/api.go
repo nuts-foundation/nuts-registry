@@ -92,25 +92,6 @@ func (apiResource ApiWrapper) RegisterOrganization(ctx echo.Context) error {
 	return ctx.NoContent(http.StatusCreated)
 }
 
-// OrganizationActors is the Api implementation for finding the actors for a given organization
-func (apiResource ApiWrapper) OrganizationActors(ctx echo.Context, id string, params OrganizationActorsParams) error {
-	result, err := apiResource.R.OrganizationById(id)
-
-	if err != nil {
-		return err
-	}
-
-	actors := []Actor{}
-
-	for _, a := range result.Actors {
-		if params.ActorId == a.Identifier.String() {
-			actors = append(actors, Actor{}.fromDb(a))
-		}
-	}
-
-	return ctx.JSON(http.StatusOK, actors)
-}
-
 // OrganizationById is the Api implementation for getting an organization based on its Id.
 func (apiResource ApiWrapper) OrganizationById(ctx echo.Context, id string) error {
 
@@ -131,14 +112,19 @@ func (apiResource ApiWrapper) OrganizationById(ctx echo.Context, id string) erro
 // EndpointsByOrganisationId is the Api implementation for getting all or certain types of endpoints for an organization
 func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error {
 	var dupEndpoints []Endpoint
+	strict := params.Strict
 	endpointIds := make(map[string]bool)
 	for _, id := range params.OrgIds {
-		dbEndpoints, err := apiResource.R.EndpointsByOrganization(id)
+		dbEndpoints, err := apiResource.R.EndpointsByOrganizationAndType(id, params.Type)
 
 		if err != nil {
 			logrus.Warning(err.Error())
 		} else {
 			dupEndpoints = append(endpointsArrayFromDb(dbEndpoints), dupEndpoints...)
+		}
+
+		if strict != nil && *strict && len(dbEndpoints) == 0 {
+			return ctx.JSON(http.StatusBadRequest, fmt.Sprintf("organization with id %s does not have an endpoint of type %v", id, params.Type))
 		}
 	}
 

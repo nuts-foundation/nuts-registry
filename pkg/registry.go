@@ -61,7 +61,7 @@ const ModuleName = "Registry"
 type RegistryClient interface {
 
 	// EndpointsByOrganization returns all registered endpoints for an organization
-	EndpointsByOrganization(organizationIdentifier string) ([]db.Endpoint, error)
+	EndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error)
 
 	// SearchOrganizations searches the registry for any Organization mathing the given query
 	SearchOrganizations(query string) ([]db.Organization, error)
@@ -127,8 +127,8 @@ func (r *Registry) Configure() error {
 }
 
 // EndpointsByOrganization is a wrapper for sam func on DB
-func (r *Registry) EndpointsByOrganization(organizationIdentifier string) ([]db.Endpoint, error) {
-	return r.Db.FindEndpointsByOrganization(organizationIdentifier)
+func (r *Registry) EndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error) {
+	return r.Db.FindEndpointsByOrganizationAndType(organizationIdentifier, endpointType)
 }
 
 // SearchOrganizations is a wrapper for sam func on DB
@@ -201,6 +201,10 @@ func (r *Registry) startFileSystemWatcher() error {
 	closer := make(chan struct{})
 
 	go func() {
+		orgs := false
+		ends := false
+		eos := false
+
 		for {
 			select {
 			case event, ok := <-w.Events:
@@ -208,13 +212,27 @@ func (r *Registry) startFileSystemWatcher() error {
 					return
 				}
 
+				// we need to receive all 3 events before reloading the files
 				r.logger().Debugf("Received file watcher event: %s", event.String())
 				if strings.Contains(event.Name, "/organizations.json") && event.Op&fsnotify.Write == fsnotify.Write {
+					orgs = true
+				}
+				if strings.Contains(event.Name, "/endpoints.json") && event.Op&fsnotify.Write == fsnotify.Write {
+					ends = true
+				}
+				if strings.Contains(event.Name, "/endpoints_organizations.json") && event.Op&fsnotify.Write == fsnotify.Write {
+					eos = true
+				}
+
+				if orgs && ends && eos {
 					if r.Db != nil {
 						if err := r.Load(); err != nil {
 							r.logger().Errorf("error during reloading of files: %v", err)
 						}
 					}
+					orgs = false
+					ends = false
+					eos = false
 				}
 			case err, ok := <-w.Errors:
 				if !ok {
