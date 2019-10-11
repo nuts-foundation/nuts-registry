@@ -224,7 +224,7 @@ func (r *Registry) startFileSystemWatcher() error {
 				if orgs && ends && eos {
 					if r.Db != nil {
 						if err := r.Load(); err != nil {
-							r.logger().WithError(err).Error("error during reloading of files: %v")
+							r.logger().WithError(err).Error("error during reloading of registry files")
 						}
 					}
 					orgs = false
