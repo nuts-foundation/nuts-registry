@@ -47,14 +47,14 @@ func (eo EndpointOrganization) fromDb(db db.EndpointOrganization) EndpointOrgani
 }
 
 func (a Organization) toDb() db.Organization {
-	org :=  db.Organization{
+	org := db.Organization{
 		Identifier: db.Identifier(a.Identifier),
 		Name:       a.Name,
 		PublicKey:  a.PublicKey,
 	}
 
 	if a.Endpoints != nil {
-		org.Endpoints =  endpointsArrayToDb(*a.Endpoints)
+		org.Endpoints = endpointsArrayToDb(*a.Endpoints)
 	}
 
 	return org

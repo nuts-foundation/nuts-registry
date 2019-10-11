@@ -118,7 +118,7 @@ func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpoint
 
 	params := &EndpointsByOrganisationIdParams{
 		OrgIds: []string{legalEntity},
-		Type:endpointType,
+		Type:   endpointType,
 	}
 	res, err := hb.client().EndpointsByOrganisationId(ctx, params)
 	if err != nil {
