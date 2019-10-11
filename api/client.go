@@ -26,7 +26,6 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/sirupsen/logrus"
 	"go/types"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -59,14 +58,14 @@ func (hb HttpClient) RemoveOrganization(id string) error {
 		return err
 	}
 
-	body, err := ioutil.ReadAll(result.Body)
+	parsed, err := ParsederegisterOrganizationResponse(result)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return err
 	}
 
-	if result.StatusCode != http.StatusAccepted {
-		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", result.StatusCode, body)}
+	if parsed.StatusCode() != http.StatusAccepted {
+		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", result.StatusCode, parsed.Body)}
 		logrus.Error(err.Error())
 		return err
 	}
@@ -92,14 +91,14 @@ func (hb HttpClient) RegisterOrganization(org db.Organization) error {
 		return err
 	}
 
-	body, err := ioutil.ReadAll(result.Body)
+	parsed, err := ParseregisterOrganizationResponse(result)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return err
 	}
 
-	if result.StatusCode != http.StatusCreated {
-		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", result.StatusCode, body)}
+	if parsed.StatusCode() != http.StatusCreated {
+		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", result.StatusCode, parsed.Body)}
 		logrus.Error(err.Error())
 		return err
 	}
@@ -122,7 +121,7 @@ func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpoint
 		return nil, err
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	parsed, err := ParseendpointsByOrganisationIdResponse(res)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return nil, err
@@ -130,7 +129,13 @@ func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpoint
 
 	var endpoints []Endpoint
 
-	if err := json.Unmarshal(body, &endpoints); err != nil {
+	if parsed.StatusCode() != http.StatusOK {
+		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", res.StatusCode, parsed.Body)}
+		logrus.Error(err.Error())
+		return nil, err
+	}
+
+	if err := json.Unmarshal(parsed.Body, &endpoints); err != nil {
 		logrus.Error("could not unmarshal response body")
 		return nil, err
 	}
@@ -150,15 +155,21 @@ func (hb HttpClient) SearchOrganizations(query string) ([]db.Organization, error
 		return nil, err
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	parsed, err := ParsesearchOrganizationsResponse(res)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return nil, err
 	}
 
+	if parsed.StatusCode() != http.StatusOK {
+		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", res.StatusCode, parsed.Body)}
+		logrus.Error(err.Error())
+		return nil, err
+	}
+
 	var organizations []Organization
 
-	if err := json.Unmarshal(body, &organizations); err != nil {
+	if err := json.Unmarshal(parsed.Body, &organizations); err != nil {
 		logrus.Error("could not unmarshal response body")
 		return nil, err
 	}
@@ -186,20 +197,20 @@ func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, err
 		return nil, err
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	parsed, err := ParseorganizationByIdResponse(res)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return nil, err
 	}
 
-	if res.StatusCode != http.StatusOK {
-		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", res.StatusCode, body)}
+	if parsed.StatusCode() != http.StatusOK {
+		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", res.StatusCode, parsed.Body)}
 		logrus.Error(err.Error())
 		return nil, err
 	}
 
 	var organization Organization
-	if err := json.Unmarshal(body, &organization); err != nil {
+	if err := json.Unmarshal(parsed.Body, &organization); err != nil {
 		logrus.Error("could not unmarshal response body")
 		return nil, err
 	}
