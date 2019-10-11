@@ -29,6 +29,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -36,20 +37,15 @@ import (
 type HttpClient struct {
 	ServerAddress string
 	Timeout       time.Duration
-	customClient  *http.Client
 }
 
-func (hb HttpClient) client() *Client {
-	if hb.customClient != nil {
-		return &Client{
-			Server: fmt.Sprintf("http://%v", hb.ServerAddress),
-			Client: *hb.customClient,
-		}
+func (hb HttpClient) client() ClientInterface {
+	url := hb.ServerAddress
+	if !strings.Contains(url , "http") {
+		url = fmt.Sprintf("http://%v", hb.ServerAddress)
 	}
 
-	return &Client{
-		Server: fmt.Sprintf("http://%v", hb.ServerAddress),
-	}
+	return NewClientWithResponses(url)
 }
 
 // RemoveOrganization removes an organization and its endpoints from the registry
