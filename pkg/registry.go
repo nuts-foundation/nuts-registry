@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
-	"github.com/labstack/gommon/random"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/sirupsen/logrus"
 	"io"
@@ -59,7 +58,6 @@ const ModuleName = "Registry"
 
 // RegistryClient is the interface to be implemented by any remote or local client
 type RegistryClient interface {
-
 	// EndpointsByOrganization returns all registered endpoints for an organization
 	EndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error)
 
@@ -193,7 +191,6 @@ func (r *Registry) Load() error {
 
 func (r *Registry) startFileSystemWatcher() error {
 	w, err := fsnotify.NewWatcher()
-
 	if err != nil {
 		return err
 	}
@@ -227,7 +224,7 @@ func (r *Registry) startFileSystemWatcher() error {
 				if orgs && ends && eos {
 					if r.Db != nil {
 						if err := r.Load(); err != nil {
-							r.logger().Errorf("error during reloading of files: %v", err)
+							r.logger().WithError(err).Error("error during reloading of registry files")
 						}
 					}
 					orgs = false
@@ -238,7 +235,7 @@ func (r *Registry) startFileSystemWatcher() error {
 				if !ok {
 					return
 				}
-				r.logger().Errorf("Received file watcher error: %v", err)
+				r.logger().WithError(err).Error("Received file watcher error")
 			case <-closer:
 				r.logger().Debug("Stopping file watcher")
 				return
@@ -258,21 +255,22 @@ func (r *Registry) startFileSystemWatcher() error {
 
 func (r *Registry) startGithubSync() error {
 	if err := r.startFileSystemWatcher(); err != nil {
-		r.logger().Error("Github sync not started due to file watcher problem")
+		r.logger().WithError(err).Error("Github sync not started due to file watcher problem")
 		return err
 	}
 
 	close := make(chan struct{})
 	go func(r *Registry, ch chan struct{}) {
-		eTag := random.String(32)
+		var eTag string
 
 		for {
 			var err error
 
 			r.logger().Debugf("Downloading registry files from %s to %s", r.Config.SyncAddress, r.Config.Datadir)
 			if eTag, err = r.downloadAndUnzip(eTag); err != nil {
-				r.logger().Errorf("Error downloading registry files: %v", err)
+				r.logger().WithError(err).Error("Error downloading registry files")
 			}
+
 			select {
 			case <-ch:
 				r.logger().Debug("Stopping github download")
@@ -307,9 +305,11 @@ func (r *Registry) downloadAndUnzip(eTag string) (string, error) {
 }
 
 func (r *Registry) download(eTag string) (string, error) {
+	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+	httpClient := &http.Client{Timeout: 30 * time.Second}
 
 	// Get the data
-	resp, err := http.Get(r.Config.SyncAddress)
+	resp, err := httpClient.Get(r.Config.SyncAddress)
 	if err != nil {
 		return "", err
 	}
