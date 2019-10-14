@@ -62,7 +62,7 @@ type Organization struct {
 
 // todo: Db temporary abstraction
 type Db interface {
-	FindEndpointsByOrganization(organizationIdentifier string) ([]Endpoint, error)
+	FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error)
 	Load(location string) error
 	SearchOrganizations(query string) []Organization
 	OrganizationById(id string) (*Organization, error)

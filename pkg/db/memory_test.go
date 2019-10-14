@@ -26,7 +26,7 @@ import (
 
 var endpoint = Endpoint{
 	Identifier:   Identifier("urn:nuts:system:value"),
-	EndpointType: "urn:nuts:endpoint::type",
+	EndpointType: "urn:nuts:endpoint:type",
 	Status:       StatusActive,
 }
 
@@ -229,7 +229,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		validDb.appendEndpoint(&endpoint)
 		validDb.appendEO(mapping)
 
-		result, err := validDb.FindEndpointsByOrganization("urn:nuts:system:value")
+		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
 
 		if err != nil {
 			t.Errorf("Expected no error, got: %s", err.Error())
@@ -237,6 +237,41 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 
 		if len(result) != 1 {
 			t.Errorf("Expected 1 result, got: %d", len(result))
+		}
+	})
+
+	t.Run("Valid example with type", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(&organization)
+		validDb.appendEndpoint(&endpoint)
+		validDb.appendEO(mapping)
+
+		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", &endpoint.EndpointType)
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %s", err.Error())
+		}
+
+		if len(result) != 1 {
+			t.Errorf("Expected 1 result, got: %d", len(result))
+		}
+	})
+
+	t.Run("incorrect type", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(&organization)
+		validDb.appendEndpoint(&endpoint)
+		validDb.appendEO(mapping)
+
+		unknown := "unknown type"
+		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", &unknown)
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %s", err.Error())
+		}
+
+		if len(result) != 0 {
+			t.Errorf("Expected 0 result, got: %d", len(result))
 		}
 	})
 
@@ -248,7 +283,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		mappingCopy.Status = "inactive"
 		validDb.appendEO(mappingCopy)
 
-		result, err := validDb.FindEndpointsByOrganization("urn:nuts:system:value")
+		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
 
 		if err != nil {
 			t.Errorf("Expected no error, got: %s", err.Error())
@@ -267,7 +302,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		validDb.appendEndpoint(&endpointCopy)
 		validDb.appendEO(mapping)
 
-		result, err := validDb.FindEndpointsByOrganization("urn:nuts:system:value")
+		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
 
 		if err != nil {
 			t.Errorf("Expected no error, got: %s", err.Error())
@@ -275,6 +310,37 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 
 		if len(result) != 0 {
 			t.Errorf("Expected 0 result, got: %d", len(result))
+		}
+	})
+
+	t.Run("no mapping", func(t *testing.T) {
+		validDb := New()
+		validDb.appendOrganization(&organization)
+		validDb.appendEndpoint(&endpoint)
+
+		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %s", err.Error())
+		}
+
+		if len(result) != 0 {
+			t.Errorf("Expected 0 result, got: %d", len(result))
+		}
+	})
+
+	t.Run("Organization unknown", func(t *testing.T) {
+		validDb := New()
+
+		_, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
+
+		if err == nil {
+			t.Errorf("Expected error")
+		}
+
+		expected := "Organization with identifier [urn:nuts:system:value] does not exist"
+		if err.Error() != expected {
+			t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
 		}
 	})
 }
@@ -313,37 +379,6 @@ func TestMemoryDb_appendEO(t *testing.T) {
 			t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
 		}
 	})
-}
-
-func TestMemoryDb_FindEndpointsByOrganizationNoMapping(t *testing.T) {
-	validDb := New()
-	validDb.appendOrganization(&organization)
-	validDb.appendEndpoint(&endpoint)
-
-	result, err := validDb.FindEndpointsByOrganization("urn:nuts:system:value")
-
-	if err != nil {
-		t.Errorf("Expected no error, got: %s", err.Error())
-	}
-
-	if len(result) != 0 {
-		t.Errorf("Expected 0 result, got: %d", len(result))
-	}
-}
-
-func TestMemoryDb_FindEndpointsByOrganizationUnknown(t *testing.T) {
-	validDb := New()
-
-	_, err := validDb.FindEndpointsByOrganization("urn:nuts:system:value")
-
-	if err == nil {
-		t.Errorf("Expected error")
-	}
-
-	expected := "Organization with identifier [urn:nuts:system:value] does not exist"
-	if err.Error() != expected {
-		t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
-	}
 }
 
 func TestMemoryDb_SearchOrganizations(t *testing.T) {

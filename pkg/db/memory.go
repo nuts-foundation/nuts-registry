@@ -170,7 +170,7 @@ func (db *MemoryDb) Load(location string) error {
 	return err
 }
 
-func (db *MemoryDb) FindEndpointsByOrganization(organizationIdentifier string) ([]Endpoint, error) {
+func (db *MemoryDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error) {
 
 	_, exists := db.organizationIndex[organizationIdentifier]
 
@@ -199,7 +199,13 @@ func (db *MemoryDb) FindEndpointsByOrganization(organizationIdentifier string) (
 		es := db.endpointIndex[f.Endpoint.String()]
 
 		if es.Status == StatusActive {
-			endpoints = append(endpoints, *es)
+			if endpointType != nil {
+				if *endpointType == es.EndpointType {
+					endpoints = append(endpoints, *es)
+				}
+			} else {
+				endpoints = append(endpoints, *es)
+			}
 		}
 	}
 

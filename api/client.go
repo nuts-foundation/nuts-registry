@@ -29,6 +29,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -36,20 +37,15 @@ import (
 type HttpClient struct {
 	ServerAddress string
 	Timeout       time.Duration
-	customClient  *http.Client
 }
 
-func (hb HttpClient) client() *Client {
-	if hb.customClient != nil {
-		return &Client{
-			Server: fmt.Sprintf("http://%v", hb.ServerAddress),
-			Client: *hb.customClient,
-		}
+func (hb HttpClient) client() ClientInterface {
+	url := hb.ServerAddress
+	if !strings.Contains(url , "http") {
+		url = fmt.Sprintf("http://%v", hb.ServerAddress)
 	}
 
-	return &Client{
-		Server: fmt.Sprintf("http://%v", hb.ServerAddress),
-	}
+	return NewClientWithResponses(url)
 }
 
 // RemoveOrganization removes an organization and its endpoints from the registry
@@ -63,7 +59,7 @@ func (hb HttpClient) RemoveOrganization(id string) error {
 		return core.Wrap(err)
 	}
 
-	body, err := ioutil.ReadAll(result.Body)
+	parsed, err := ParsederegisterOrganizationResponse(result)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return err
@@ -83,13 +79,20 @@ func (hb HttpClient) RegisterOrganization(org db.Organization) error {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 
-	result, err := hb.client().RegisterOrganization(ctx, Organization{}.fromDb(org))
+	e := endpointsArrayFromDb(org.Endpoints)
+	req := RegisterOrganizationJSONRequestBody{
+		Endpoints:  &e,
+		Identifier: Identifier(string(org.Identifier)),
+		Name:       org.Name,
+		PublicKey:  org.PublicKey,
+	}
+	result, err := hb.client().RegisterOrganization(ctx, req)
 	if err != nil {
 		logrus.Error("error while registering organization in registry", err)
 		return core.Wrap(err)
 	}
 
-	body, err := ioutil.ReadAll(result.Body)
+	parsed, err := ParseregisterOrganizationResponse(result)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return err
@@ -105,12 +108,13 @@ func (hb HttpClient) RegisterOrganization(org db.Organization) error {
 }
 
 // EndpointsByOrganization is the client Api implementation for getting all or certain types of endpoints for an organization
-func (hb HttpClient) EndpointsByOrganization(legalEntity string) ([]db.Endpoint, error) {
+func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpointType *string) ([]db.Endpoint, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 
 	params := &EndpointsByOrganisationIdParams{
 		OrgIds: []string{legalEntity},
+		Type:   endpointType,
 	}
 	res, err := hb.client().EndpointsByOrganisationId(ctx, params)
 	if err != nil {
@@ -118,7 +122,7 @@ func (hb HttpClient) EndpointsByOrganization(legalEntity string) ([]db.Endpoint,
 		return nil, core.Wrap(err)
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	parsed, err := ParseendpointsByOrganisationIdResponse(res)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return nil, err
@@ -126,7 +130,13 @@ func (hb HttpClient) EndpointsByOrganization(legalEntity string) ([]db.Endpoint,
 
 	var endpoints []Endpoint
 
-	if err := json.Unmarshal(body, &endpoints); err != nil {
+	if parsed.StatusCode() != http.StatusOK {
+		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", res.StatusCode, parsed.Body)}
+		logrus.Error(err.Error())
+		return nil, err
+	}
+
+	if err := json.Unmarshal(parsed.Body, &endpoints); err != nil {
 		logrus.Error("could not unmarshal response body")
 		return nil, err
 	}
@@ -146,15 +156,21 @@ func (hb HttpClient) SearchOrganizations(query string) ([]db.Organization, error
 		return nil, core.Wrap(err)
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	parsed, err := ParsesearchOrganizationsResponse(res)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return nil, err
 	}
 
+	if parsed.StatusCode() != http.StatusOK {
+		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", res.StatusCode, parsed.Body)}
+		logrus.Error(err.Error())
+		return nil, err
+	}
+
 	var organizations []Organization
 
-	if err := json.Unmarshal(body, &organizations); err != nil {
+	if err := json.Unmarshal(parsed.Body, &organizations); err != nil {
 		logrus.Error("could not unmarshal response body")
 		return nil, err
 	}
@@ -182,7 +198,7 @@ func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, err
 		return nil, core.Wrap(err)
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	parsed, err := ParseorganizationByIdResponse(res)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return nil, err

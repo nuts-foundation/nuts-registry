@@ -33,19 +33,19 @@ func (m *MockRegistryClient) EXPECT() *MockRegistryClientMockRecorder {
 	return m.recorder
 }
 
-// EndpointsByOrganization mocks base method
-func (m *MockRegistryClient) EndpointsByOrganization(organizationIdentifier string) ([]db.Endpoint, error) {
+// EndpointsByOrganizationAndType mocks base method
+func (m *MockRegistryClient) EndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EndpointsByOrganization", organizationIdentifier)
+	ret := m.ctrl.Call(m, "EndpointsByOrganizationAndType", organizationIdentifier, endpointType)
 	ret0, _ := ret[0].([]db.Endpoint)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// EndpointsByOrganization indicates an expected call of EndpointsByOrganization
-func (mr *MockRegistryClientMockRecorder) EndpointsByOrganization(organizationIdentifier interface{}) *gomock.Call {
+// EndpointsByOrganizationAndType indicates an expected call of EndpointsByOrganizationAndType
+func (mr *MockRegistryClientMockRecorder) EndpointsByOrganizationAndType(organizationIdentifier, endpointType interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndpointsByOrganization", reflect.TypeOf((*MockRegistryClient)(nil).EndpointsByOrganization), organizationIdentifier)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndpointsByOrganizationAndType", reflect.TypeOf((*MockRegistryClient)(nil).EndpointsByOrganizationAndType), organizationIdentifier, endpointType)
 }
 
 // SearchOrganizations mocks base method
