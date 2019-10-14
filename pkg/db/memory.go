@@ -21,8 +21,10 @@ package db
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"os"
 	"strings"
 )
 
@@ -33,11 +35,17 @@ type MemoryDb struct {
 	organizationToEndpointIndex map[string][]EndpointOrganization
 }
 
+// ErrDuplicateOrganization is given for an organization with an identifier that has already been stored
+var ErrDuplicateOrganization = errors.New("duplicate organization")
+
+// ErrUnknownOrganization is given when an organization does not exist for given identifier
+var ErrUnknownOrganization = errors.New("unknown organization")
+
 func (db *MemoryDb) RegisterOrganization(org Organization) error {
 	o := db.organizationIndex[string(org.Identifier)]
 
 	if o != nil {
-		return newDbError(fmt.Sprintf("Duplicate organization for id %s", org.Identifier))
+		return fmt.Errorf("error registering organization with id %s: %w", org.Identifier, ErrDuplicateOrganization)
 	}
 
 	db.appendOrganization(&org)
@@ -64,7 +72,7 @@ func (db *MemoryDb) RemoveOrganization(id string) error {
 	eos := db.organizationToEndpointIndex[id]
 
 	if o == nil {
-		return newDbError(fmt.Sprintf("Unknown organization with id %s", id))
+		return fmt.Errorf("error removing organization with id %s: %w", id, ErrUnknownOrganization)
 	}
 
 	for _, v := range eos {
@@ -93,12 +101,12 @@ func (i *MemoryDb) appendEO(eo EndpointOrganization) error {
 
 	_, f := i.organizationToEndpointIndex[ois]
 	if !f {
-		return newDbError(fmt.Sprintf("Endpoint <> Organization mapping references unknown organization with identifier [%s]", ois))
+		return fmt.Errorf("Endpoint <> Organization mapping references unknown organization with identifier [%s]", ois)
 	}
 
 	_, f = i.endpointToOrganizationIndex[eis]
 	if !f {
-		return newDbError(fmt.Sprintf("Endpoint <> Organization mapping references unknown endpoint with identifier [%s]", eis))
+		return fmt.Errorf("Endpoint <> Organization mapping references unknown endpoint with identifier [%s]", eis)
 	}
 
 	i.organizationToEndpointIndex[ois] = append(i.organizationToEndpointIndex[ois], eo)
@@ -134,11 +142,11 @@ func (db *MemoryDb) Load(location string) error {
 	err := validateLocation(location)
 
 	if err != nil {
-		if err.Error() == fmt.Sprintf("open %s: no such file or directory", location) {
+		if errors.Is(err, os.ErrNotExist) {
 			logrus.Warnf("No database files found at %s, starting with empty registry", location)
 			return nil
 		}
-		if strings.Contains(err.Error(), "is missing required files") {
+		if errors.Is(err, ErrMissingRequiredFiles) {
 			logrus.Warnf("No database files found at %s, starting with empty registry", location)
 			return nil
 		}
@@ -169,7 +177,7 @@ func (db *MemoryDb) FindEndpointsByOrganizationAndType(organizationIdentifier st
 
 	// not found
 	if !exists {
-		return nil, newDbError(fmt.Sprintf("Organization with identifier [%s] does not exist", organizationIdentifier))
+		return nil, fmt.Errorf("Organization with identifier [%s] does not exist", organizationIdentifier)
 	}
 
 	mappings := db.organizationToEndpointIndex[organizationIdentifier]
@@ -221,6 +229,9 @@ func (db *MemoryDb) SearchOrganizations(query string) []Organization {
 	return matches
 }
 
+// ErrOrganizationNotFound is returned when an organization is not found
+var ErrOrganizationNotFound = errors.New("organization not found")
+
 func (db *MemoryDb) OrganizationById(id string) (*Organization, error) {
 
 	for _, o := range db.organizationIndex {
@@ -228,7 +239,7 @@ func (db *MemoryDb) OrganizationById(id string) (*Organization, error) {
 			return o, nil
 		}
 	}
-	return nil, newDbError("organization not found")
+	return nil, ErrOrganizationNotFound
 }
 
 func searchRecursive(query []string, orgName []string) bool {

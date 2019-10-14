@@ -69,15 +69,3 @@ type Db interface {
 	RemoveOrganization(id string) error
 	RegisterOrganization(org Organization) error
 }
-
-type dbError struct {
-	s string
-}
-
-func newDbError(text string) error {
-	return &dbError{text}
-}
-
-func (e *dbError) Error() string {
-	return e.s
-}

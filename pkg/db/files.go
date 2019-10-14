@@ -20,7 +20,7 @@
 package db
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -40,6 +40,9 @@ func (e *fileError) Error() string {
 	return e.s
 }
 
+// ErrMissingRequiredFiles is returned when one or more files is missing at a certain location
+var ErrMissingRequiredFiles = errors.New("missing one or more required files")
+
 // Validate location of data files, checks if following files can be found in given directory:
 // - endpoints.json
 // - organisations.json
@@ -50,7 +53,6 @@ func validateLocation(location string) error {
 	if _, err := os.Stat(location); os.IsNotExist(err) {
 		// create and return
 		os.Mkdir(location, os.ModePerm)
-		return newFileError(fmt.Sprintf("%s is missing required files: ", sLocation))
 	}
 
 	files, err := ioutil.ReadDir(sLocation)
@@ -81,17 +83,7 @@ func validateLocation(location string) error {
 		// sort to get consistent test results
 		sort.Strings(keys)
 
-		buf := new(bytes.Buffer)
-		fmt.Fprintf(buf, "%s is missing required files: ", sLocation)
-		for i, k := range keys {
-			if i == len(keys)-1 {
-				fmt.Fprintf(buf, "%s", k)
-			} else {
-				fmt.Fprintf(buf, "%s, ", k)
-			}
-		}
-
-		return newFileError(buf.String())
+		return fmt.Errorf("loading from %s: %w", location, ErrMissingRequiredFiles)
 	}
 
 	return nil

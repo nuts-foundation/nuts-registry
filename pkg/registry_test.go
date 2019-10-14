@@ -147,6 +147,8 @@ func TestRegistry_Configure(t *testing.T) {
 }
 
 func TestRegistry_FileUpdate(t *testing.T) {
+	defer os.RemoveAll("../tmp")
+
 	t.Run("New files are loaded", func(t *testing.T) {
 		logrus.StandardLogger().SetLevel(logrus.DebugLevel)
 
@@ -192,6 +194,7 @@ func TestRegistry_FileUpdate(t *testing.T) {
 }
 
 func TestRegistry_GithubUpdate(t *testing.T) {
+	defer os.RemoveAll("../tmp")
 	logrus.StandardLogger().SetLevel(logrus.DebugLevel)
 
 	t.Run("New files are downloaded", func(t *testing.T) {

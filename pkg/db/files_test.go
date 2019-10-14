@@ -19,17 +19,19 @@
 
 package db
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestValidateLocation(t *testing.T) {
 	t.Run("Missing files gives err", func(t *testing.T) {
 		err := validateLocation("../../test_data/missing_files")
 
-		expected := "../../test_data/missing_files is missing required files: endpoints.json, endpoints_organizations.json"
 		if err == nil {
-			t.Errorf("Expected error with: %s", expected)
-		} else if err.Error() != expected {
-			t.Errorf("Expected error with: [%s], got [%s]", expected, err.Error())
+			t.Errorf("Expected error: %v", ErrMissingRequiredFiles)
+		} else if !errors.Is(err, ErrMissingRequiredFiles) {
+			t.Errorf("Expected error: [%v], got [%v]", ErrMissingRequiredFiles, err)
 		}
 	})
 
@@ -37,7 +39,7 @@ func TestValidateLocation(t *testing.T) {
 		err := validateLocation("../../test_data/all_empty_files")
 
 		if err != nil {
-			t.Errorf("Unexpected error: %s", err.Error())
+			t.Errorf("Unexpected error: %v", err)
 		}
 	})
 
@@ -45,7 +47,7 @@ func TestValidateLocation(t *testing.T) {
 		err := validateLocation("../../test_data/all_empty_files/")
 
 		if err != nil {
-			t.Errorf("Unexpected error: %s", err.Error())
+			t.Errorf("Unexpected error: %v", err)
 		}
 	})
 }
@@ -54,7 +56,7 @@ func TestReadFile(t *testing.T) {
 	data, err := ReadFile("../../test_data/all_empty_files", "endpoints.json")
 
 	if err != nil {
-		t.Errorf("Unexpected error: %s", err.Error())
+		t.Errorf("Unexpected error: %v", err)
 		return
 	}
 

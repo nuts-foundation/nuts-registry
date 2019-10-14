@@ -35,9 +35,9 @@ func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req), nil
 }
 
-type handler struct{
-	statusCode  int
-	bytes 		[]byte
+type handler struct {
+	statusCode int
+	bytes      []byte
 }
 
 func (h handler) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
@@ -54,9 +54,9 @@ func TestHttpClient_OrganizationById(t *testing.T) {
 
 		_, err := c.OrganizationById("id")
 
-		expected := "-: Registry returned 404, reason: error reason"
+		expected := "registry returned 404, reason: error reason"
 		if err.Error() != expected {
-			t.Errorf("Expected error [%s], got [%s]", expected, err.Error())
+			t.Errorf("Expected error [%s], got [%v]", expected, err)
 		}
 	})
 
@@ -68,8 +68,7 @@ func TestHttpClient_OrganizationById(t *testing.T) {
 		res, err := c.OrganizationById("id")
 
 		if err != nil {
-			t.Errorf("Expected no error, got [%s]", err.Error())
-			return
+			t.Errorf("Expected no error, got [%v]", err)
 		}
 
 		if res.Identifier != organizations[0].Identifier {
@@ -85,9 +84,9 @@ func TestHttpClient_RegisterOrganization(t *testing.T) {
 
 		err := c.RegisterOrganization(organizations[0])
 
-		expected := "-: Registry returned 400, reason: error reason"
+		expected := "registry returned 400, reason: error reason"
 		if err.Error() != expected {
-			t.Errorf("Expected error [%s], got [%s]", expected, err.Error())
+			t.Errorf("Expected error [%s], got [%v]", expected, err)
 		}
 	})
 
@@ -98,7 +97,7 @@ func TestHttpClient_RegisterOrganization(t *testing.T) {
 		err := c.RegisterOrganization(organizations[0])
 
 		if err != nil {
-			t.Errorf("Expected no error, got [%s]", err.Error())
+			t.Errorf("Expected no error, got [%v]", err)
 		}
 	})
 }
@@ -110,9 +109,9 @@ func TestHttpClient_RemoveOrganization(t *testing.T) {
 
 		err := c.RemoveOrganization("id")
 
-		expected := "-: Registry returned 404, reason: error reason"
+		expected := "registry returned 404, reason: error reason"
 		if err.Error() != expected {
-			t.Errorf("Expected error [%s], got [%s]", expected, err.Error())
+			t.Errorf("Expected error [%s], got [%v]", expected, err)
 		}
 	})
 
@@ -137,7 +136,7 @@ func TestHttpClient_SearchOrganizations(t *testing.T) {
 		res, err := c.SearchOrganizations("query")
 
 		if err != nil {
-			t.Errorf("Expected no error, got [%s]", err.Error())
+			t.Errorf("Expected no error, got [%v]", err)
 		}
 
 		if len(res) != 2 {
