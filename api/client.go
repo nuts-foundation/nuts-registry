@@ -26,7 +26,7 @@ import (
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
+	"go/types"
 	"net/http"
 	"strconv"
 	"strings"
@@ -41,7 +41,7 @@ type HttpClient struct {
 
 func (hb HttpClient) client() ClientInterface {
 	url := hb.ServerAddress
-	if !strings.Contains(url , "http") {
+	if !strings.Contains(url, "http") {
 		url = fmt.Sprintf("http://%v", hb.ServerAddress)
 	}
 
@@ -66,7 +66,7 @@ func (hb HttpClient) RemoveOrganization(id string) error {
 	}
 
 	if result.StatusCode != http.StatusAccepted {
-		err = fmt.Errorf("registry returned %d, reason: %s", result.StatusCode, body)
+		err = fmt.Errorf("registry returned %d, reason: %s", result.StatusCode, parsed.Body)
 		logrus.Error(err)
 		return err
 	}
@@ -99,7 +99,7 @@ func (hb HttpClient) RegisterOrganization(org db.Organization) error {
 	}
 
 	if result.StatusCode != http.StatusCreated {
-		err = fmt.Errorf("registry returned %d, reason: %s", result.StatusCode, body)
+		err = fmt.Errorf("registry returned %d, reason: %s", result.StatusCode, parsed.Body)
 		logrus.Error(err)
 		return err
 	}
@@ -205,13 +205,13 @@ func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, err
 	}
 
 	if res.StatusCode != http.StatusOK {
-		err = fmt.Errorf("registry returned %d, reason: %s", res.StatusCode, body)
+		err = fmt.Errorf("registry returned %d, reason: %s", res.StatusCode, parsed.Body)
 		logrus.Error(err)
 		return nil, err
 	}
 
 	var organization Organization
-	if err := json.Unmarshal(body, &organization); err != nil {
+	if err := json.Unmarshal(parsed.Body, &organization); err != nil {
 		logrus.Errorf("could not unmarshal response body: %v", err)
 		return nil, err
 	}

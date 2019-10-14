@@ -35,9 +35,9 @@ func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req), nil
 }
 
-type handler struct{
-	statusCode  int
-	bytes 		[]byte
+type handler struct {
+	statusCode int
+	bytes      []byte
 }
 
 func (h handler) ServeHTTP(writer http.ResponseWriter, req *http.Request) {

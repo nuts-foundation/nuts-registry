@@ -37,6 +37,7 @@ type MemoryDb struct {
 
 // ErrDuplicateOrganization is given for an organization with an identifier that has already been stored
 var ErrDuplicateOrganization = errors.New("duplicate organization")
+
 // ErrUnknownOrganization is given when an organization does not exist for given identifier
 var ErrUnknownOrganization = errors.New("unknown organization")
 
