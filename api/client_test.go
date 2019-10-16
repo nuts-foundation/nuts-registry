@@ -166,6 +166,18 @@ func TestHttpClient_ReverseLookup(t *testing.T) {
 			assert.True(t, errors.Is(err, ErrOrganizationNotFound))
 		}
 	})
+
+	t.Run("too many results", func(t *testing.T) {
+		org, _ := json.Marshal(organizations)
+		s := httptest.NewServer(handler{statusCode: 200, bytes: org})
+		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
+
+		_, err := c.ReverseLookup("name")
+
+		if assert.NotNil(t, err) {
+			assert.True(t, errors.Is(err, ErrOrganizationNotFound))
+		}
+	})
 }
 
 func TestHttpClient_EndpointsByOrganizationAndType(t *testing.T) {
