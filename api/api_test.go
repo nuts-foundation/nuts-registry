@@ -112,20 +112,10 @@ var organizations = []db.Organization{
 	{
 		Identifier: db.Identifier("urn:nuts:system:value"),
 		Name:       "test",
-		Actors: []db.Actor{
-			{
-				Identifier: db.Identifier("urn:nuts:system:value"),
-			},
-		},
 	},
 	{
 		Identifier: db.Identifier("urn:nuts:hidden"),
 		Name:       "hidden",
-		Actors: []db.Actor{
-			{
-				Identifier: db.Identifier("urn:nuts:hidden"),
-			},
-		},
 	},
 }
 

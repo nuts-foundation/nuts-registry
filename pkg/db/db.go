@@ -22,11 +22,6 @@ package db
 // StatusActive represents the "active" status
 const StatusActive = "active"
 
-// Actor defines component schema for Actor.
-type Actor struct {
-	Identifier Identifier `json:"identifier"`
-}
-
 // Endpoint defines component schema for Endpoint.
 type Endpoint struct {
 	URL          string     `json:"URL"`
@@ -53,7 +48,6 @@ func (i Identifier) String() string {
 
 // Organization defines component schema for Organization.
 type Organization struct {
-	Actors     []Actor    `json:"actors,omitempty"`
 	Identifier Identifier `json:"identifier"`
 	Name       string     `json:"name"`
 	PublicKey  *string    `json:"publicKey,omitempty"`
