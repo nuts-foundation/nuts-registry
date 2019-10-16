@@ -21,6 +21,7 @@ package db
 
 import (
 	"errors"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -429,6 +430,34 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 
 		if len(result) != 0 {
 			t.Errorf("Expected 0 result, got: %d", len(result))
+		}
+	})
+}
+
+func TestMemoryDb_ReverseLookup(t *testing.T) {
+	validDb := New()
+	validDb.appendOrganization(&organization)
+
+	t.Run("finds exact match", func(t *testing.T) {
+		result, err := validDb.ReverseLookup("test")
+
+		assert.Nil(t, err)
+		assert.NotNil(t, result)
+	})
+
+	t.Run("finds exact match, case insensitive", func(t *testing.T) {
+		result, err := validDb.ReverseLookup("TEST")
+
+		assert.Nil(t, err)
+		assert.NotNil(t, result)
+	})
+
+	t.Run("does not fn partial match", func(t *testing.T) {
+		result, err := validDb.ReverseLookup("tst")
+
+		assert.Nil(t, result)
+		if assert.NotNil(t, err) {
+			assert.True(t, errors.Is(err, ErrOrganizationNotFound))
 		}
 	})
 }

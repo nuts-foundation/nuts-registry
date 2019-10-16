@@ -25,6 +25,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
+	"github.com/stretchr/testify/assert"
 	"net/url"
 
 	"net/http"
@@ -50,33 +51,40 @@ type MockDb struct {
 	endpointsError error
 }
 
-func (db *MockDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error) {
-	if db.endpointsError != nil {
-		return nil, db.endpointsError
+func (mdb *MockDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error) {
+	if mdb.endpointsError != nil {
+		return nil, mdb.endpointsError
 	}
 
-	return db.endpoints, nil
+	return mdb.endpoints, nil
 }
 
-func (db *MockDb) RemoveOrganization(id string) error {
+func (mdb *MockDb) RemoveOrganization(id string) error {
 	return nil
 }
 
-func (db *MockDb) RegisterOrganization(org db.Organization) error {
+func (mdb *MockDb) RegisterOrganization(org db.Organization) error {
 	return nil
 }
 
-func (db *MockDb) Load(location string) error {
+func (mdb *MockDb) Load(location string) error {
 	return nil
 }
 
-func (db *MockDb) SearchOrganizations(query string) []db.Organization {
-	return db.organizations
+func (mdb *MockDb) SearchOrganizations(query string) []db.Organization {
+	return mdb.organizations
 }
 
-func (db *MockDb) OrganizationById(id string) (*db.Organization, error) {
-	if len(db.organizations) > 0 {
-		return &db.organizations[0], nil
+func (mdb *MockDb) ReverseLookup(name string) (*db.Organization, error) {
+	if len(mdb.organizations) > 0 {
+		return &mdb.organizations[0], nil
+	}
+	return nil, db.ErrOrganizationNotFound
+}
+
+func (mdb *MockDb) OrganizationById(id string) (*db.Organization, error) {
+	if len(mdb.organizations) > 0 {
+		return &mdb.organizations[0], nil
 	}
 
 	return nil, nil
@@ -104,20 +112,10 @@ var organizations = []db.Organization{
 	{
 		Identifier: db.Identifier("urn:nuts:system:value"),
 		Name:       "test",
-		Actors: []db.Actor{
-			{
-				Identifier: db.Identifier("urn:nuts:system:value"),
-			},
-		},
 	},
 	{
 		Identifier: db.Identifier("urn:nuts:hidden"),
 		Name:       "hidden",
-		Actors: []db.Actor{
-			{
-				Identifier: db.Identifier("urn:nuts:hidden"),
-			},
-		},
 	},
 }
 
@@ -453,27 +451,14 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 
 		err := wrapper.SearchOrganizations(c)
 
-		if err != nil {
-			t.Errorf("Got err during call: %s", err.Error())
-		}
+		if assert.Nil(t, err) && assert.Equal(t, http.StatusOK, rec.Code) {
 
-		if rec.Code != http.StatusOK {
-			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-		}
+			var result []Organization
+			result, err = deserializeOrganizations(rec.Body)
 
-		var result []Organization
-		result, err = deserializeOrganizations(rec.Body)
-
-		if err != nil {
-			t.Errorf("Got err during deserialization: %s", err.Error())
-		}
-
-		if len(result) != 2 {
-			t.Errorf("Got result size: %d, want 2", len(result))
-		}
-
-		if result[0].Identifier.String() != "urn:nuts:system:value" {
-			t.Errorf("Got result with Identifier: [%s], want [urn:nuts:system:value]", result[0].Identifier.String())
+			assert.Nil(t, err)
+			assert.Equal(t, 2, len(result))
+			assert.Equal(t, "urn:nuts:system:value", result[0].Identifier.String())
 		}
 	})
 
@@ -490,24 +475,57 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 
 		err := wrapper.SearchOrganizations(c)
 
-		if err != nil {
-			t.Errorf("Got err during call: %s", err.Error())
-		}
+		if assert.Nil(t, err) && assert.Equal(t, http.StatusOK, rec.Code) {
 
-		if rec.Code != http.StatusOK {
-			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-		}
+			var result []Organization
+			result, err = deserializeOrganizations(rec.Body)
 
-		var result []Organization
-		result, err = deserializeOrganizations(rec.Body)
-
-		if err != nil {
-			t.Errorf("Got err during deserialization: %s", err.Error())
+			assert.Nil(t, err)
+			assert.Equal(t, 0, len(result))
 		}
+	})
+}
 
-		if len(result) != 0 {
-			t.Errorf("Got result size: %d, want 0", len(result))
+func TestApiResource_ReverseLookup(t *testing.T) {
+	t.Run("200", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{organizations: organizations})
+
+		q := make(url.Values)
+		q.Set("query", "test")
+		q.Set("exact", "true")
+
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organizations")
+
+		err := wrapper.SearchOrganizations(c)
+
+		if assert.Nil(t, err) && assert.Equal(t, http.StatusOK, rec.Code) {
+
+			result, err := deserializeOrganizations(rec.Body)
+
+			assert.Nil(t, err)
+			assert.NotNil(t, result)
 		}
+	})
+
+	t.Run("404", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{})
+
+		q := make(url.Values)
+		q.Set("query", "que?")
+		q.Set("exact", "true")
+
+		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organizations")
+
+		err := wrapper.SearchOrganizations(c)
+
+		assert.Nil(t, err)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
 }
 

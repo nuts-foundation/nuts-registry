@@ -72,6 +72,9 @@ type RegistryClient interface {
 
 	// RegisterOrganization adds the organization identified by id to the registry or returns an error if the organization already exists
 	RegisterOrganization(db.Organization) error
+
+	// ReverseLookup finds an exact match on name or returns an error if not found
+	ReverseLookup(name string) (*db.Organization, error)
 }
 
 // RegistryConfig holds the config
@@ -147,6 +150,10 @@ func (r *Registry) RemoveOrganization(id string) error {
 // RegisterOrganization is a wrapper for sam func on DB
 func (r *Registry) RegisterOrganization(org db.Organization) error {
 	return r.Db.RegisterOrganization(org)
+}
+
+func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
+	return r.Db.ReverseLookup(name)
 }
 
 // Start initiates the routines for auto-updating the data

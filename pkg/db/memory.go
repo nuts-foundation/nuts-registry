@@ -117,22 +117,22 @@ func (i *MemoryDb) appendEO(eo EndpointOrganization) error {
 	return nil
 }
 
-func (i *MemoryDb) appendEndpoint(e *Endpoint) {
+func (db *MemoryDb) appendEndpoint(e *Endpoint) {
 	cp := *e
-	i.endpointIndex[e.Identifier.String()] = &cp
+	db.endpointIndex[e.Identifier.String()] = &cp
 
 	// also create empty slice at this map R
-	i.endpointToOrganizationIndex[e.Identifier.String()] = []EndpointOrganization{}
+	db.endpointToOrganizationIndex[e.Identifier.String()] = []EndpointOrganization{}
 
 	logrus.Tracef("Added endpoint: %s", e.Identifier)
 }
 
-func (i *MemoryDb) appendOrganization(o *Organization) {
+func (db *MemoryDb) appendOrganization(o *Organization) {
 	cp := *o
-	i.organizationIndex[o.Identifier.String()] = &cp
+	db.organizationIndex[o.Identifier.String()] = &cp
 
 	// also create empty slice at this map R
-	i.organizationToEndpointIndex[o.Identifier.String()] = []EndpointOrganization{}
+	db.organizationToEndpointIndex[o.Identifier.String()] = []EndpointOrganization{}
 
 	logrus.Tracef("Added Organization: %s", o.Identifier)
 }
@@ -231,6 +231,16 @@ func (db *MemoryDb) SearchOrganizations(query string) []Organization {
 
 // ErrOrganizationNotFound is returned when an organization is not found
 var ErrOrganizationNotFound = errors.New("organization not found")
+
+func (db *MemoryDb) ReverseLookup(name string) (*Organization, error) {
+	for _, o := range db.organizationIndex {
+		if strings.ToLower(name) == strings.ToLower(o.Name) {
+			return o, nil
+		}
+	}
+
+	return nil, ErrOrganizationNotFound
+}
 
 func (db *MemoryDb) OrganizationById(id string) (*Organization, error) {
 

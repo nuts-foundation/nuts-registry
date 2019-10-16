@@ -22,6 +22,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
@@ -146,11 +147,38 @@ func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpoint
 
 // SearchOrganizations is the client Api implementation for finding organizations by (partial) query
 func (hb HttpClient) SearchOrganizations(query string) ([]db.Organization, error) {
+	params := SearchOrganizationsParams{Query: query}
+
+	return hb.searchOrganization(params)
+}
+
+// ErrOrganizationNotFound is returned by the reverseLookup when the organization is not found
+var ErrOrganizationNotFound = errors.New("organization not found")
+
+// ReverseLookup returns an exact match or an error
+func (hb HttpClient) ReverseLookup(name string) (*db.Organization, error) {
+	t := true
+	params := SearchOrganizationsParams{Query: name, Exact: &t}
+
+	orgs, err := hb.searchOrganization(params)
+	if err != nil {
+		return nil, err
+	}
+
+	// should not be reachable
+	if len(orgs) != 1 {
+		logrus.Error("Reverse lookup returned more than 1 match")
+		return nil, ErrOrganizationNotFound
+	}
+
+	return &orgs[0], nil
+}
+
+func (hb HttpClient) searchOrganization(params SearchOrganizationsParams) ([]db.Organization, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 
-	params := &SearchOrganizationsParams{Query: query}
-	res, err := hb.client().SearchOrganizations(ctx, params)
+	res, err := hb.client().SearchOrganizations(ctx, &params)
 	if err != nil {
 		logrus.Error("error while searching for organizations", err)
 		return nil, core.Wrap(err)
@@ -160,6 +188,10 @@ func (hb HttpClient) SearchOrganizations(query string) ([]db.Organization, error
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return nil, err
+	}
+
+	if parsed.StatusCode() == http.StatusNotFound {
+		return nil, ErrOrganizationNotFound
 	}
 
 	if parsed.StatusCode() != http.StatusOK {
@@ -184,7 +216,6 @@ func (hb HttpClient) SearchOrganizations(query string) ([]db.Organization, error
 	}
 
 	return organizationsToFromDb(organizations), nil
-
 }
 
 // OrganizationById is the client Api implementation for getting an organization based on its Id.

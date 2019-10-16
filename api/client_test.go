@@ -21,6 +21,8 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -135,12 +137,45 @@ func TestHttpClient_SearchOrganizations(t *testing.T) {
 
 		res, err := c.SearchOrganizations("query")
 
-		if err != nil {
-			t.Errorf("Expected no error, got [%v]", err)
+		if assert.Nil(t, err) {
+			assert.Equal(t, 2, len(res))
 		}
+	})
+}
 
-		if len(res) != 2 {
-			t.Errorf("Expected 2 Organizations in return, got [%d]", len(res))
+func TestHttpClient_ReverseLookup(t *testing.T) {
+	t.Run("200", func(t *testing.T) {
+		org, _ := json.Marshal(organizations[0:1])
+		s := httptest.NewServer(handler{statusCode: 200, bytes: org})
+		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
+
+		res, err := c.ReverseLookup("name")
+
+		if assert.Nil(t, err) {
+			assert.Equal(t, organizations[0], *res)
+		}
+	})
+
+	t.Run("404", func(t *testing.T) {
+		s := httptest.NewServer(handler{statusCode: 404})
+		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
+
+		_, err := c.ReverseLookup("name")
+
+		if assert.NotNil(t, err) {
+			assert.True(t, errors.Is(err, ErrOrganizationNotFound))
+		}
+	})
+
+	t.Run("too many results", func(t *testing.T) {
+		org, _ := json.Marshal(organizations)
+		s := httptest.NewServer(handler{statusCode: 200, bytes: org})
+		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
+
+		_, err := c.ReverseLookup("name")
+
+		if assert.NotNil(t, err) {
+			assert.True(t, errors.Is(err, ErrOrganizationNotFound))
 		}
 	})
 }
