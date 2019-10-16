@@ -53,6 +53,7 @@ type EndpointsByOrganisationIdParams struct {
 // SearchOrganizationsParams defines parameters for SearchOrganizations.
 type SearchOrganizationsParams struct {
 	Query string `json:"query"`
+	Exact *bool  `json:"exact,omitempty"`
 }
 
 // registerOrganizationJSONBody defines parameters for RegisterOrganization.
@@ -297,6 +298,17 @@ func NewSearchOrganizationsRequest(server string, params *SearchOrganizationsPar
 	}
 
 	queryStrings = append(queryStrings, queryParam0)
+
+	var queryParam1 string
+	if params.Exact != nil {
+
+		queryParam1, err = runtime.StyleParam("form", true, "exact", *params.Exact)
+		if err != nil {
+			return nil, err
+		}
+
+		queryStrings = append(queryStrings, queryParam1)
+	}
 
 	if len(queryStrings) != 0 {
 		queryUrl += "?" + strings.Join(queryStrings, "&")
@@ -727,6 +739,16 @@ func (w *ServerInterfaceWrapper) SearchOrganizations(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter query: %s", err))
 	}
 
+	// ------------- Optional query parameter "exact" -------------
+	if paramValue := ctx.QueryParam("exact"); paramValue != "" {
+
+	}
+
+	err = runtime.BindQueryParameter("form", true, false, "exact", ctx.QueryParams(), &params.Exact)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter exact: %s", err))
+	}
+
 	// Invoke the callback with all the unmarshalled arguments
 	err = w.Handler.SearchOrganizations(ctx, params)
 	return err
@@ -755,3 +777,4 @@ func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
 	router.POST("/api/organizations", wrapper.RegisterOrganization)
 
 }
+

@@ -21,9 +21,11 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
+	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
@@ -157,7 +159,25 @@ func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params
 // SearchOrganizations is the Api implementation for finding organizations by (partial) query
 func (apiResource ApiWrapper) SearchOrganizations(ctx echo.Context, params SearchOrganizationsParams) error {
 
-	searchResult, err := apiResource.R.SearchOrganizations(params.Query)
+	var (
+		searchResult []db.Organization
+		org 		 *db.Organization
+		err 		 error
+	)
+
+	if params.Exact != nil && *params.Exact {
+		org, err = apiResource.R.ReverseLookup(params.Query)
+
+		if org != nil {
+			searchResult = append(searchResult, *org)
+		}
+	} else {
+		searchResult, err = apiResource.R.SearchOrganizations(params.Query)
+	}
+
+	if errors.Is(err, db.ErrOrganizationNotFound) {
+		return ctx.NoContent(http.StatusNotFound)
+	}
 
 	if err != nil {
 		return err

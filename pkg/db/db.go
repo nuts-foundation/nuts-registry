@@ -68,4 +68,5 @@ type Db interface {
 	OrganizationById(id string) (*Organization, error)
 	RemoveOrganization(id string) error
 	RegisterOrganization(org Organization) error
+	ReverseLookup(name string) (*Organization, error)
 }
