@@ -1,4 +1,4 @@
-.. _nuts-crypto-api:
+.. _nuts-registry-api:
 
 Nuts registry API
 =================
