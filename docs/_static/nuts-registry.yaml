@@ -232,38 +232,4 @@ components:
       description: as described by https://tools.ietf.org/html/rfc7517. Modelled as object so libraries can parse the tokens themselves.
       additionalProperties: true
       type: object
-#      required:
-#        - kty
-#      properties:
-#        kty:
-#          description: "Key type. Current supported values are: oct, RSA, EC"
-#          type: string
-#        use:
-#          description: "Intended use. "
-#          type: string
-#        kid:
-#          type: string
-#        alg:
-#          type: string
-#        n:
-#          type: string
-#        e:
-#          type: string
-#        crv:
-#          type: string
-#        x:
-#          type: string
-#        y:
-#          type: string
-#        d:
-#          type: string
-#        p:
-#          type: string
-#        q:
-#          type: string
-#        dp:
-#          type: string
-#        dq:
-#          type: string
-#        qi:
-#          type: string
+      
