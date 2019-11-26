@@ -76,27 +76,57 @@ func TestOrganization_KeysAsSet(t *testing.T) {
 }
 
 func TestOrganization_CurrentPublicKey(t *testing.T) {
-	oldKey := "{\"name\": \"Zorggroep Nuts 2\",\"identifier\": \"urn:oid:2.16.840.1.113883.2.4.6.1:00000001\",\"actors\": [{\"identifier\": \"urn:oid:2.16.840.1.113883.2.4.6.1:00000007\"}],\"publicKey\": \"-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9wJQN59PYsvIsTrFuTqS\\nLoUBgwdRfpJxOa5L8nOALxNk41MlAg7xnPbvnYrOHFucfWBTDOMTKBMSmD4WDkaF\\ndVrXAML61z85Le8qsXfX6f7TbKMDm2u1O3cye+KdJe8zclK9sTFzSD0PP0wfw7wf\\nlACe+PfwQgeOLPUWHaR6aDfaA64QEdfIzk/IL3S595ixaEn0huxMHgXFX35Vok+o\\nQdbnclSTo6HUinkqsHUu/hGHApkE3UfT6GD6SaLiB9G4rAhlrDQ71ai872t4FfoK\\n7skhe8sP2DstzAQRMf9FcetrNeTxNL7Zt4F/qKm80cchRZiFYPMCYyjQphyBCoJf\\n0wIDAQAB\\n-----END PUBLIC KEY-----\"}"
+	oldKey := "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9wJQN59PYsvIsTrFuTqS\nLoUBgwdRfpJxOa5L8nOALxNk41MlAg7xnPbvnYrOHFucfWBTDOMTKBMSmD4WDkaF\ndVrXAML61z85Le8qsXfX6f7TbKMDm2u1O3cye+KdJe8zclK9sTFzSD0PP0wfw7wf\nlACe+PfwQgeOLPUWHaR6aDfaA64QEdfIzk/IL3S595ixaEn0huxMHgXFX35Vok+o\nQdbnclSTo6HUinkqsHUu/hGHApkE3UfT6GD6SaLiB9G4rAhlrDQ71ai872t4FfoK\n7skhe8sP2DstzAQRMf9FcetrNeTxNL7Zt4F/qKm80cchRZiFYPMCYyjQphyBCoJf\n0wIDAQAB\n-----END PUBLIC KEY-----"
+	oldKeyCorrupt := "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9wJQN59PYsvIsTrFuTqS\nLoUBgwdRfpJxOa5L8nOALxNk41MlAg7xnPbvnYrOHFucfWBTDOMTKBMSmD4WDkaF\ndVrXAML61z85Le8qsXfX6f7TbKMDm2u1O3cye+KdJe8zclK9sTFzSD0PP0wfw7wf\nlACe+PfwQgeOLPUWHaR6aDfaA64QEdfIzk/IL3S595ixaEn0huxMHgXFX35Vok+o\nQdbnclSTo6HUinkqsHUu/hGHApkE3UfT6GD6SaLiB9G4rAhlrDQ71ai872t4FfoK\n7skhe8sP2DstzAQRMf9FcetrNeTxNL7Zt4F/qKm80cchRZiFYPMCYyjQphyBCoJf\n0wIDAQ\n-----END PUBLIC KEY-----"
 
-	newKey := "{\"name\": \"Zorggroep Nuts 2\",\"identifier\": \"urn:oid:2.16.840.1.113883.2.4.6.1:00000001\",\"actors\": [{\"identifier\": \"urn:oid:2.16.840.1.113883.2.4.6.1:00000007\"}],\"publicKey\": \"-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9wJQN59PYsvIsTrFuTqS\\nLoUBgwdRfpJxOa5L8nOALxNk41MlAg7xnPbvnYrOHFucfWBTDOMTKBMSmD4WDkaF\\ndVrXAML61z85Le8qsXfX6f7TbKMDm2u1O3cye+KdJe8zclK9sTFzSD0PP0wfw7wf\\nlACe+PfwQgeOLPUWHaR6aDfaA64QEdfIzk/IL3S595ixaEn0huxMHgXFX35Vok+o\\nQdbnclSTo6HUinkqsHUu/hGHApkE3UfT6GD6SaLiB9G4rAhlrDQ71ai872t4FfoK\\n7skhe8sP2DstzAQRMf9FcetrNeTxNL7Zt4F/qKm80cchRZiFYPMCYyjQphyBCoJf\\n0wIDAQAB\\n-----END PUBLIC KEY-----\",\"keys\": [{\"kty\":\"EC\",\"crv\":\"P-256\",\"x\":\"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4\",\"y\":\"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM\",\"use\":\"enc\",\"kid\":\"2\"}]}"
+	newKey := []interface{}{
+		map[string]interface{}{
+			"kty": "EC",
+			"crv": "P-256",
+			"x": "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+			"y": "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+			"use": "enc",
+			"kid": "1",
+		},
+	}
+	newKeyCorrupt := []interface{}{
+		map[string]interface{}{
+			"kty": "nil",
+		},
+	}
 	
 	t.Run("using old public key", func(t *testing.T) {
-		o := Organization{}
-		if assert.NoError(t, json.Unmarshal([]byte(oldKey), &o)) {
-			key, err := o.CurrentPublicKey()
-			if assert.NoError(t, err) {
-				assert.Equal(t, jwa.RSA, key.KeyType())
-			}
+		o := Organization{PublicKey: &oldKey}
+		key, err := o.CurrentPublicKey()
+		if assert.NoError(t, err) {
+			assert.Equal(t, jwa.RSA, key.KeyType())
 		}
 	})
 
 	t.Run("using new JWK style keys", func(t *testing.T) {
-		o := Organization{}
-		if assert.NoError(t, json.Unmarshal([]byte(newKey), &o)) {
-			key, err := o.CurrentPublicKey()
-			if assert.NoError(t, err) {
-				assert.Equal(t, jwa.EC, key.KeyType())
-			}
+		o := Organization{PublicKey: &oldKey, Keys: newKey}
+		key, err := o.CurrentPublicKey()
+		if assert.NoError(t, err) {
+			assert.Equal(t, jwa.EC, key.KeyType())
 		}
+	})
+
+	t.Run("Invalid old style key", func(t *testing.T) {
+		emptyKey := ""
+		o := Organization{PublicKey: &emptyKey}
+		_, err := o.CurrentPublicKey()
+		assert.Error(t, err)
+	})
+
+	t.Run("Corrupt old style key", func(t *testing.T) {
+		o := Organization{PublicKey: &oldKeyCorrupt}
+		_, err := o.CurrentPublicKey()
+		assert.Error(t, err)
+	})
+
+	t.Run("using invalid JWK", func(t *testing.T) {
+		o := Organization{PublicKey: &oldKey, Keys: newKeyCorrupt}
+		_, err := o.CurrentPublicKey()
+		assert.Error(t, err)
 	})
 }
