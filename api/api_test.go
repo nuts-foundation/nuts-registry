@@ -108,6 +108,7 @@ var multiEndpoints = []db.Endpoint{
 	},
 }
 
+var key = map[string]interface{}{"kty": "EC"}
 var organizations = []db.Organization{
 	{
 		Identifier: db.Identifier("urn:nuts:system:value"),
@@ -116,6 +117,9 @@ var organizations = []db.Organization{
 	{
 		Identifier: db.Identifier("urn:nuts:hidden"),
 		Name:       "hidden",
+		Keys: 		[]interface{}{
+			key,
+		},
 	},
 }
 

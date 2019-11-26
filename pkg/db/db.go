@@ -19,6 +19,14 @@
 
 package db
 
+import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
+	"github.com/lestrrat-go/jwx/jwk"
+)
+
 // StatusActive represents the "active" status
 const StatusActive = "active"
 
@@ -48,10 +56,66 @@ func (i Identifier) String() string {
 
 // Organization defines component schema for Organization.
 type Organization struct {
-	Identifier Identifier `json:"identifier"`
-	Name       string     `json:"name"`
-	PublicKey  *string    `json:"publicKey,omitempty"`
+	Identifier Identifier 		`json:"identifier"`
+	Name       string     		`json:"name"`
+	PublicKey  *string    		`json:"publicKey,omitempty"`
+	Keys       []interface{} 	`json:"keys,omitempty"`
 	Endpoints  []Endpoint
+}
+
+// KeysAsSet transforms the raw map in Keys to a jwk.Set
+func (o Organization) KeysAsSet() (*jwk.Set, error) {
+	var set jwk.Set
+	m := make(map[string]interface{})
+	m["keys"] = o.Keys
+	if err := set.ExtractMap(m); err != nil {
+		return nil, err
+	}
+	return &set, nil
+}
+
+// CurrentPublicKey returns the first current active public key. If a JWK set is registered, it'll search in the keys there.
+// If none are valid it'll return an error.
+// If no JWK Set is set, it'll always return the (deprecated) PublicKey
+// TODO: In a later stage the certificate capabilities of the JWK will be used. For now the first JWK is returned
+func (o Organization) CurrentPublicKey() (jwk.Key, error) {
+	if len(o.Keys) > 0 {
+		set, err := o.KeysAsSet()
+		if err != nil {
+			return nil, err
+		}
+		key := set.Keys[0]
+
+		// check for certificate validity at a later stage.
+		return key, nil
+	}
+
+	key, err := pemToPublicKey([]byte(*o.PublicKey))
+	if err != nil {
+		return nil, err
+	}
+
+	return jwk.New(key)
+}
+
+// temporary func for converting pem public keys to rsaPublicKey
+func pemToPublicKey(pub []byte) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode(pub)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, errors.New("failed to decode PEM block containing public key, key is of the wrong type")
+	}
+
+	b := block.Bytes
+	key, err := x509.ParsePKIXPublicKey(b)
+	if err != nil {
+		return nil, err
+	}
+	finalKey, ok := key.(*rsa.PublicKey)
+	if !ok {
+		return nil, errors.New("Unable to convert public key to RSA public key")
+	}
+
+	return finalKey, nil
 }
 
 // todo: Db temporary abstraction
