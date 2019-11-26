@@ -5,13 +5,10 @@ package api
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
-	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"io"
@@ -839,61 +836,5 @@ func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
 	router.GET("/api/organizations", wrapper.SearchOrganizations)
 	router.POST("/api/organizations", wrapper.RegisterOrganization)
 
-}
-
-// Base64 encoded, gzipped, json marshaled Swagger object
-var swaggerSpec = []string{
-
-	"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",
-	"d593R8Vps/lfAAAA//8IvWMx8hUAAA==",
-}
-
-// GetSwagger returns the Swagger specification corresponding to the generated code
-// in this file.
-func GetSwagger() (*openapi3.Swagger, error) {
-	zipped, err := base64.StdEncoding.DecodeString(strings.Join(swaggerSpec, ""))
-	if err != nil {
-		return nil, fmt.Errorf("error base64 decoding spec: %s", err)
-	}
-	zr, err := gzip.NewReader(bytes.NewReader(zipped))
-	if err != nil {
-		return nil, fmt.Errorf("error decompressing spec: %s", err)
-	}
-	var buf bytes.Buffer
-	_, err = buf.ReadFrom(zr)
-	if err != nil {
-		return nil, fmt.Errorf("error decompressing spec: %s", err)
-	}
-
-	swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(buf.Bytes())
-	if err != nil {
-		return nil, fmt.Errorf("error loading Swagger: %s", err)
-	}
-	return swagger, nil
 }
 
