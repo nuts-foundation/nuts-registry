@@ -32,6 +32,14 @@ func TestOrganization_KeysAsSet(t *testing.T) {
 	invalidKty := "{\"name\": \"Zorggroep Nuts 2\",\"identifier\": \"urn:oid:2.16.840.1.113883.2.4.6.1:00000001\",\"keys\": [{\"kty\":\"error\"}]}"
 	invalidData := "{\"name\": \"Zorggroep Nuts 2\",\"identifier\": \"urn:oid:2.16.840.1.113883.2.4.6.1:00000001\",\"keys\": [{\"kty\":\"EC\",\"crv\":\"P-256\",\"x\":\"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4\",\"z\":\"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM\",\"use\":\"enc\",\"kid\":\"2\"}]}"
 
+	t.Run("No keys returns empty set", func(t *testing.T) {
+		o := Organization{}
+		set, err := o.KeysAsSet()
+		if assert.NoError(t, err) && assert.NotNil(t, set) {
+			assert.Len(t, set.Keys, 0)
+		}
+	})
+
 	t.Run("JWK set is parsed", func(t *testing.T) {
 		o := Organization{}
 		if assert.NoError(t, json.Unmarshal([]byte(valid), &o)) {

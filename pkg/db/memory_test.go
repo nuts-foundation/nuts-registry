@@ -21,6 +21,7 @@ package db
 
 import (
 	"errors"
+	"github.com/labstack/gommon/random"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -163,13 +164,26 @@ func TestMemoryDb_RegisterOrganization(t *testing.T) {
 
 		err := validDb.RegisterOrganization(organization)
 
-		if err != nil {
-			t.Errorf("Expected no error, got: %s", err.Error())
+		if assert.NoError(t, err) {
+			assert.Len(t, validDb.organizationIndex, 1)
 		}
+	})
 
-		if len(validDb.organizationIndex) != 1 {
-			t.Errorf("Expected 1 entry in db, got: %d", len(validDb.organizationIndex))
+	t.Run("organization with invalid key set", func(t *testing.T) {
+		validDb := New()
+
+		o := Organization{
+			Identifier: Identifier(random.String(8)),
+			Name:       random.String(8),
+			Keys:       []interface{}{
+				map[string]interface{}{
+					"kty": "EC",
+				},
+			},
 		}
+		err := validDb.RegisterOrganization(o)
+
+		assert.Error(t, err)
 	})
 
 	t.Run("duplicate entry", func(t *testing.T) {
@@ -178,13 +192,8 @@ func TestMemoryDb_RegisterOrganization(t *testing.T) {
 		validDb.RegisterOrganization(organization)
 		err := validDb.RegisterOrganization(organization)
 
-		if err == nil {
-			t.Errorf("Expected error, got nothing")
-			return
-		}
-
-		if !errors.Is(err, ErrDuplicateOrganization) {
-			t.Errorf("Expected error [%v], got: [%v]", ErrDuplicateOrganization, err)
+		if assert.Error(t, err) {
+			assert.True(t, errors.Is(err, ErrDuplicateOrganization))
 		}
 	})
 }

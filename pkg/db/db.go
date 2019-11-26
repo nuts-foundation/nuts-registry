@@ -63,8 +63,12 @@ type Organization struct {
 	Endpoints  []Endpoint
 }
 
-// KeysAsSet transforms the raw map in Keys to a jwk.Set
+// KeysAsSet transforms the raw map in Keys to a jwk.Set. If no keys are present, it'll return an empty set
 func (o Organization) KeysAsSet() (*jwk.Set, error) {
+	if len(o.Keys) == 0 {
+		return &jwk.Set{}, nil
+	}
+
 	var set jwk.Set
 	m := make(map[string]interface{})
 	m["keys"] = o.Keys
