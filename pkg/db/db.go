@@ -56,10 +56,10 @@ func (i Identifier) String() string {
 
 // Organization defines component schema for Organization.
 type Organization struct {
-	Identifier Identifier 		`json:"identifier"`
-	Name       string     		`json:"name"`
-	PublicKey  *string    		`json:"publicKey,omitempty"`
-	Keys       []interface{} 	`json:"keys,omitempty"`
+	Identifier Identifier    `json:"identifier"`
+	Name       string        `json:"name"`
+	PublicKey  *string       `json:"publicKey,omitempty"`
+	Keys       []interface{} `json:"keys,omitempty"`
 	Endpoints  []Endpoint
 }
 

@@ -117,7 +117,7 @@ var organizations = []db.Organization{
 	{
 		Identifier: db.Identifier("urn:nuts:hidden"),
 		Name:       "hidden",
-		Keys: 		[]interface{}{
+		Keys: []interface{}{
 			key,
 		},
 	},

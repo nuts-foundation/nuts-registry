@@ -28,7 +28,7 @@ import (
 func TestOrganizationConversion(t *testing.T) {
 	t.Run("JWK is converted correctly from DB", func(t *testing.T) {
 		em := make([]interface{}, 1)
-		em[0] = map[string]interface{}{"kty":"EC"}
+		em[0] = map[string]interface{}{"kty": "EC"}
 
 		o := Organization{}.fromDb(db.Organization{Keys: em})
 
@@ -37,7 +37,7 @@ func TestOrganizationConversion(t *testing.T) {
 	})
 
 	t.Run("JWK is converted correctly to DB", func(t *testing.T) {
-		em := []JWK{{AdditionalProperties: map[string]interface{}{"kty":"EC"}}}
+		em := []JWK{{AdditionalProperties: map[string]interface{}{"kty": "EC"}}}
 		o := Organization{Keys: &em}.toDb()
 
 		assert.Len(t, o.Keys, 1)

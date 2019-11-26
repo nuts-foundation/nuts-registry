@@ -83,8 +83,8 @@ func TestOrganization_CurrentPublicKey(t *testing.T) {
 		map[string]interface{}{
 			"kty": "EC",
 			"crv": "P-256",
-			"x": "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
-			"y": "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+			"x":   "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+			"y":   "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
 			"use": "enc",
 			"kid": "1",
 		},
@@ -94,7 +94,7 @@ func TestOrganization_CurrentPublicKey(t *testing.T) {
 			"kty": "nil",
 		},
 	}
-	
+
 	t.Run("using old public key", func(t *testing.T) {
 		o := Organization{PublicKey: &oldKey}
 		key, err := o.CurrentPublicKey()

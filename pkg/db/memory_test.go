@@ -175,7 +175,7 @@ func TestMemoryDb_RegisterOrganization(t *testing.T) {
 		o := Organization{
 			Identifier: Identifier(random.String(8)),
 			Name:       random.String(8),
-			Keys:       []interface{}{
+			Keys: []interface{}{
 				map[string]interface{}{
 					"kty": "EC",
 				},

@@ -161,8 +161,8 @@ func (apiResource ApiWrapper) SearchOrganizations(ctx echo.Context, params Searc
 
 	var (
 		searchResult []db.Organization
-		org 		 *db.Organization
-		err 		 error
+		org          *db.Organization
+		err          error
 	)
 
 	if params.Exact != nil && *params.Exact {

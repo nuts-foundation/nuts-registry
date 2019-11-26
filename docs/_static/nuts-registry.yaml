@@ -232,4 +232,3 @@ components:
       description: as described by https://tools.ietf.org/html/rfc7517. Modelled as object so libraries can parse the tokens themselves.
       additionalProperties: true
       type: object
-      
