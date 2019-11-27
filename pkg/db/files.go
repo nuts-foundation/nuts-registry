@@ -22,10 +22,11 @@ package db
 import (
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"sort"
+
+	"github.com/sirupsen/logrus"
 )
 
 type fileError struct {

@@ -21,9 +21,10 @@ package db
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/labstack/gommon/random"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 var endpoint = Endpoint{

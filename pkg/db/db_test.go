@@ -21,15 +21,16 @@ package db
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestOrganization_KeysAsSet(t *testing.T) {
 	valid := "{\"name\": \"Zorggroep Nuts 2\",\"identifier\": \"urn:oid:2.16.840.1.113883.2.4.6.1:00000001\",\"keys\": [{\"kty\":\"EC\",\"crv\":\"P-256\",\"x\":\"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4\",\"y\":\"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM\",\"use\":\"enc\",\"kid\":\"2\"}]}"
 	invalidKeys := "{\"name\": \"Zorggroep Nuts 2\",\"identifier\": \"urn:oid:2.16.840.1.113883.2.4.6.1:00000001\",\"keys\": {\"kty\":\"EC\"}}"
-	
+
 	t.Run("No keys returns empty set", func(t *testing.T) {
 		o := Organization{}
 		set, err := o.KeysAsSet()
@@ -62,9 +63,8 @@ func TestOrganization_KeysAsSet(t *testing.T) {
 				},
 			},
 		}
-		set, err := o.KeysAsSet()
+		_, err := o.KeysAsSet()
 		assert.Error(t, err)
-		assert.Nil(t, set)
 	})
 
 	t.Run("invalid combination in JWK set returns error", func(t *testing.T) {
@@ -73,14 +73,13 @@ func TestOrganization_KeysAsSet(t *testing.T) {
 				map[string]interface{}{
 					"kty": "EC",
 					"crv": "P-256",
-					"x": "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
-					"z": "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+					"x":   "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+					"z":   "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
 				},
 			},
 		}
-		set, err := o.KeysAsSet()
+		_, err := o.KeysAsSet()
 		assert.Error(t, err)
-		assert.Nil(t, set)
 	})
 }
 

@@ -37,15 +37,17 @@ func (o Organization) fromDb(db db.Organization) Organization {
 	o.PublicKey = db.PublicKey
 	o.Endpoints = &e
 
-	if len(db.Keys) > 0 {
-		keys := make([]JWK, len(db.Keys))
-
-		for i, k := range db.Keys {
-			keys[i] = JWK{AdditionalProperties: k.(map[string]interface{})}
-		}
-
-		o.Keys = &keys
+	if len(db.Keys) == 0 {
+		return o
 	}
+
+	keys := make([]JWK, len(db.Keys))
+
+	for i, k := range db.Keys {
+		keys[i] = JWK{AdditionalProperties: k.(map[string]interface{})}
+	}
+
+	o.Keys = &keys
 
 	return o
 }

@@ -20,9 +20,10 @@
 package api
 
 import (
+	"testing"
+
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestOrganizationConversion(t *testing.T) {

@@ -20,10 +20,11 @@
 package client
 
 import (
+	"time"
+
 	"github.com/nuts-foundation/nuts-registry/api"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/sirupsen/logrus"
-	"time"
 )
 
 // NewRegistryClient creates a new Local- or RemoteClient for the nuts registry

@@ -24,6 +24,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
@@ -64,18 +65,16 @@ type Organization struct {
 }
 
 // KeysAsSet transforms the raw map in Keys to a jwk.Set. If no keys are present, it'll return an empty set
-func (o Organization) KeysAsSet() (*jwk.Set, error) {
-	if len(o.Keys) == 0 {
-		return &jwk.Set{}, nil
-	}
-
+func (o Organization) KeysAsSet() (jwk.Set, error) {
 	var set jwk.Set
+	if len(o.Keys) == 0 {
+		return set, nil
+	}
+	
 	m := make(map[string]interface{})
 	m["keys"] = o.Keys
-	if err := set.ExtractMap(m); err != nil {
-		return nil, err
-	}
-	return &set, nil
+	err := set.ExtractMap(m)
+	return set, err
 }
 
 // CurrentPublicKey returns the first current active public key. If a JWK set is registered, it'll search in the keys there.

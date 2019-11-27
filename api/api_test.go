@@ -22,11 +22,12 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"net/url"
+
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/stretchr/testify/assert"
-	"net/url"
 
 	"net/http"
 	"net/http/httptest"
