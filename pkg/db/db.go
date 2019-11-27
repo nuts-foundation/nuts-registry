@@ -70,7 +70,7 @@ func (o Organization) KeysAsSet() (jwk.Set, error) {
 	if len(o.Keys) == 0 {
 		return set, nil
 	}
-	
+
 	m := make(map[string]interface{})
 	m["keys"] = o.Keys
 	err := set.ExtractMap(m)
