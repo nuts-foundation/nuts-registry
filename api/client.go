@@ -24,14 +24,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
-	"github.com/sirupsen/logrus"
 	"go/types"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-registry/pkg/db"
+	"github.com/sirupsen/logrus"
 )
 
 // HttpClient holds the server address and other basic settings for the http client

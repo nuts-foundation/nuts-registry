@@ -20,6 +20,9 @@
 package engine
 
 import (
+	"os"
+	"os/signal"
+
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -29,8 +32,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"os"
-	"os/signal"
 )
 
 // NewRegistryEngine returns the core definition for the registry

@@ -192,7 +192,11 @@ components:
             $ref: "#/components/schemas/Endpoint"
         publicKey:
           type: string
-          description: "PEM encoded public key"
+          description: "PEM encoded public key (deprecated, use JWK)"
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/JWK"
     Endpoint:
       required:
         - endpointType
@@ -224,3 +228,7 @@ components:
         Generic identifier used for representing BSN, agbcode, etc.
         It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
       example: urn:oid:2.16.840.1.113883.2.4.6.3:999999990
+    JWK:
+      description: as described by https://tools.ietf.org/html/rfc7517. Modelled as object so libraries can parse the tokens themselves.
+      additionalProperties: true
+      type: object

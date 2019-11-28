@@ -36,6 +36,19 @@ func (o Organization) fromDb(db db.Organization) Organization {
 	o.Name = db.Name
 	o.PublicKey = db.PublicKey
 	o.Endpoints = &e
+
+	if len(db.Keys) == 0 {
+		return o
+	}
+
+	keys := make([]JWK, len(db.Keys))
+
+	for i, k := range db.Keys {
+		keys[i] = JWK{AdditionalProperties: k.(map[string]interface{})}
+	}
+
+	o.Keys = &keys
+
 	return o
 }
 
@@ -46,15 +59,24 @@ func (eo EndpointOrganization) fromDb(db db.EndpointOrganization) EndpointOrgani
 	return eo
 }
 
-func (a Organization) toDb() db.Organization {
+func (o Organization) toDb() db.Organization {
 	org := db.Organization{
-		Identifier: db.Identifier(a.Identifier),
-		Name:       a.Name,
-		PublicKey:  a.PublicKey,
+		Identifier: db.Identifier(o.Identifier),
+		Name:       o.Name,
+		PublicKey:  o.PublicKey,
 	}
 
-	if a.Endpoints != nil {
-		org.Endpoints = endpointsArrayToDb(*a.Endpoints)
+	if o.Keys != nil {
+		ks := *o.Keys
+		em := make([]interface{}, len(ks))
+		for i, k := range ks {
+			em[i] = k.AdditionalProperties
+		}
+		org.Keys = em
+	}
+
+	if o.Endpoints != nil {
+		org.Endpoints = endpointsArrayToDb(*o.Endpoints)
 	}
 
 	return org

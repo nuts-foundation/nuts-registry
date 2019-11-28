@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -35,10 +36,16 @@ type EndpointOrganization struct {
 // Identifier defines model for Identifier.
 type Identifier string
 
+// JWK defines model for JWK.
+type JWK struct {
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
 // Organization defines model for Organization.
 type Organization struct {
 	Endpoints  *[]Endpoint `json:"endpoints,omitempty"`
 	Identifier Identifier  `json:"identifier"`
+	Keys       *[]JWK      `json:"keys,omitempty"`
 	Name       string      `json:"name"`
 	PublicKey  *string     `json:"publicKey,omitempty"`
 }
@@ -61,6 +68,59 @@ type registerOrganizationJSONBody Organization
 
 // RegisterOrganizationRequestBody defines body for RegisterOrganization for application/json ContentType.
 type RegisterOrganizationJSONRequestBody registerOrganizationJSONBody
+
+// Getter for additional properties for JWK. Returns the specified
+// element and whether it was found
+func (a JWK) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for JWK
+func (a *JWK) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for JWK to handle AdditionalProperties
+func (a *JWK) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for JWK to handle AdditionalProperties
+func (a JWK) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
+		}
+	}
+	return json.Marshal(object)
+}
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(req *http.Request, ctx context.Context) error
@@ -777,4 +837,3 @@ func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
 	router.POST("/api/organizations", wrapper.RegisterOrganization)
 
 }
-

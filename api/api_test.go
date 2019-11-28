@@ -22,11 +22,12 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"net/url"
+
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/stretchr/testify/assert"
-	"net/url"
 
 	"net/http"
 	"net/http/httptest"
@@ -108,6 +109,7 @@ var multiEndpoints = []db.Endpoint{
 	},
 }
 
+var key = map[string]interface{}{"kty": "EC"}
 var organizations = []db.Organization{
 	{
 		Identifier: db.Identifier("urn:nuts:system:value"),
@@ -116,6 +118,9 @@ var organizations = []db.Organization{
 	{
 		Identifier: db.Identifier("urn:nuts:hidden"),
 		Name:       "hidden",
+		Keys: []interface{}{
+			key,
+		},
 	},
 }
 

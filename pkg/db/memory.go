@@ -23,9 +23,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type MemoryDb struct {
@@ -46,6 +47,11 @@ func (db *MemoryDb) RegisterOrganization(org Organization) error {
 
 	if o != nil {
 		return fmt.Errorf("error registering organization with id %s: %w", org.Identifier, ErrDuplicateOrganization)
+	}
+
+	// also validate the keys parsed from json
+	if _, err := org.KeysAsSet(); err != nil {
+		return fmt.Errorf("error registering organization with id %s: %w", org.Identifier, err)
 	}
 
 	db.appendOrganization(&org)
@@ -314,6 +320,11 @@ func (db *MemoryDb) loadOrganizations(location string) error {
 	db.organizationIndex = make(map[string]*Organization)
 	db.organizationToEndpointIndex = make(map[string][]EndpointOrganization)
 	for _, e := range stub {
+		// also validate the keys parsed from json
+		if _, err := e.KeysAsSet(); err != nil {
+			return fmt.Errorf("failed to load organization %s: %w", e.Name, err)
+		}
+
 		db.appendOrganization(&e)
 	}
 
