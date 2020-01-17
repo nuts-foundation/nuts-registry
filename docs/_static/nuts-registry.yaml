@@ -253,6 +253,6 @@ components:
       example: urn:oid:2.16.840.1.113883.2.4.6.3:999999990
     JWK:
       description: as described by https://tools.ietf.org/html/rfc7517. Modelled as object so libraries can parse the tokens themselves.
-      additionalProperties: true
+      additionalProperties: {}
       type: object
 
