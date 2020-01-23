@@ -1,0 +1,9 @@
+{
+  "payload": {
+    "endpointType": "urn:nuts:endpoint:consent",
+    "identifier": "urn:ietf:rfc:1779::O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local",
+    "status": "active",
+    "version": "0.1.0",
+    "URL": "tcp://127.0.0.1:1234"
+  }
+}

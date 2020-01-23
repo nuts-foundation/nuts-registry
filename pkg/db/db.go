@@ -24,7 +24,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
@@ -115,7 +114,7 @@ func pemToPublicKey(pub []byte) (*rsa.PublicKey, error) {
 	}
 	finalKey, ok := key.(*rsa.PublicKey)
 	if !ok {
-		return nil, errors.New("Unable to convert public key to RSA public key")
+		return nil, errors.New("unable to convert public key to RSA public key")
 	}
 
 	return finalKey, nil
@@ -124,10 +123,11 @@ func pemToPublicKey(pub []byte) (*rsa.PublicKey, error) {
 // todo: Db temporary abstraction
 type Db interface {
 	FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error)
-	Load(location string) error
 	SearchOrganizations(query string) []Organization
 	OrganizationById(id string) (*Organization, error)
 	RemoveOrganization(id string) error
 	RegisterOrganization(org Organization) error
+	RegisterEndpoint(endpoint Endpoint)
+	RegisterEndpointOrganization(endpointOrg EndpointOrganization) error
 	ReverseLookup(name string) (*Organization, error)
 }

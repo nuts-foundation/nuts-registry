@@ -17,10 +17,22 @@
  *
  */
 
-package db
+package events
 
-const fileEndpoints = "endpoints.json"
-const fileOrganizations = "organizations.json"
-const fileEndpointsOrganizations = "endpoints_organizations.json"
+import "github.com/nuts-foundation/nuts-registry/pkg/db"
 
-var requiredFiles = [3]string{fileEndpoints, fileOrganizations, fileEndpointsOrganizations}
+type RegisterOrganizationEvent struct {
+	Payload db.Organization `json:"payload"`
+}
+
+type RemoveOrganizationEvent struct {
+	Payload string `json:"payload"`
+}
+
+type RegisterEndpointEvent struct {
+	Payload db.Endpoint `json:"payload"`
+}
+
+type RegisterEndpointOrganizationEvent struct {
+	Payload db.EndpointOrganization `json:"payload"`
+}

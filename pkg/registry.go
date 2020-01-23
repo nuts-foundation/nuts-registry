@@ -26,10 +26,12 @@ import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -89,12 +91,13 @@ type RegistryConfig struct {
 
 // Registry holds the config and Db reference
 type Registry struct {
-	Config     RegistryConfig
-	Db         db.Db
-	configOnce sync.Once
-	_logger    *logrus.Entry
-	closers    []chan struct{}
-	OnChange   func(registry *Registry)
+	Config      RegistryConfig
+	Db          db.Db
+	eventSystem events.EventSystem
+	configOnce  sync.Once
+	_logger     *logrus.Entry
+	closers     []chan struct{}
+	OnChange    func(registry *Registry)
 }
 
 var instance *Registry
@@ -104,7 +107,8 @@ var oneRegistry sync.Once
 func RegistryInstance() *Registry {
 	oneRegistry.Do(func() {
 		instance = &Registry{
-			_logger: logrus.StandardLogger().WithField("module", ModuleName),
+			eventSystem: events.NewEventSystem(),
+			_logger:     logrus.StandardLogger().WithField("module", ModuleName),
 		}
 	})
 
@@ -117,14 +121,36 @@ func (r *Registry) Configure() error {
 
 	r.configOnce.Do(func() {
 		if r.Config.Mode == "server" {
-			// load static Db
+			r.registerEventHandlers()
+			// Apply stored events
 			r.Db = db.New()
-			if err := r.Db.Load(r.Config.Datadir); err != nil {
+			if err := r.eventSystem.LoadAndApplyEvents(r.Config.Datadir); err != nil {
 				r.logger().WithError(err).Warn("unable to load registry files")
 			}
 		}
 	})
 	return err
+}
+
+func (r *Registry) registerEventHandlers() {
+	// TODO: We should receive a struct here, not a pointer to it
+	r.eventSystem.RegisterEventHandler(reflect.TypeOf(&events.RegisterOrganizationEvent{}), func(e interface{}) error {
+		event := e.(*events.RegisterOrganizationEvent)
+		return r.Db.RegisterOrganization(event.Payload)
+	})
+	r.eventSystem.RegisterEventHandler(reflect.TypeOf(&events.RegisterEndpointEvent{}), func(e interface{}) error {
+		event := e.(*events.RegisterEndpointEvent)
+		r.Db.RegisterEndpoint(event.Payload)
+		return nil
+	})
+	r.eventSystem.RegisterEventHandler(reflect.TypeOf(&events.RegisterEndpointOrganizationEvent{}), func(e interface{}) error {
+		event := e.(*events.RegisterEndpointOrganizationEvent)
+		return r.Db.RegisterEndpointOrganization(event.Payload)
+	})
+	r.eventSystem.RegisterEventHandler(reflect.TypeOf(&events.RemoveOrganizationEvent{}), func(e interface{}) error {
+		event := e.(*events.RemoveOrganizationEvent)
+		return r.Db.RemoveOrganization(event.Payload)
+	})
 }
 
 // EndpointsByOrganization is a wrapper for sam func on DB
@@ -144,12 +170,12 @@ func (r *Registry) OrganizationById(id string) (*db.Organization, error) {
 
 // RemoveOrganization is a wrapper for sam func on DB
 func (r *Registry) RemoveOrganization(id string) error {
-	return r.Db.RemoveOrganization(id)
+	return r.eventSystem.PublishEvent(&events.RemoveOrganizationEvent{Payload: id})
 }
 
 // RegisterOrganization is a wrapper for sam func on DB
 func (r *Registry) RegisterOrganization(org db.Organization) error {
-	return r.Db.RegisterOrganization(org)
+	return r.eventSystem.PublishEvent(&events.RegisterOrganizationEvent{Payload: org})
 }
 
 func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
@@ -185,7 +211,7 @@ func (r *Registry) Shutdown() error {
 
 // Load signals the Db to (re)load sources. On success the OnChange func is called
 func (r *Registry) Load() error {
-	if err := r.Db.Load(r.Config.Datadir); err != nil {
+	if err := r.eventSystem.LoadAndApplyEvents(r.Config.Datadir); err != nil {
 		return err
 	}
 

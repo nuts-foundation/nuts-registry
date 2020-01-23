@@ -17,30 +17,17 @@
  *
  */
 
-package db
+package events
 
 import (
-	"errors"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestValidateLocation(t *testing.T) {
-	t.Run("Missing files gives err", func(t *testing.T) {
-		err := validateLocation("../../test_data/missing_files")
-
-		if err == nil {
-			t.Errorf("Expected error: %v", ErrMissingRequiredFiles)
-		} else if !errors.Is(err, ErrMissingRequiredFiles) {
-			t.Errorf("Expected error: [%v], got [%v]", ErrMissingRequiredFiles, err)
-		}
-	})
-
-	t.Run("All files present", func(t *testing.T) {
-		err := validateLocation("../../test_data/all_empty_files")
-
-		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
-		}
+	t.Run("Location is a file", func(t *testing.T) {
+		err := validateLocation("../../test_data/invalid_location")
+		assert.Error(t, err)
 	})
 
 	t.Run("All files present with trailing slash", func(t *testing.T) {
@@ -53,7 +40,7 @@ func TestValidateLocation(t *testing.T) {
 }
 
 func TestReadFile(t *testing.T) {
-	data, err := ReadFile("../../test_data/all_empty_files", "endpoints.json")
+	data, err := readFile("../../test_data/all_empty_files", "endpoints.json")
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)

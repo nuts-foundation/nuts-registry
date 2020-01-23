@@ -17,16 +17,14 @@
  *
  */
 
-package db
+package events
 
 import (
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
-	"sort"
-
-	"github.com/sirupsen/logrus"
 )
 
 type fileError struct {
@@ -41,61 +39,32 @@ func (e *fileError) Error() string {
 	return e.s
 }
 
-// ErrMissingRequiredFiles is returned when one or more files is missing at a certain location
-var ErrMissingRequiredFiles = errors.New("missing one or more required files")
-
-// Validate location of data files, checks if following files can be found in given directory:
-// - endpoints.json
-// - organisations.json
-// - endpoints_organisations.json
+// Validate location of data files. Creates the directory if it doesn't exist.
 func validateLocation(location string) error {
 	sLocation := sanitizeLocation(location)
-
-	if _, err := os.Stat(location); os.IsNotExist(err) {
-		// create and return
-		os.Mkdir(location, os.ModePerm)
-	}
-
-	files, err := ioutil.ReadDir(sLocation)
-
+	info, err := os.Stat(sLocation)
 	if err != nil {
+		if os.IsNotExist(err) {
+			// create and return
+			return os.Mkdir(location, os.ModePerm)
+		}
 		return err
 	}
-
-	m := make(map[string]bool)
-
-	for _, f := range requiredFiles {
-		m[f] = false
+	if !info.IsDir() {
+		return errors.New(fmt.Sprintf("datadir is file, expected a directory (location = %s)", location))
 	}
-
-	for _, f := range files {
-		_, prs := m[f.Name()]
-		if prs {
-			delete(m, f.Name())
-		}
-	}
-
-	if len(m) != 0 {
-		var keys []string
-		for key := range m {
-			keys = append(keys, key)
-		}
-
-		// sort to get consistent test results
-		sort.Strings(keys)
-
-		return fmt.Errorf("loading from %s: %w", location, ErrMissingRequiredFiles)
-	}
-
 	return nil
 }
 
-// Readfile reads a file relative to datadir
-func ReadFile(location string, file string) ([]byte, error) {
-	finalLocation := fmt.Sprintf("%s/%s", sanitizeLocation(location), file)
+func readFile(location string, file string) ([]byte, error) {
+	finalLocation := normalizeLocation(location, file)
 	logrus.Debugf("Reading file from %s", finalLocation)
 
 	return ioutil.ReadFile(finalLocation)
+}
+
+func normalizeLocation(location string, file string) string {
+	return fmt.Sprintf("%s/%s", sanitizeLocation(location), file)
 }
 
 func sanitizeLocation(dirty string) string {

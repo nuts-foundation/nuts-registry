@@ -24,6 +24,7 @@ package pkg
 import (
 	"fmt"
 	"github.com/labstack/gommon/random"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
@@ -134,6 +135,7 @@ func TestRegistry_Configure(t *testing.T) {
 				Mode:    "server",
 				Datadir: "../test_data/valid_files",
 			},
+			eventSystem: events.NewEventSystem(),
 		}
 
 		if err := registry.Configure(); err != nil {
