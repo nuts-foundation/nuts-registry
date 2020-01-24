@@ -50,6 +50,18 @@ func TestOrganization_KeysAsSet(t *testing.T) {
 		}
 	})
 
+	t.Run("JWK as set can be called multiple times (bug: #20)", func(t *testing.T) {
+		o := Organization{}
+		if assert.NoError(t, json.Unmarshal([]byte(valid), &o)) {
+			_, _ = o.KeysAsSet()
+			set, err := o.KeysAsSet()
+			if assert.NoError(t, err) && assert.NotNil(t, set) {
+				assert.Len(t, set.Keys, 1)
+				assert.Equal(t, jwa.EC, set.Keys[0].KeyType())
+			}
+		}
+	})
+
 	t.Run("invalid JWK set in json returns error", func(t *testing.T) {
 		o := Organization{}
 		assert.Error(t, json.Unmarshal([]byte(invalidKeys), &o))

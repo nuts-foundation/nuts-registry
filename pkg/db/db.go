@@ -64,6 +64,20 @@ type Organization struct {
 	Endpoints  []Endpoint
 }
 
+// copyKeys is needed since the jwkSet.extractMap consumes the contents
+func (o Organization) copyKeys() []interface{} {
+	var keys []interface{}
+	for _, k := range o.Keys {
+		nk := map[string]interface{}{}
+		m := k.(map[string]interface{})
+		for k, v := range m {
+			nk[k] = v
+		}
+		keys = append(keys, nk)
+	}
+	return keys
+}
+
 // KeysAsSet transforms the raw map in Keys to a jwk.Set. If no keys are present, it'll return an empty set
 func (o Organization) KeysAsSet() (jwk.Set, error) {
 	var set jwk.Set
@@ -72,7 +86,8 @@ func (o Organization) KeysAsSet() (jwk.Set, error) {
 	}
 
 	m := make(map[string]interface{})
-	m["keys"] = o.Keys
+
+	m["keys"] = o.copyKeys()
 	err := set.ExtractMap(m)
 	return set, err
 }
