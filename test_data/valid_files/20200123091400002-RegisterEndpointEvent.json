@@ -1,4 +1,5 @@
 {
+  "type": "RegisterEndpointEvent",
   "payload": {
     "endpointType": "urn:nuts:endpoint:consent",
     "identifier": "urn:ietf:rfc:1779::O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local",

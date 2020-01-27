@@ -20,20 +20,19 @@
 package events
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	errors2 "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
-	"reflect"
 	"regexp"
+	"time"
 )
 
 var eventFileRegex *regexp.Regexp = nil
 
-const eventFileFormat = "\\d{17}-([a-zA-Z]+)\\.json"
+const eventFileFormat = "(\\d{17})-([a-zA-Z]+)\\.json"
 
 func init() {
 	r, err := regexp.Compile(eventFileFormat)
@@ -46,51 +45,44 @@ func init() {
 type EventSystem interface {
 	// RegisterEventHandler registers an event handler for the given type, which will be called when the an event of this
 	// type is received.
-	RegisterEventHandler(eventType reflect.Type, handler EventHandler)
-	RegisteredEventTypes() []reflect.Type
-	ProcessEvent(event interface{}) error
-	PublishEvent(event interface{}) error
+	RegisterEventHandler(eventType EventType, handler EventHandler)
+	ProcessEvent(event Event) error
+	PublishEvent(event Event) error
 	LoadAndApplyEvents(location string) error
 }
 
-type EventHandler func(interface{}) error
+type EventHandler func(Event) error
 
 type eventSystem struct {
-	eventHandlers map[reflect.Type]EventHandler
+	eventHandlers map[EventType]EventHandler
 	// lastLoadedEvent contains the file name of the last event that was loaded. It is used
 	lastLoadedEvent string
 }
 
 func NewEventSystem() *eventSystem {
-	return &eventSystem{eventHandlers: make(map[reflect.Type]EventHandler, 0)}
+	return &eventSystem{eventHandlers: make(map[EventType]EventHandler, 0)}
 }
 
-func (system *eventSystem) RegisterEventHandler(eventType reflect.Type, handler EventHandler) {
+func (system *eventSystem) RegisterEventHandler(eventType EventType, handler EventHandler) {
 	system.eventHandlers[eventType] = handler
 }
 
-func (system eventSystem) RegisteredEventTypes() []reflect.Type {
-	types := make([]reflect.Type, 0, len(system.eventHandlers))
-	for t, _ := range system.eventHandlers {
-		types = append(types, t)
+func (system eventSystem) ProcessEvent(event Event) error {
+	if !IsEventType(event.Type()) {
+		return fmt.Errorf("unknown event type: %s", event.Type())
 	}
-	return types
-}
-
-func (system eventSystem) ProcessEvent(event interface{}) error {
-	eventType := reflect.TypeOf(event)
-	handler := system.eventHandlers[eventType]
+	handler := system.eventHandlers[event.Type()]
 	if handler == nil {
-		return errors.New(fmt.Sprintf("no handler registered for event (type = %T), handlers are: %v", event, system.eventHandlers))
+		return fmt.Errorf("no handler registered for event (type = %s), handlers are: %v", event.Type(), system.eventHandlers)
 	}
-	return handler(event)
+	err := handler(event)
+	if err == nil {
+		logrus.Infof("Processed event: %v - %s", event.IssuedAt(), event.Type())
+	}
+	return err
 }
 
-func (system eventSystem) PublishEvent(event interface{}) error {
-	if reflect.TypeOf(event).Kind() == reflect.Struct {
-		// TODO: This is actually a pretty ugly API, so this should be fixed in future
-		return errors.New("a struct was passed to PublishEvent, which should've been a pointer to the struct")
-	}
+func (system eventSystem) PublishEvent(event Event) error {
 	// TODO: In future we'll publish the event to the mesh network here
 	return system.ProcessEvent(event)
 }
@@ -104,7 +96,7 @@ func (system *eventSystem) LoadAndApplyEvents(location string) error {
 
 	type fileEvent struct {
 		file  string
-		event interface{}
+		event Event
 	}
 	events := make([]fileEvent, 0)
 	entries, err := ioutil.ReadDir(location)
@@ -115,17 +107,10 @@ func (system *eventSystem) LoadAndApplyEvents(location string) error {
 		}
 
 		matches := eventFileRegex.FindStringSubmatch(entry.Name())
-		if len(matches) != 2 {
-			return errors.New(fmt.Sprintf("file does not match event file format (file = %s, expected format = %s)", entry.Name(), eventFileFormat))
+		if len(matches) != 3 {
+			return errors.New(fmt.Sprintf("file does not match event file name format (file = %s, expected format = %s)", entry.Name(), eventFileFormat))
 		}
-		eventName := matches[1]
-		resolvedEventType := system.resolveEventType(eventName)
-
-		if resolvedEventType == nil {
-			return errors.New(fmt.Sprintf("unsupported event type (type = %s, supported = %v)", eventName, system.RegisteredEventTypes()))
-		}
-		logrus.Debugf("Reading %s file: %s", resolvedEventType.Name(), entry.Name())
-		event, err := readEvent(normalizeLocation(location, entry.Name()), resolvedEventType)
+		event, err := readEvent(normalizeLocation(location, entry.Name()), matches[1])
 		if err != nil {
 			return err
 		}
@@ -141,16 +126,6 @@ func (system *eventSystem) LoadAndApplyEvents(location string) error {
 			return errors2.Wrap(err, fmt.Sprintf("error while applying event (event = %s)", e.file))
 		}
 		system.lastLoadedEvent = e.file
-		logrus.Infof("Applied event: %s", e.file)
-	}
-	return nil
-}
-
-func (system eventSystem) resolveEventType(eventName string) reflect.Type {
-	for _, eventType := range system.RegisteredEventTypes() {
-		if eventType.Elem().Name() == eventName {
-			return eventType
-		}
 	}
 	return nil
 }
@@ -164,15 +139,23 @@ func (system eventSystem) findStartIndex(entries []os.FileInfo) int {
 	return 0
 }
 
-func readEvent(file string, eventType reflect.Type) (interface{}, error) {
+func readEvent(file string, timestamp string) (Event, error) {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
-		return reflect.Value{}, err
+		return nil, err
 	}
-	event := reflect.New(eventType.Elem()).Interface()
-	err = json.Unmarshal(data, event)
+	event, err := EventFromJson(data)
 	if err != nil {
-		return reflect.Value{}, err
+		return nil, err
 	}
-	return event, nil
+	if !event.IssuedAt().IsZero() {
+		return nil, fmt.Errorf("event from file should not contain issuedAt, since it's derived from the file name")
+	}
+	t, err := time.Parse("20060102150405.000", timestamp[0:14] + "." + timestamp[14:])
+	if err != nil {
+		return nil, errors2.Wrap(err, "event timestamp does not match required pattern (yyyyMMddHHmmssmmm)")
+	}
+	je := event.(jsonEvent)
+	je.EventIssuedAt = t
+	return je, nil
 }

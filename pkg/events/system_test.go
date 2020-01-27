@@ -21,55 +21,53 @@ package events
 
 import (
 	"github.com/stretchr/testify/assert"
-	"reflect"
 	"testing"
 )
 
-func TestProcessEvent(t *testing.T) {
-	type event1 struct {
-	}
+func TestUnknownEventType(t *testing.T) {
 	system := NewEventSystem()
-	var called = 0
-	system.RegisterEventHandler(reflect.TypeOf(event1{}), func(event interface{}) error {
-		_, ok := event.(event1)
-		assert.True(t, ok)
-		called++
-		return nil
-	})
-	assert.Nil(t, system.ProcessEvent(event1{}))
-	assert.Equal(t, 1, called)
+	input := `{
+		"type": "non-existing"
+	}`
+	event, err := EventFromJson([]byte(input))
+	assert.NoError(t, err)
+	err = system.ProcessEvent(event)
+	assert.Error(t, err, "unknown event type: non-existing")
 }
 
-func TestNoEventProcessor(t *testing.T) {
-	type event1 struct {
-	}
+func TestNoEventHandler(t *testing.T) {
 	system := NewEventSystem()
-	assert.Equal(t, "no handler registered for event (type = events.event1), handlers are: map[]", system.ProcessEvent(event1{}).Error())
+	input := `{
+		"type": "RegisterOrganizationEvent"
+	}`
+	event, err := EventFromJson([]byte(input))
+	assert.NoError(t, err)
+	err = system.ProcessEvent(event)
+	assert.Error(t, err, "no handler registered for event (type = RegisterOrganizationEvent), handlers are: map[]")
 }
 
 func TestLoadEventsFromFile(t *testing.T) {
 	system := NewEventSystem()
 	organizationsCreated := 0
-	system.RegisterEventHandler(reflect.TypeOf(&RegisterOrganizationEvent{}), func(i interface{}) error {
+	system.RegisterEventHandler(RegisterOrganization, func(e Event) error {
 		organizationsCreated++
 		return nil
 	})
 	endpointsCreated := 0
-	system.RegisterEventHandler(reflect.TypeOf(&RegisterEndpointEvent{}), func(i interface{}) error {
+	system.RegisterEventHandler(RegisterEndpoint, func(e Event) error {
 		endpointsCreated++
 		return nil
 	})
 	endpointOrganizationsCreated := 0
-	system.RegisterEventHandler(reflect.TypeOf(&RegisterEndpointOrganizationEvent{}), func(i interface{}) error {
+	system.RegisterEventHandler(RegisterEndpointOrganization, func(e Event) error {
 		endpointOrganizationsCreated++
 		return nil
 	})
 
-	assert.Equal(t, reflect.TypeOf(RegisterEndpointOrganizationEvent{}), reflect.TypeOf(RegisterEndpointOrganizationEvent{}))
 	err := system.LoadAndApplyEvents("../../test_data/valid_files")
 
 	assert.NoError(t, err)
-	assert.Equal(t, 2, organizationsCreated)
-	assert.Equal(t, 2, endpointsCreated)
-	assert.Equal(t, 2, endpointOrganizationsCreated)
+	assert.Equal(t, 2, organizationsCreated, "unexpected number of events for: RegisterOrganization")
+	assert.Equal(t, 2, endpointsCreated, "unexpected number of events for: RegisterEndpoint")
+	assert.Equal(t, 2, endpointOrganizationsCreated, "unexpected number of events for: RegisterEndpointOrganization")
 }

@@ -31,7 +31,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -133,23 +132,34 @@ func (r *Registry) Configure() error {
 }
 
 func (r *Registry) registerEventHandlers() {
-	// TODO: We should receive a struct here, not a pointer to it
-	r.eventSystem.RegisterEventHandler(reflect.TypeOf(&events.RegisterOrganizationEvent{}), func(e interface{}) error {
-		event := e.(*events.RegisterOrganizationEvent)
-		return r.Db.RegisterOrganization(event.Payload)
+	r.eventSystem.RegisterEventHandler(events.RegisterOrganization, func(e events.Event) error {
+		event := events.RegisterOrganizationEvent{}
+		if err := e.Unmarshal(&event); err != nil {
+			return err
+		}
+		return r.Db.RegisterOrganization(event.Organization)
 	})
-	r.eventSystem.RegisterEventHandler(reflect.TypeOf(&events.RegisterEndpointEvent{}), func(e interface{}) error {
-		event := e.(*events.RegisterEndpointEvent)
-		r.Db.RegisterEndpoint(event.Payload)
+	r.eventSystem.RegisterEventHandler(events.RegisterEndpoint, func(e events.Event) error {
+		event := events.RegisterEndpointEvent{}
+		if err := e.Unmarshal(&event); err != nil {
+			return err
+		}
+		r.Db.RegisterEndpoint(event.Endpoint)
 		return nil
 	})
-	r.eventSystem.RegisterEventHandler(reflect.TypeOf(&events.RegisterEndpointOrganizationEvent{}), func(e interface{}) error {
-		event := e.(*events.RegisterEndpointOrganizationEvent)
-		return r.Db.RegisterEndpointOrganization(event.Payload)
+	r.eventSystem.RegisterEventHandler(events.RegisterEndpointOrganization, func(e events.Event) error {
+		event := events.RegisterEndpointOrganizationEvent{}
+		if err := e.Unmarshal(&event); err != nil {
+			return err
+		}
+		return r.Db.RegisterEndpointOrganization(event.EndpointOrganization)
 	})
-	r.eventSystem.RegisterEventHandler(reflect.TypeOf(&events.RemoveOrganizationEvent{}), func(e interface{}) error {
-		event := e.(*events.RemoveOrganizationEvent)
-		return r.Db.RemoveOrganization(event.Payload)
+	r.eventSystem.RegisterEventHandler(events.RemoveOrganization, func(e events.Event) error {
+		event := events.RemoveOrganizationEvent{}
+		if err := e.Unmarshal(&event); err != nil {
+			return err
+		}
+		return r.Db.RemoveOrganization(event.OrganizationId)
 	})
 }
 
@@ -170,12 +180,20 @@ func (r *Registry) OrganizationById(id string) (*db.Organization, error) {
 
 // RemoveOrganization is a wrapper for sam func on DB
 func (r *Registry) RemoveOrganization(id string) error {
-	return r.eventSystem.PublishEvent(&events.RemoveOrganizationEvent{Payload: id})
+	event, err := events.CreateEvent(events.RemoveOrganization, events.RemoveOrganizationEvent{OrganizationId: id})
+	if err != nil {
+		return err
+	}
+	return r.eventSystem.PublishEvent(event)
 }
 
 // RegisterOrganization is a wrapper for sam func on DB
 func (r *Registry) RegisterOrganization(org db.Organization) error {
-	return r.eventSystem.PublishEvent(&events.RegisterOrganizationEvent{Payload: org})
+	event, err := events.CreateEvent(events.RegisterOrganization, events.RegisterOrganizationEvent{Organization: org})
+	if err != nil {
+		return err
+	}
+	return r.eventSystem.PublishEvent(event)
 }
 
 func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
