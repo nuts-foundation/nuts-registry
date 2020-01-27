@@ -22,8 +22,6 @@ package events
 import (
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"io/ioutil"
 	"os"
 )
 
@@ -54,13 +52,6 @@ func validateLocation(location string) error {
 		return errors.New(fmt.Sprintf("datadir is file, expected a directory (location = %s)", location))
 	}
 	return nil
-}
-
-func readFile(location string, file string) ([]byte, error) {
-	finalLocation := normalizeLocation(location, file)
-	logrus.Debugf("Reading file from %s", finalLocation)
-
-	return ioutil.ReadFile(finalLocation)
 }
 
 func normalizeLocation(location string, file string) string {

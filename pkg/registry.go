@@ -57,6 +57,8 @@ const ConfSyncInterval = "syncInterval"
 // ModuleName == Registry
 const ModuleName = "Registry"
 
+var ReloadRegistryIdleTimeout time.Duration
+
 // RegistryClient is the interface to be implemented by any remote or local client
 type RegistryClient interface {
 	// EndpointsByOrganization returns all registered endpoints for an organization
@@ -92,7 +94,7 @@ type RegistryConfig struct {
 type Registry struct {
 	Config      RegistryConfig
 	Db          db.Db
-	eventSystem events.EventSystem
+	EventSystem events.EventSystem
 	configOnce  sync.Once
 	_logger     *logrus.Entry
 	closers     []chan struct{}
@@ -102,11 +104,15 @@ type Registry struct {
 var instance *Registry
 var oneRegistry sync.Once
 
+func init() {
+	ReloadRegistryIdleTimeout = 3 * time.Second
+}
+
 // RegistryInstance returns the singleton Registry
 func RegistryInstance() *Registry {
 	oneRegistry.Do(func() {
 		instance = &Registry{
-			eventSystem: events.NewEventSystem(),
+			EventSystem: events.NewEventSystem(),
 			_logger:     logrus.StandardLogger().WithField("module", ModuleName),
 		}
 	})
@@ -123,7 +129,7 @@ func (r *Registry) Configure() error {
 			r.registerEventHandlers()
 			// Apply stored events
 			r.Db = db.New()
-			if err := r.eventSystem.LoadAndApplyEvents(r.Config.Datadir); err != nil {
+			if err := r.EventSystem.LoadAndApplyEvents(r.Config.Datadir); err != nil {
 				r.logger().WithError(err).Warn("unable to load registry files")
 			}
 		}
@@ -132,14 +138,14 @@ func (r *Registry) Configure() error {
 }
 
 func (r *Registry) registerEventHandlers() {
-	r.eventSystem.RegisterEventHandler(events.RegisterOrganization, func(e events.Event) error {
+	r.EventSystem.RegisterEventHandler(events.RegisterOrganization, func(e events.Event) error {
 		event := events.RegisterOrganizationEvent{}
 		if err := e.Unmarshal(&event); err != nil {
 			return err
 		}
 		return r.Db.RegisterOrganization(event.Organization)
 	})
-	r.eventSystem.RegisterEventHandler(events.RegisterEndpoint, func(e events.Event) error {
+	r.EventSystem.RegisterEventHandler(events.RegisterEndpoint, func(e events.Event) error {
 		event := events.RegisterEndpointEvent{}
 		if err := e.Unmarshal(&event); err != nil {
 			return err
@@ -147,14 +153,14 @@ func (r *Registry) registerEventHandlers() {
 		r.Db.RegisterEndpoint(event.Endpoint)
 		return nil
 	})
-	r.eventSystem.RegisterEventHandler(events.RegisterEndpointOrganization, func(e events.Event) error {
+	r.EventSystem.RegisterEventHandler(events.RegisterEndpointOrganization, func(e events.Event) error {
 		event := events.RegisterEndpointOrganizationEvent{}
 		if err := e.Unmarshal(&event); err != nil {
 			return err
 		}
 		return r.Db.RegisterEndpointOrganization(event.EndpointOrganization)
 	})
-	r.eventSystem.RegisterEventHandler(events.RemoveOrganization, func(e events.Event) error {
+	r.EventSystem.RegisterEventHandler(events.RemoveOrganization, func(e events.Event) error {
 		event := events.RemoveOrganizationEvent{}
 		if err := e.Unmarshal(&event); err != nil {
 			return err
@@ -184,7 +190,7 @@ func (r *Registry) RemoveOrganization(id string) error {
 	if err != nil {
 		return err
 	}
-	return r.eventSystem.PublishEvent(event)
+	return r.EventSystem.PublishEvent(event)
 }
 
 // RegisterOrganization is a wrapper for sam func on DB
@@ -193,7 +199,7 @@ func (r *Registry) RegisterOrganization(org db.Organization) error {
 	if err != nil {
 		return err
 	}
-	return r.eventSystem.PublishEvent(event)
+	return r.EventSystem.PublishEvent(event)
 }
 
 func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
@@ -229,7 +235,7 @@ func (r *Registry) Shutdown() error {
 
 // Load signals the Db to (re)load sources. On success the OnChange func is called
 func (r *Registry) Load() error {
-	if err := r.eventSystem.LoadAndApplyEvents(r.Config.Datadir); err != nil {
+	if err := r.EventSystem.LoadAndApplyEvents(r.Config.Datadir); err != nil {
 		return err
 	}
 
@@ -249,6 +255,8 @@ func (r *Registry) startFileSystemWatcher() error {
 	closer := make(chan struct{})
 
 	go func() {
+		// Timer needs to be initialized, otherwise Go panics. Reloading after an hour or so isn't a problem.
+		var reloadRegistryTimer = time.NewTimer(time.Hour)
 		for {
 			select {
 			case event, ok := <-w.Events:
@@ -259,10 +267,21 @@ func (r *Registry) startFileSystemWatcher() error {
 				r.logger().Debugf("Received file watcher event: %s", event.String())
 				if strings.HasSuffix(event.Name, ".json") &&
 					(event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create) {
-					if r.Db != nil {
-						if err := r.Load(); err != nil {
-							r.logger().WithError(err).Error("error during reloading of registry files")
+					// When copying or extracting files, we have no guarantees that the filewatcher notifies us about
+					// the files in natural order (of filenames), which we use for our event ordering. To circumvent
+					// conflicts, we schedule an 'idle time-out' before actually reloading the registry as to wait for
+					// new notifications. If a file is added while waiting, the reload timer is rescheduled.
+					if reloadRegistryTimer != nil {
+						if !reloadRegistryTimer.Stop() {
+							<-reloadRegistryTimer.C
 						}
+					}
+					reloadRegistryTimer = time.NewTimer(ReloadRegistryIdleTimeout)
+				}
+			case <-reloadRegistryTimer.C:
+				if r.Db != nil {
+					if err := r.Load(); err != nil {
+						r.logger().WithError(err).Error("error during reloading of registry files")
 					}
 				}
 			case err, ok := <-w.Errors:

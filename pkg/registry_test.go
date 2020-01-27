@@ -52,6 +52,7 @@ func (h *ZipHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestRegistry_Start(t *testing.T) {
+	configureIdleTimeout()
 	t.Run("Start with an incorrect configuration returns error", func(t *testing.T) {
 		registry := Registry{
 			Config: RegistryConfig{
@@ -130,13 +131,14 @@ func TestRegistry_Start(t *testing.T) {
 }
 
 func TestRegistry_Configure(t *testing.T) {
+	configureIdleTimeout()
 	t.Run("Configure loads the BD", func(t *testing.T) {
 		registry := Registry{
 			Config: RegistryConfig{
 				Mode:    "server",
 				Datadir: "../test_data/valid_files",
 			},
-			eventSystem: events.NewEventSystem(),
+			EventSystem: events.NewEventSystem(),
 		}
 
 		if err := registry.Configure(); err != nil {
@@ -152,12 +154,13 @@ func TestRegistry_Configure(t *testing.T) {
 func TestRegistry_FileUpdate(t *testing.T) {
 	cleanup()
 	defer cleanup()
+	configureIdleTimeout()
 
 	t.Run("New files are loaded", func(t *testing.T) {
 		logrus.StandardLogger().SetLevel(logrus.DebugLevel)
 
 		wg := sync.WaitGroup{}
-		wg.Add(len(findJsonFiles("../test_data/valid_files")))
+		wg.Add(1)
 
 		registry := Registry{
 			Config: RegistryConfig{
@@ -168,7 +171,7 @@ func TestRegistry_FileUpdate(t *testing.T) {
 			OnChange: func(registry *Registry) {
 				wg.Done()
 			},
-			eventSystem: events.NewEventSystem(),
+			EventSystem: events.NewEventSystem(),
 		}
 		defer registry.Shutdown()
 
@@ -198,10 +201,15 @@ func TestRegistry_FileUpdate(t *testing.T) {
 	})
 }
 
+func configureIdleTimeout() {
+	ReloadRegistryIdleTimeout = 100 * time.Millisecond
+}
+
 func TestRegistry_GithubUpdate(t *testing.T) {
 	cleanup()
 	defer cleanup()
 	logrus.StandardLogger().SetLevel(logrus.DebugLevel)
+	configureIdleTimeout()
 
 	t.Run("New files are downloaded", func(t *testing.T) {
 		handler := &ZipHandler{}
@@ -226,7 +234,7 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 				println("EVENT")
 				wg.Done()
 			},
-			eventSystem: events.NewEventSystem(),
+			EventSystem: events.NewEventSystem(),
 		}
 		defer registry.Shutdown()
 
@@ -291,5 +299,8 @@ func copyFile(src string, dst string) error {
 }
 
 func cleanup() {
-	os.RemoveAll("../tmp")
+	err := os.RemoveAll("../tmp")
+	if err != nil {
+		logrus.Warnf("unable to clean tmp dir: %v", err)
+	}
 }

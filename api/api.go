@@ -88,8 +88,8 @@ func (apiResource ApiWrapper) RegisterOrganization(ctx echo.Context) error {
 
 	err = apiResource.R.RegisterOrganization(org.toDb())
 
-	if result != nil {
-		return ctx.String(http.StatusBadRequest, err.Error())
+	if err != nil {
+		return ctx.String(http.StatusInternalServerError, err.Error())
 	}
 
 	return ctx.NoContent(http.StatusCreated)

@@ -26,7 +26,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 )
@@ -108,8 +110,7 @@ func (system *eventSystem) LoadAndApplyEvents(location string) error {
 	entries, err := ioutil.ReadDir(location)
 	for i := system.findStartIndex(entries); i < len(entries); i++ {
 		entry := entries[i]
-		logrus.Infof("Resuming from %s", entry.Name())
-		if entry.IsDir() {
+		if !isJsonFile(entry) {
 			continue
 		}
 
@@ -137,15 +138,25 @@ func (system *eventSystem) LoadAndApplyEvents(location string) error {
 }
 
 func (system eventSystem) findStartIndex(entries []os.FileInfo) int {
+	if system.lastLoadedEvent.IsZero() {
+		return 0
+	}
 	for index, entry := range entries {
-		timestamp, err := parseTimestamp(entry.Name()[:17])
+		if !isJsonFile(entry) {
+			continue
+		}
+		timestamp, err := parseTimestamp(filepath.Base(entry.Name()[:17]))
 		if err == nil {
 			if timestamp.After(system.lastLoadedEvent) {
-				return index
+				return index + 1
 			}
 		}
 	}
 	return 0
+}
+
+func isJsonFile(file os.FileInfo) bool {
+	return !file.IsDir() && strings.HasSuffix(file.Name(), ".json")
 }
 
 func parseTimestamp(timestamp string) (time.Time, error) {
