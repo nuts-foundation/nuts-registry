@@ -46,7 +46,7 @@ func TestNoEventHandler(t *testing.T) {
 	assert.Error(t, err, "no handler registered for event (type = RegisterOrganizationEvent), handlers are: map[]")
 }
 
-func TestLoadEventsFromFile(t *testing.T) {
+func TestLoadEvents(t *testing.T) {
 	system := NewEventSystem()
 	organizationsCreated := 0
 	system.RegisterEventHandler(RegisterOrganization, func(e Event) error {
@@ -70,4 +70,16 @@ func TestLoadEventsFromFile(t *testing.T) {
 	assert.Equal(t, 2, organizationsCreated, "unexpected number of events for: RegisterOrganization")
 	assert.Equal(t, 2, endpointsCreated, "unexpected number of events for: RegisterEndpoint")
 	assert.Equal(t, 2, endpointOrganizationsCreated, "unexpected number of events for: RegisterEndpointOrganization")
+}
+
+func TestLoadEventsInvalidJson(t *testing.T) {
+	system := NewEventSystem()
+	err := system.LoadAndApplyEvents("../../test_data/invalid_files")
+	assert.EqualError(t, err, "invalid character '{' looking for beginning of object key string")
+}
+
+func TestLoadEventsEmptyFile(t *testing.T) {
+	system := NewEventSystem()
+	err := system.LoadAndApplyEvents("../../test_data/empty_files")
+	assert.EqualError(t, err, "unexpected end of JSON input")
 }

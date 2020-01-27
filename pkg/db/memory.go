@@ -41,7 +41,8 @@ var ErrDuplicateOrganization = errors.New("duplicate organization")
 var ErrUnknownOrganization = errors.New("unknown organization")
 
 func (db *MemoryDb) RegisterOrganization(org Organization) error {
-	o := db.organizationIndex[string(org.Identifier)]
+	id := string(org.Identifier)
+	o := db.organizationIndex[id]
 
 	if o != nil {
 		return fmt.Errorf("error registering organization with id %s: %w", org.Identifier, ErrDuplicateOrganization)
@@ -52,7 +53,8 @@ func (db *MemoryDb) RegisterOrganization(org Organization) error {
 		return fmt.Errorf("error registering organization with id %s: %w", org.Identifier, err)
 	}
 
-	db.appendOrganization(&org)
+	db.organizationIndex[id] = &org
+	db.organizationToEndpointIndex[id] = []EndpointOrganization{}
 
 	for _, e := range org.Endpoints {
 		db.RegisterEndpoint(e)
@@ -62,7 +64,6 @@ func (db *MemoryDb) RegisterOrganization(org Organization) error {
 				Organization: org.Identifier,
 				Endpoint:     e.Identifier,
 			})
-
 		if err != nil {
 			return err
 		}
@@ -129,16 +130,6 @@ func (db *MemoryDb) RegisterEndpoint(e Endpoint) {
 	db.endpointToOrganizationIndex[e.Identifier.String()] = []EndpointOrganization{}
 
 	logrus.Tracef("Added endpoint: %s", e.Identifier)
-}
-
-func (db *MemoryDb) appendOrganization(o *Organization) {
-	cp := *o
-	db.organizationIndex[o.Identifier.String()] = &cp
-
-	// also create empty slice at this map R
-	db.organizationToEndpointIndex[o.Identifier.String()] = []EndpointOrganization{}
-
-	logrus.Tracef("Added Organization: %s", o.Identifier)
 }
 
 func (db *MemoryDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error) {

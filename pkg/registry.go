@@ -249,10 +249,6 @@ func (r *Registry) startFileSystemWatcher() error {
 	closer := make(chan struct{})
 
 	go func() {
-		orgs := false
-		ends := false
-		eos := false
-
 		for {
 			select {
 			case event, ok := <-w.Events:
@@ -260,27 +256,14 @@ func (r *Registry) startFileSystemWatcher() error {
 					return
 				}
 
-				// we need to receive all 3 events before reloading the files
 				r.logger().Debugf("Received file watcher event: %s", event.String())
-				if strings.Contains(event.Name, "/organizations.json") && event.Op&fsnotify.Write == fsnotify.Write {
-					orgs = true
-				}
-				if strings.Contains(event.Name, "/endpoints.json") && event.Op&fsnotify.Write == fsnotify.Write {
-					ends = true
-				}
-				if strings.Contains(event.Name, "/endpoints_organizations.json") && event.Op&fsnotify.Write == fsnotify.Write {
-					eos = true
-				}
-
-				if orgs && ends && eos {
+				if strings.HasSuffix(event.Name, ".json") &&
+					(event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create) {
 					if r.Db != nil {
 						if err := r.Load(); err != nil {
 							r.logger().WithError(err).Error("error during reloading of registry files")
 						}
 					}
-					orgs = false
-					ends = false
-					eos = false
 				}
 			case err, ok := <-w.Errors:
 				if !ok {

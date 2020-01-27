@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"sync"
 	"time"
 )
 
@@ -55,8 +56,10 @@ type EventHandler func(Event) error
 
 type eventSystem struct {
 	eventHandlers map[EventType]EventHandler
-	// lastLoadedEvent contains the file name of the last event that was loaded. It is used
-	lastLoadedEvent string
+	// lastLoadedEvent contains the identifier of the last event that was loaded. It is used to keep track from
+	// what event to resume when the events are reloaded (from disk)
+	lastLoadedEvent time.Time
+	mux             sync.Mutex
 }
 
 func NewEventSystem() *eventSystem {
@@ -67,7 +70,7 @@ func (system *eventSystem) RegisterEventHandler(eventType EventType, handler Eve
 	system.eventHandlers[eventType] = handler
 }
 
-func (system eventSystem) ProcessEvent(event Event) error {
+func (system *eventSystem) ProcessEvent(event Event) error {
 	if !IsEventType(event.Type()) {
 		return fmt.Errorf("unknown event type: %s", event.Type())
 	}
@@ -77,6 +80,7 @@ func (system eventSystem) ProcessEvent(event Event) error {
 	}
 	err := handler(event)
 	if err == nil {
+		system.lastLoadedEvent = event.IssuedAt()
 		logrus.Infof("Processed event: %v - %s", event.IssuedAt(), event.Type())
 	}
 	return err
@@ -89,6 +93,8 @@ func (system eventSystem) PublishEvent(event Event) error {
 
 // Load the db files from the datadir
 func (system *eventSystem) LoadAndApplyEvents(location string) error {
+	system.mux.Lock()
+	defer system.mux.Unlock()
 	err := validateLocation(location)
 	if err != nil {
 		return err
@@ -102,6 +108,7 @@ func (system *eventSystem) LoadAndApplyEvents(location string) error {
 	entries, err := ioutil.ReadDir(location)
 	for i := system.findStartIndex(entries); i < len(entries); i++ {
 		entry := entries[i]
+		logrus.Infof("Resuming from %s", entry.Name())
 		if entry.IsDir() {
 			continue
 		}
@@ -125,18 +132,28 @@ func (system *eventSystem) LoadAndApplyEvents(location string) error {
 		if err != nil {
 			return errors2.Wrap(err, fmt.Sprintf("error while applying event (event = %s)", e.file))
 		}
-		system.lastLoadedEvent = e.file
 	}
 	return nil
 }
 
 func (system eventSystem) findStartIndex(entries []os.FileInfo) int {
 	for index, entry := range entries {
-		if entry.Name() == system.lastLoadedEvent {
-			return index
+		timestamp, err := parseTimestamp(entry.Name()[:17])
+		if err == nil {
+			if timestamp.After(system.lastLoadedEvent) {
+				return index
+			}
 		}
 	}
 	return 0
+}
+
+func parseTimestamp(timestamp string) (time.Time, error) {
+	t, err := time.Parse("20060102150405.000", timestamp[0:14]+"."+timestamp[14:])
+	if err != nil {
+		return time.Time{}, errors2.Wrap(err, "event timestamp does not match required pattern (yyyyMMddHHmmssmmm)")
+	}
+	return t, nil
 }
 
 func readEvent(file string, timestamp string) (Event, error) {
@@ -151,9 +168,9 @@ func readEvent(file string, timestamp string) (Event, error) {
 	if !event.IssuedAt().IsZero() {
 		return nil, fmt.Errorf("event from file should not contain issuedAt, since it's derived from the file name")
 	}
-	t, err := time.Parse("20060102150405.000", timestamp[0:14] + "." + timestamp[14:])
+	t, err := parseTimestamp(timestamp)
 	if err != nil {
-		return nil, errors2.Wrap(err, "event timestamp does not match required pattern (yyyyMMddHHmmssmmm)")
+		return nil, err
 	}
 	je := event.(jsonEvent)
 	je.EventIssuedAt = t

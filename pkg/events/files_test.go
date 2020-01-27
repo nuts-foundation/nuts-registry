@@ -38,18 +38,3 @@ func TestValidateLocation(t *testing.T) {
 		}
 	})
 }
-
-func TestReadFile(t *testing.T) {
-	data, err := readFile("../../test_data/all_empty_files", "endpoints.json")
-
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-		return
-	}
-
-	expected := "[]"
-	got := string(data)
-	if got != expected {
-		t.Errorf("Expected empty json file with: [[]], got [%s]", got)
-	}
-}

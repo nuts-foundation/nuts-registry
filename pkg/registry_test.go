@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -149,13 +150,14 @@ func TestRegistry_Configure(t *testing.T) {
 }
 
 func TestRegistry_FileUpdate(t *testing.T) {
-	defer os.RemoveAll("../tmp")
+	cleanup()
+	defer cleanup()
 
 	t.Run("New files are loaded", func(t *testing.T) {
 		logrus.StandardLogger().SetLevel(logrus.DebugLevel)
 
 		wg := sync.WaitGroup{}
-		wg.Add(1)
+		wg.Add(len(findJsonFiles("../test_data/valid_files")))
 
 		registry := Registry{
 			Config: RegistryConfig{
@@ -166,6 +168,7 @@ func TestRegistry_FileUpdate(t *testing.T) {
 			OnChange: func(registry *Registry) {
 				wg.Done()
 			},
+			eventSystem: events.NewEventSystem(),
 		}
 		defer registry.Shutdown()
 
@@ -196,7 +199,8 @@ func TestRegistry_FileUpdate(t *testing.T) {
 }
 
 func TestRegistry_GithubUpdate(t *testing.T) {
-	defer os.RemoveAll("../tmp")
+	cleanup()
+	defer cleanup()
 	logrus.StandardLogger().SetLevel(logrus.DebugLevel)
 
 	t.Run("New files are downloaded", func(t *testing.T) {
@@ -222,6 +226,7 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 				println("EVENT")
 				wg.Done()
 			},
+			eventSystem: events.NewEventSystem(),
 		}
 		defer registry.Shutdown()
 
@@ -243,9 +248,28 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 }
 
 func copyDir(src string, dst string) {
-	for _, f := range []string{"organizations.json", "endpoints.json", "endpoints_organizations.json"} {
-		copyFile(fmt.Sprintf("%s/%s", src, f), fmt.Sprintf("%s/%s", dst, f))
+	for _, file := range findJsonFiles(src) {
+		if strings.HasSuffix(file, ".json") {
+			err := copyFile(fmt.Sprintf("%s/%s", src, file), fmt.Sprintf("%s/%s", dst, file))
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
+}
+
+func findJsonFiles(src string) []string {
+	dir, err := ioutil.ReadDir(src)
+	if err != nil {
+		panic(err)
+	}
+	files := make([]string, 0)
+	for _, entry := range dir {
+		if strings.HasSuffix(entry.Name(), ".json") {
+			files = append(files, entry.Name())
+		}
+	}
+	return files
 }
 
 func copyFile(src string, dst string) error {
@@ -264,4 +288,8 @@ func copyFile(src string, dst string) error {
 	_, err = io.Copy(dstFile, srcFile)
 
 	return err
+}
+
+func cleanup() {
+	os.RemoveAll("../tmp")
 }
