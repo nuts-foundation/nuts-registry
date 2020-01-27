@@ -271,11 +271,7 @@ func (r *Registry) startFileSystemWatcher() error {
 					// the files in natural order (of filenames), which we use for our event ordering. To circumvent
 					// conflicts, we schedule an 'idle time-out' before actually reloading the registry as to wait for
 					// new notifications. If a file is added while waiting, the reload timer is rescheduled.
-					if reloadRegistryTimer != nil {
-						if !reloadRegistryTimer.Stop() {
-							<-reloadRegistryTimer.C
-						}
-					}
+					reloadRegistryTimer.Stop()
 					reloadRegistryTimer = time.NewTimer(ReloadRegistryIdleTimeout)
 				}
 			case <-reloadRegistryTimer.C:

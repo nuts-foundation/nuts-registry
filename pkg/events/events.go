@@ -62,7 +62,6 @@ func IsEventType(eventType EventType) bool {
 }
 
 type RegisterOrganizationEvent struct {
-	Type         string
 	Organization db.Organization `json:"payload"`
 }
 

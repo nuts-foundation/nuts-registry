@@ -24,8 +24,10 @@ package pkg
 import (
 	"fmt"
 	"github.com/labstack/gommon/random"
+	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -49,6 +51,13 @@ func (h *ZipHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// write bytes to w
 	w.Write(bytes)
+}
+
+func TestRegistry_Instance(t *testing.T) {
+	registry1 := RegistryInstance()
+	registry2 := RegistryInstance()
+	assert.Same(t, registry1, registry2)
+	assert.NotNil(t, registry1.EventSystem)
 }
 
 func TestRegistry_Start(t *testing.T) {
@@ -201,10 +210,6 @@ func TestRegistry_FileUpdate(t *testing.T) {
 	})
 }
 
-func configureIdleTimeout() {
-	ReloadRegistryIdleTimeout = 100 * time.Millisecond
-}
-
 func TestRegistry_GithubUpdate(t *testing.T) {
 	cleanup()
 	defer cleanup()
@@ -255,6 +260,61 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 	})
 }
 
+func TestRegistry_EventsOnUpdate(t *testing.T) {
+	t.Run("Check event emitted: register organization", func(t *testing.T) {
+		eventSystem := &MockEventSystem{Events: []events.Event{}}
+		registry := Registry{
+			Config: RegistryConfig{
+			},
+			EventSystem: eventSystem,
+		}
+		err := registry.RegisterOrganization(db.Organization{Name: "bla"})
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(eventSystem.Events))
+		assert.Equal(t, "RegisterOrganizationEvent", string(eventSystem.Events[0].Type()))
+		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
+		event := events.RegisterOrganizationEvent{}
+		assert.NoError(t, eventSystem.Events[0].Unmarshal(&event))
+		assert.Equal(t, "bla", event.Organization.Name)
+	})
+	t.Run("Check event emitted: update organization", func(t *testing.T) {
+		eventSystem := &MockEventSystem{Events: []events.Event{}}
+		registry := Registry{
+			Config: RegistryConfig{
+			},
+			EventSystem: eventSystem,
+		}
+		err := registry.RemoveOrganization("abc")
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(eventSystem.Events))
+		assert.Equal(t, "RemoveOrganizationEvent", string(eventSystem.Events[0].Type()))
+		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
+		event := events.RemoveOrganizationEvent{}
+		assert.NoError(t, eventSystem.Events[0].Unmarshal(&event))
+		assert.Equal(t, "abc", event.OrganizationId)
+	})
+	t.Run("Check event emitted: update organization", func(t *testing.T) {
+		eventSystem := &MockEventSystem{Events: []events.Event{}}
+		registry := Registry{
+			Config: RegistryConfig{
+			},
+			EventSystem: eventSystem,
+		}
+		err := registry.RemoveOrganization("abc")
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(eventSystem.Events))
+		assert.Equal(t, "RemoveOrganizationEvent", string(eventSystem.Events[0].Type()))
+		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
+		event := events.RemoveOrganizationEvent{}
+		assert.NoError(t, eventSystem.Events[0].Unmarshal(&event))
+		assert.Equal(t, "abc", event.OrganizationId)
+	})
+}
+
+func configureIdleTimeout() {
+	ReloadRegistryIdleTimeout = 100 * time.Millisecond
+}
+
 func copyDir(src string, dst string) {
 	for _, file := range findJsonFiles(src) {
 		if strings.HasSuffix(file, ".json") {
@@ -303,4 +363,27 @@ func cleanup() {
 	if err != nil {
 		logrus.Warnf("unable to clean tmp dir: %v", err)
 	}
+}
+
+type MockEventSystem struct {
+	Events []events.Event
+}
+
+func (m MockEventSystem) RegisterEventHandler(events.EventType, events.EventHandler) {
+	// NOP
+}
+
+func (m MockEventSystem) ProcessEvent(events.Event) error {
+	// NOP
+	return nil
+}
+
+func (m *MockEventSystem) PublishEvent(event events.Event) error {
+	m.Events = append(m.Events, event)
+	return nil
+}
+
+func (m MockEventSystem) LoadAndApplyEvents(string) error {
+	// NOP
+	return nil
 }

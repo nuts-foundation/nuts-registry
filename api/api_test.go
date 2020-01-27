@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"net/url"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
@@ -214,7 +215,47 @@ func TestApiWrapper_RegisterOrganization(t *testing.T) {
 		assert.True(t, eventHandled, "expected RegisterOrganization event to be fired and handled")
 	})
 
-	t.Run("400", func(t *testing.T) {
+	t.Run("400 - Invalid JSON", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{organizations: organizations})
+
+		req := httptest.NewRequest(echo.POST, "/", strings.NewReader("{{[[][}{"))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organizations")
+
+		err := wrapper.RegisterOrganization(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("400 - Identifier missing", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{organizations: organizations})
+
+		b, _ := json.Marshal(Organization{})
+
+		req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organizations")
+
+		err := wrapper.RegisterOrganization(c)
+
+		if err != nil {
+			t.Errorf("Got err during call: %s", err.Error())
+		}
+
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("400 - Duplicate organization ID", func(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{organizations: organizations})
 
 		b, _ := json.Marshal(Organization{}.fromDb(organizations[0]))
