@@ -29,7 +29,7 @@ func TestUnknownEventType(t *testing.T) {
 	input := `{
 		"type": "non-existing"
 	}`
-	event, err := EventFromJson([]byte(input))
+	event, err := EventFromJSON([]byte(input))
 	assert.NoError(t, err)
 	err = system.ProcessEvent(event)
 	assert.Error(t, err, "unknown event type: non-existing")
@@ -40,7 +40,7 @@ func TestNoEventHandler(t *testing.T) {
 	input := `{
 		"type": "RegisterOrganizationEvent"
 	}`
-	event, err := EventFromJson([]byte(input))
+	event, err := EventFromJSON([]byte(input))
 	assert.NoError(t, err)
 	err = system.ProcessEvent(event)
 	assert.Error(t, err, "no handler registered for event (type = RegisterOrganizationEvent), handlers are: map[]")

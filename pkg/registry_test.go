@@ -316,7 +316,7 @@ func configureIdleTimeout() {
 }
 
 func copyDir(src string, dst string) {
-	for _, file := range findJsonFiles(src) {
+	for _, file := range findJSONFiles(src) {
 		if strings.HasSuffix(file, ".json") {
 			err := copyFile(fmt.Sprintf("%s/%s", src, file), fmt.Sprintf("%s/%s", dst, file))
 			if err != nil {
@@ -326,7 +326,7 @@ func copyDir(src string, dst string) {
 	}
 }
 
-func findJsonFiles(src string) []string {
+func findJSONFiles(src string) []string {
 	dir, err := ioutil.ReadDir(src)
 	if err != nil {
 		panic(err)

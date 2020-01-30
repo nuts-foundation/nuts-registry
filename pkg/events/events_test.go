@@ -13,7 +13,7 @@ func TestEventMarshalling(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Unmarshal event
-	event, err := EventFromJson(data)
+	event, err := EventFromJSON(data)
 	assert.NoError(t, err)
 	assert.Equal(t, RegisterOrganization, event.Type())
 
@@ -29,7 +29,7 @@ func TestEventMarshalling(t *testing.T) {
 
 func TestUnsupportedEventType(t *testing.T) {
 	data := "{}"
-	event, err := EventFromJson([]byte(data))
+	event, err := EventFromJSON([]byte(data))
 	assert.NoError(t, err)
 	event.Type()
 }

@@ -25,6 +25,7 @@ import (
 	"time"
 )
 
+// Event defines an event which can be (un)marshalled.
 type Event interface {
 	Type() EventType
 	IssuedAt() time.Time
@@ -32,12 +33,17 @@ type Event interface {
 	Marshal() []byte
 }
 
+// EventType defines a supported type of event, which is used for executing the right handler.
 type EventType string
 
 const (
+	// RegisterOrganization event type
 	RegisterOrganization         EventType = "RegisterOrganizationEvent"
+	// RemoveOrganization event type
 	RemoveOrganization           EventType = "RemoveOrganizationEvent"
+	// RegisterEndpoint event type
 	RegisterEndpoint             EventType = "RegisterEndpointEvent"
+	// RegisterEndpointOrganization event type
 	RegisterEndpointOrganization EventType = "RegisterEndpointOrganizationEvent"
 )
 
@@ -52,6 +58,7 @@ func init() {
 	}
 }
 
+// IsEventType checks whether the given type is supported.
 func IsEventType(eventType EventType) bool {
 	for _, actual := range eventTypes {
 		if actual == eventType {
@@ -61,18 +68,22 @@ func IsEventType(eventType EventType) bool {
 	return false
 }
 
+// RegisterOrganizationEvent event
 type RegisterOrganizationEvent struct {
 	Organization db.Organization `json:"payload"`
 }
 
+// RemoveOrganizationEvent event
 type RemoveOrganizationEvent struct {
 	OrganizationId string `json:"payload"`
 }
 
+// RegisterEndpointEvent event
 type RegisterEndpointEvent struct {
 	Endpoint db.Endpoint `json:"payload"`
 }
 
+// RegisterEndpointOrganizationEvent event
 type RegisterEndpointOrganizationEvent struct {
 	EndpointOrganization db.EndpointOrganization `json:"payload"`
 }
@@ -84,13 +95,16 @@ type jsonEvent struct {
 	data          []byte
 }
 
-func EventFromJson(data []byte) (Event, error) {
+// EventFromJSON unmarshals an event. If the event can't be unmarshalled, an error is returned.
+func EventFromJSON(data []byte) (Event, error) {
 	e := jsonEvent{}
 	err := json.Unmarshal(data, &e)
 	e.data = data
 	return e, err
 }
 
+// CreateEvent creates an event of the given type and the provided payload. If the event can't be created, an error is
+// returned.
 func CreateEvent(eventType EventType, payload interface{}) (Event, error) {
 	data, err := json.Marshal(payload)
 	if err != nil {

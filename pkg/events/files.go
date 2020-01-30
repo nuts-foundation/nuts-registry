@@ -20,7 +20,6 @@
 package events
 
 import (
-	"errors"
 	"fmt"
 	"os"
 )
@@ -49,7 +48,7 @@ func validateLocation(location string) error {
 		return err
 	}
 	if !info.IsDir() {
-		return errors.New(fmt.Sprintf("datadir is file, expected a directory (location = %s)", location))
+		return fmt.Errorf("datadir is file, expected a directory (location = %s)", location)
 	}
 	return nil
 }

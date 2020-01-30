@@ -100,6 +100,8 @@ func New() *MemoryDb {
 	}
 }
 
+// RegisterEndpointOrganization registers an organization <-> endpoint mapping. It returns an error if the specified
+// endpoint or organization doesn't exist.
 func (db *MemoryDb) RegisterEndpointOrganization(eo EndpointOrganization) error {
 	ois := eo.Organization.String()
 	eis := eo.Endpoint.String()
@@ -122,6 +124,7 @@ func (db *MemoryDb) RegisterEndpointOrganization(eo EndpointOrganization) error 
 	return nil
 }
 
+// RegisterEndpoint registers an endpoint.
 func (db *MemoryDb) RegisterEndpoint(e Endpoint) {
 	cp := &e
 	db.endpointIndex[e.Identifier.String()] = cp

@@ -20,7 +20,6 @@
 package events
 
 import (
-	"errors"
 	"fmt"
 	errors2 "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -29,11 +28,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 )
 
-var eventFileRegex *regexp.Regexp = nil
+var eventFileRegex *regexp.Regexp
 
 const eventFileFormat = "(\\d{17})-([a-zA-Z]+)\\.json"
 
@@ -45,6 +43,7 @@ func init() {
 	eventFileRegex = r
 }
 
+// EventSystem is meant for registering and handling events.
 type EventSystem interface {
 	// RegisterEventHandler registers an event handler for the given type, which will be called when the an event of this
 	// type is received.
@@ -54,6 +53,7 @@ type EventSystem interface {
 	LoadAndApplyEvents(location string) error
 }
 
+// EventHandler handles an event of a specific type.
 type EventHandler func(Event) error
 
 type eventSystem struct {
@@ -61,10 +61,10 @@ type eventSystem struct {
 	// lastLoadedEvent contains the identifier of the last event that was loaded. It is used to keep track from
 	// what event to resume when the events are reloaded (from disk)
 	lastLoadedEvent time.Time
-	mux             sync.Mutex
 }
 
-func NewEventSystem() *eventSystem {
+// NewEventSystem creates and initializes a new event system.
+func NewEventSystem() EventSystem {
 	return &eventSystem{eventHandlers: make(map[EventType]EventHandler, 0)}
 }
 
@@ -95,8 +95,6 @@ func (system eventSystem) PublishEvent(event Event) error {
 
 // Load the db files from the datadir
 func (system *eventSystem) LoadAndApplyEvents(location string) error {
-	system.mux.Lock()
-	defer system.mux.Unlock()
 	err := validateLocation(location)
 	if err != nil {
 		return err
@@ -110,13 +108,13 @@ func (system *eventSystem) LoadAndApplyEvents(location string) error {
 	entries, err := ioutil.ReadDir(location)
 	for i := system.findStartIndex(entries); i < len(entries); i++ {
 		entry := entries[i]
-		if !isJsonFile(entry) {
+		if !isJSONFile(entry) {
 			continue
 		}
 
 		matches := eventFileRegex.FindStringSubmatch(entry.Name())
 		if len(matches) != 3 {
-			return errors.New(fmt.Sprintf("file does not match event file name format (file = %s, expected format = %s)", entry.Name(), eventFileFormat))
+			return fmt.Errorf("file does not match event file name format (file = %s, expected format = %s)", entry.Name(), eventFileFormat)
 		}
 		event, err := readEvent(normalizeLocation(location, entry.Name()), matches[1])
 		if err != nil {
@@ -142,7 +140,7 @@ func (system eventSystem) findStartIndex(entries []os.FileInfo) int {
 		return 0
 	}
 	for index, entry := range entries {
-		if !isJsonFile(entry) {
+		if !isJSONFile(entry) {
 			continue
 		}
 		timestamp, err := parseTimestamp(filepath.Base(entry.Name()[:17]))
@@ -155,7 +153,7 @@ func (system eventSystem) findStartIndex(entries []os.FileInfo) int {
 	return 0
 }
 
-func isJsonFile(file os.FileInfo) bool {
+func isJSONFile(file os.FileInfo) bool {
 	return !file.IsDir() && strings.HasSuffix(file.Name(), ".json")
 }
 
@@ -172,7 +170,7 @@ func readEvent(file string, timestamp string) (Event, error) {
 	if err != nil {
 		return nil, err
 	}
-	event, err := EventFromJson(data)
+	event, err := EventFromJSON(data)
 	if err != nil {
 		return nil, err
 	}

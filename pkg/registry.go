@@ -57,6 +57,8 @@ const ConfSyncInterval = "syncInterval"
 // ModuleName == Registry
 const ModuleName = "Registry"
 
+// ReloadRegistryIdleTimeout defines the cooling down period after receiving a file watcher notification, before
+// the registry is reloaded (from disk).
 var ReloadRegistryIdleTimeout time.Duration
 
 // RegistryClient is the interface to be implemented by any remote or local client
