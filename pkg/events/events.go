@@ -75,7 +75,7 @@ type RegisterOrganizationEvent struct {
 
 // RemoveOrganizationEvent event
 type RemoveOrganizationEvent struct {
-	OrganizationId string `json:"payload"`
+	OrganizationID string `json:"payload"`
 }
 
 // RegisterEndpointEvent event
