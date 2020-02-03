@@ -320,7 +320,7 @@ func (r *Registry) startGithubSync() error {
 		for {
 			var err error
 
-			r.logger().Debugf("Downloading registry files from %s to %s", r.Config.SyncAddress, r.Config.Datadir)
+			r.logger().Debugf("Downloading registry files from %s to %s", r.Config.SyncAddress, r.getEventsDir())
 			if eTag, err = r.downloadAndUnzip(eTag); err != nil {
 				r.logger().WithError(err).Error("Error downloading registry files")
 			}
@@ -435,7 +435,7 @@ func (r *Registry) unzip() error {
 			continue
 		case tar.TypeReg:
 			if strings.Index(name, ".json") > 0 {
-				targetPath := fmt.Sprintf("%s/%s", r.Config.Datadir, name)
+				targetPath := fmt.Sprintf("%s/%s", r.getEventsDir(), name)
 
 				dst, err := os.Create(targetPath)
 				if err != nil {
