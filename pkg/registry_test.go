@@ -293,7 +293,7 @@ func TestRegistry_EventsOnUpdate(t *testing.T) {
 		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
 		event := events.RemoveOrganizationEvent{}
 		if assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
-			assert.Equal(t, "abc", event.OrganizationID)
+			assert.Equal(t, "abc", event.Identifier.String())
 		}
 	})
 	t.Run("Check event emitted: update organization", func(t *testing.T) {
@@ -312,7 +312,7 @@ func TestRegistry_EventsOnUpdate(t *testing.T) {
 		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
 		event := events.RemoveOrganizationEvent{}
 		if assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
-			assert.Equal(t, "abc", event.OrganizationID)
+			assert.Equal(t, "abc", event.Identifier.String())
 		}
 	})
 }

@@ -46,6 +46,16 @@ func TestUnmarshalJSONPayload(t *testing.T) {
 	assert.Equal(t, "Zorggroep Nuts", r.Organization.Name)
 }
 
+func TestUnmarshalEventWithoutPayload(t *testing.T) {
+	event, err := EventFromJSON([]byte("{\"type\": \"" + RegisterOrganization + "\"}"))
+	if !assert.NoError(t, err) {
+		return
+	}
+	payload := RegisterOrganizationEvent{}
+	err = event.Unmarshal(&payload)
+	assert.EqualError(t, err, "event has no payload")
+}
+
 func TestMissingEventType(t *testing.T) {
 	_, err := EventFromJSON([]byte("{}"))
 	assert.Error(t, err, ErrMissingEventType)
