@@ -1,9 +1,11 @@
 package events
 
 import (
+	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"testing"
+	"time"
 )
 
 func TestEventFromJSON(t *testing.T) {
@@ -59,6 +61,20 @@ func TestUnmarshalEventWithoutPayload(t *testing.T) {
 func TestMissingEventType(t *testing.T) {
 	_, err := EventFromJSON([]byte("{}"))
 	assert.Error(t, err, ErrMissingEventType)
+}
+
+func TestCreateEvent(t *testing.T) {
+	event, err := CreateEvent(RegisterOrganization, RegisterOrganizationEvent{db.Organization{Name: "bla"}})
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, RegisterOrganization, event.Type())
+	assert.Equal(t, int64(0), time.Now().Unix() - event.IssuedAt().Unix())
+}
+
+func TestIsEventType(t *testing.T) {
+	assert.True(t, IsEventType(RegisterOrganization))
+	assert.False(t, IsEventType("NonExistingEvent"))
 }
 
 func readTestEvent() ([]byte, error) {
