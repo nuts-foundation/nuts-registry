@@ -184,9 +184,6 @@ func TestRegistry_FileUpdate(t *testing.T) {
 		}
 		defer registry.Shutdown()
 
-		os.Mkdir("../tmp", os.ModePerm)
-		copyDir("../test_data/all_empty_files", "../tmp")
-
 		if err := registry.Configure(); err != nil {
 			t.Errorf("Expected no error, got [%v]", err)
 		}
@@ -200,7 +197,7 @@ func TestRegistry_FileUpdate(t *testing.T) {
 		}
 
 		// copy valid files
-		copyDir("../test_data/valid_files", "../tmp")
+		copyDir("../test_data/valid_files/events", "../tmp/events")
 
 		wg.Wait()
 

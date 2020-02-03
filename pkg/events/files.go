@@ -31,7 +31,7 @@ func validateLocation(location string) error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// create and return
-			return os.Mkdir(location, os.ModePerm)
+			return os.MkdirAll(location, os.ModePerm)
 		}
 		return err
 	}

@@ -130,7 +130,7 @@ func (r *Registry) Configure() error {
 			r.registerEventHandlers()
 			// Apply stored events
 			r.Db = db.New()
-			if err := r.EventSystem.LoadAndApplyEvents(r.Config.Datadir); err != nil {
+			if err := r.EventSystem.LoadAndApplyEvents(r.getEventsDir()); err != nil {
 				r.logger().WithError(err).Warn("unable to load registry files")
 			}
 		}
@@ -236,7 +236,7 @@ func (r *Registry) Shutdown() error {
 
 // Load signals the Db to (re)load sources. On success the OnChange func is called
 func (r *Registry) Load() error {
-	if err := r.EventSystem.LoadAndApplyEvents(r.Config.Datadir); err != nil {
+	if err := r.EventSystem.LoadAndApplyEvents(r.getEventsDir()); err != nil {
 		return err
 	}
 
@@ -245,6 +245,10 @@ func (r *Registry) Load() error {
 	}
 
 	return nil
+}
+
+func (r *Registry) getEventsDir() string {
+	return r.Config.Datadir + "/events"
 }
 
 func (r *Registry) startFileSystemWatcher() error {
@@ -293,7 +297,7 @@ func (r *Registry) startFileSystemWatcher() error {
 		}
 	}()
 
-	if err := w.Add(r.Config.Datadir); err != nil {
+	if err := w.Add(r.getEventsDir()); err != nil {
 		return err
 	}
 

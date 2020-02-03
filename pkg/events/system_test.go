@@ -76,7 +76,7 @@ func TestLoadEvents(t *testing.T) {
 		assert.Equal(t, eoc, endpointOrganizationsCreated, "unexpected number of events for: RegisterEndpointOrganization")
 	}
 
-	const dir = "../../test_data/valid_files"
+	const dir = "../../test_data/valid_files/events"
 	t.Run("All fresh system state, all events should be loaded", func(t *testing.T) {
 		err := system.LoadAndApplyEvents(dir)
 		if !assert.NoError(t, err) {
@@ -110,13 +110,13 @@ func TestLoadEvents(t *testing.T) {
 
 func TestLoadEventsInvalidJson(t *testing.T) {
 	system := NewEventSystem()
-	err := system.LoadAndApplyEvents("../../test_data/invalid_files")
+	err := system.LoadAndApplyEvents("../../test_data/invalid_files/events")
 	assert.EqualError(t, err, "invalid character '{' looking for beginning of object key string")
 }
 
 func TestLoadEventsEmptyFile(t *testing.T) {
 	system := NewEventSystem()
-	err := system.LoadAndApplyEvents("../../test_data/empty_files")
+	err := system.LoadAndApplyEvents("../../test_data/empty_files/events")
 	assert.EqualError(t, err, "unexpected end of JSON input")
 }
 

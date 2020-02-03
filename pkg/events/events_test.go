@@ -52,5 +52,5 @@ func TestMissingEventType(t *testing.T) {
 }
 
 func readTestEvent() ([]byte, error) {
-	return ioutil.ReadFile("../../test_data/valid_files/20200123091400001-RegisterOrganizationEvent.json")
+	return ioutil.ReadFile("../../test_data/valid_files/events/20200123091400001-RegisterOrganizationEvent.json")
 }
