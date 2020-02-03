@@ -273,10 +273,9 @@ func TestRegistry_EventsOnUpdate(t *testing.T) {
 		assert.Equal(t, "RegisterOrganizationEvent", string(eventSystem.Events[0].Type()))
 		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
 		event := events.RegisterOrganizationEvent{}
-		if !assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
-			return
+		if assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
+			assert.Equal(t, "bla", event.Organization.Name)
 		}
-		assert.Equal(t, "bla", event.Organization.Name)
 	})
 	t.Run("Check event emitted: update organization", func(t *testing.T) {
 		eventSystem := &MockEventSystem{Events: []events.Event{}}
@@ -293,10 +292,9 @@ func TestRegistry_EventsOnUpdate(t *testing.T) {
 		assert.Equal(t, "RemoveOrganizationEvent", string(eventSystem.Events[0].Type()))
 		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
 		event := events.RemoveOrganizationEvent{}
-		if !assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
-			return
+		if assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
+			assert.Equal(t, "abc", event.OrganizationID)
 		}
-		assert.Equal(t, "abc", event.OrganizationID)
 	})
 	t.Run("Check event emitted: update organization", func(t *testing.T) {
 		eventSystem := &MockEventSystem{Events: []events.Event{}}
@@ -313,10 +311,9 @@ func TestRegistry_EventsOnUpdate(t *testing.T) {
 		assert.Equal(t, "RemoveOrganizationEvent", string(eventSystem.Events[0].Type()))
 		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
 		event := events.RemoveOrganizationEvent{}
-		if !assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
-			return
+		if assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
+			assert.Equal(t, "abc", event.OrganizationID)
 		}
-		assert.Equal(t, "abc", event.OrganizationID)
 	})
 }
 
