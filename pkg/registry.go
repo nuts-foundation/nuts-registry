@@ -166,7 +166,7 @@ func (r *Registry) registerEventHandlers() {
 		if err := e.Unmarshal(&event); err != nil {
 			return err
 		}
-		return r.Db.RemoveOrganization(event.OrganizationID)
+		return r.Db.RemoveOrganization(event.Identifier.String())
 	})
 }
 
@@ -187,7 +187,7 @@ func (r *Registry) OrganizationById(id string) (*db.Organization, error) {
 
 // RemoveOrganization is a wrapper for sam func on DB
 func (r *Registry) RemoveOrganization(id string) error {
-	event, err := events.CreateEvent(events.RemoveOrganization, events.RemoveOrganizationEvent{OrganizationID: id})
+	event, err := events.CreateEvent(events.RemoveOrganization, events.RemoveOrganizationEvent{Identifier: db.Identifier(id)})
 	if err != nil {
 		return err
 	}

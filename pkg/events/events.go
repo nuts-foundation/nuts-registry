@@ -20,9 +20,11 @@
 package events
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
+	"io"
 	"time"
 )
 
@@ -39,11 +41,11 @@ type EventType string
 
 const (
 	// RegisterOrganization event type
-	RegisterOrganization         EventType = "RegisterOrganizationEvent"
+	RegisterOrganization EventType = "RegisterOrganizationEvent"
 	// RemoveOrganization event type
-	RemoveOrganization           EventType = "RemoveOrganizationEvent"
+	RemoveOrganization EventType = "RemoveOrganizationEvent"
 	// RegisterEndpoint event type
-	RegisterEndpoint             EventType = "RegisterEndpointEvent"
+	RegisterEndpoint EventType = "RegisterEndpointEvent"
 	// RegisterEndpointOrganization event type
 	RegisterEndpointOrganization EventType = "RegisterEndpointOrganizationEvent"
 )
@@ -74,22 +76,22 @@ func IsEventType(eventType EventType) bool {
 
 // RegisterOrganizationEvent event
 type RegisterOrganizationEvent struct {
-	Organization db.Organization `json:"payload"`
+	db.Organization
 }
 
 // RemoveOrganizationEvent event
 type RemoveOrganizationEvent struct {
-	OrganizationID string `json:"payload"`
+	Identifier db.Identifier
 }
 
 // RegisterEndpointEvent event
 type RegisterEndpointEvent struct {
-	Endpoint db.Endpoint `json:"payload"`
+	db.Endpoint
 }
 
 // RegisterEndpointOrganizationEvent event
 type RegisterEndpointOrganizationEvent struct {
-	EndpointOrganization db.EndpointOrganization `json:"payload"`
+	db.EndpointOrganization
 }
 
 type jsonEvent struct {
@@ -116,20 +118,23 @@ func EventFromJSON(data []byte) (Event, error) {
 // CreateEvent creates an event of the given type and the provided payload. If the event can't be created, an error is
 // returned.
 func CreateEvent(eventType EventType, payload interface{}) (Event, error) {
-	data, err := json.Marshal(payload)
+	type e struct {
+		jsonEvent
+		P interface{} `json:"payload"`
+	}
+	event := e{
+		jsonEvent: jsonEvent{
+			EventType:     string(eventType),
+			EventIssuedAt: time.Now(),
+		},
+		P: payload,
+	}
+	data, err := json.Marshal(event)
 	if err != nil {
 		return nil, err
 	}
-	payloadMap := map[string]interface{}{}
-	if err := json.Unmarshal(data, &payloadMap); err != nil {
-		return nil, err
-	}
-	return jsonEvent{
-		EventType:     string(eventType),
-		EventIssuedAt: time.Now(),
-		EventPayload:  payloadMap,
-		data:          data,
-	}, nil
+	event.data = data
+	return event, nil
 }
 
 func (j jsonEvent) IssuedAt() time.Time {
@@ -141,7 +146,22 @@ func (j jsonEvent) Type() EventType {
 }
 
 func (j jsonEvent) Unmarshal(out interface{}) error {
-	return json.Unmarshal(j.data, out)
+	decoder := json.NewDecoder(bytes.NewReader(j.data))
+	// Look for "payload" field
+	for ; ; {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			return errors.New("event has no payload")
+		}
+		if err != nil {
+			return err
+		}
+		str, ok := token.(string)
+		if ok && str == "payload" {
+			break
+		}
+	}
+	return decoder.Decode(&out)
 }
 
 func (j jsonEvent) Marshal() []byte {
