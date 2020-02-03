@@ -21,6 +21,7 @@ package events
 
 import (
 	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 )
 
@@ -37,4 +38,20 @@ func TestValidateLocation(t *testing.T) {
 			t.Errorf("Unexpected error: %v", err)
 		}
 	})
+
+	t.Run("Non-existing location is created", func(t *testing.T) {
+		const target = "../../test_data/non-existing/"
+		err := validateLocation(target)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		err = os.Remove(target)
+		if !assert.NoError(t, err, "unable to remove test directory") {
+			return
+		}
+	})
+}
+
+func TestNormalizeLocation(t *testing.T) {
+	assert.Equal(t, "foo/bar/file", normalizeLocation("foo/bar/", "file"))
 }

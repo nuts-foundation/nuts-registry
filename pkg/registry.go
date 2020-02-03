@@ -22,7 +22,6 @@ package pkg
 import (
 	"archive/tar"
 	"compress/gzip"
-	"errors"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
@@ -217,7 +216,7 @@ func (r *Registry) Start() error {
 		case "github":
 			return r.startGithubSync()
 		default:
-			return errors.New(fmt.Sprintf("invalid syncMode: %s", cm))
+			return fmt.Errorf("invalid syncMode: %s", cm)
 		}
 	}
 	return nil

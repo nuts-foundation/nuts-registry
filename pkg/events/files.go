@@ -24,18 +24,6 @@ import (
 	"os"
 )
 
-type fileError struct {
-	s string
-}
-
-func newFileError(text string) error {
-	return &fileError{text}
-}
-
-func (e *fileError) Error() string {
-	return e.s
-}
-
 // Validate location of data files. Creates the directory if it doesn't exist.
 func validateLocation(location string) error {
 	sLocation := sanitizeLocation(location)

@@ -269,12 +269,16 @@ func TestRegistry_EventsOnUpdate(t *testing.T) {
 			EventSystem: eventSystem,
 		}
 		err := registry.RegisterOrganization(db.Organization{Name: "bla"})
-		assert.NoError(t, err)
+		if !assert.NoError(t, err) {
+			return
+		}
 		assert.Equal(t, 1, len(eventSystem.Events))
 		assert.Equal(t, "RegisterOrganizationEvent", string(eventSystem.Events[0].Type()))
 		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
 		event := events.RegisterOrganizationEvent{}
-		assert.NoError(t, eventSystem.Events[0].Unmarshal(&event))
+		if !assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
+			return
+		}
 		assert.Equal(t, "bla", event.Organization.Name)
 	})
 	t.Run("Check event emitted: update organization", func(t *testing.T) {
@@ -285,12 +289,16 @@ func TestRegistry_EventsOnUpdate(t *testing.T) {
 			EventSystem: eventSystem,
 		}
 		err := registry.RemoveOrganization("abc")
-		assert.NoError(t, err)
+		if !assert.NoError(t, err) {
+			return
+		}
 		assert.Equal(t, 1, len(eventSystem.Events))
 		assert.Equal(t, "RemoveOrganizationEvent", string(eventSystem.Events[0].Type()))
 		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
 		event := events.RemoveOrganizationEvent{}
-		assert.NoError(t, eventSystem.Events[0].Unmarshal(&event))
+		if !assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
+			return
+		}
 		assert.Equal(t, "abc", event.OrganizationID)
 	})
 	t.Run("Check event emitted: update organization", func(t *testing.T) {
@@ -301,12 +309,16 @@ func TestRegistry_EventsOnUpdate(t *testing.T) {
 			EventSystem: eventSystem,
 		}
 		err := registry.RemoveOrganization("abc")
-		assert.NoError(t, err)
+		if !assert.NoError(t, err) {
+			return
+		}
 		assert.Equal(t, 1, len(eventSystem.Events))
 		assert.Equal(t, "RemoveOrganizationEvent", string(eventSystem.Events[0].Type()))
 		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
 		event := events.RemoveOrganizationEvent{}
-		assert.NoError(t, eventSystem.Events[0].Unmarshal(&event))
+		if !assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
+			return
+		}
 		assert.Equal(t, "abc", event.OrganizationID)
 	})
 }

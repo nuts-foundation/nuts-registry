@@ -20,6 +20,7 @@
 package events
 
 import (
+	"errors"
 	"fmt"
 	errors2 "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -32,6 +33,9 @@ import (
 )
 
 var eventFileRegex *regexp.Regexp
+
+// ErrInvalidTimestamp is returned when a timestamp does not match the required pattern
+var ErrInvalidTimestamp = errors.New("event timestamp does not match required pattern (yyyyMMddHHmmssmmm)")
 
 const eventFileFormat = "(\\d{17})-([a-zA-Z]+)\\.json"
 
@@ -137,6 +141,7 @@ func (system *eventSystem) LoadAndApplyEvents(location string) error {
 
 func (system eventSystem) findStartIndex(entries []os.FileInfo) int {
 	if system.lastLoadedEvent.IsZero() {
+		// No entries were ever loaded
 		return 0
 	}
 	for index, entry := range entries {
@@ -146,11 +151,13 @@ func (system eventSystem) findStartIndex(entries []os.FileInfo) int {
 		timestamp, err := parseTimestamp(filepath.Base(entry.Name()[:17]))
 		if err == nil {
 			if timestamp.After(system.lastLoadedEvent) {
-				return index + 1
+				// Incremental change
+				return index
 			}
 		}
 	}
-	return 0
+	// No new entries
+	return len(entries) + 1
 }
 
 func isJSONFile(file os.FileInfo) bool {
@@ -158,9 +165,12 @@ func isJSONFile(file os.FileInfo) bool {
 }
 
 func parseTimestamp(timestamp string) (time.Time, error) {
+	if len(timestamp) != 17 {
+		return time.Time{}, ErrInvalidTimestamp
+	}
 	t, err := time.Parse("20060102150405.000", timestamp[0:14]+"."+timestamp[14:])
 	if err != nil {
-		return time.Time{}, errors2.Wrap(err, "event timestamp does not match required pattern (yyyyMMddHHmmssmmm)")
+		return time.Time{}, ErrInvalidTimestamp
 	}
 	return t, nil
 }

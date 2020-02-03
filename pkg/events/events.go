@@ -21,6 +21,7 @@ package events
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"time"
 )
@@ -46,6 +47,9 @@ const (
 	// RegisterEndpointOrganization event type
 	RegisterEndpointOrganization EventType = "RegisterEndpointOrganizationEvent"
 )
+
+// ErrMissingEventType is given when the event being unmarshalled has no type attribute.
+var ErrMissingEventType = errors.New("unmarshalling error: missing event type")
 
 var eventTypes []EventType
 
@@ -99,8 +103,14 @@ type jsonEvent struct {
 func EventFromJSON(data []byte) (Event, error) {
 	e := jsonEvent{}
 	err := json.Unmarshal(data, &e)
+	if err != nil {
+		return nil, err
+	}
+	if e.EventType == "" {
+		return nil, ErrMissingEventType
+	}
 	e.data = data
-	return e, err
+	return e, nil
 }
 
 // CreateEvent creates an event of the given type and the provided payload. If the event can't be created, an error is
