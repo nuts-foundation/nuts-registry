@@ -22,10 +22,10 @@ package pkg
 import (
 	"archive/tar"
 	"compress/gzip"
-	"errors"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
@@ -55,6 +55,10 @@ const ConfSyncInterval = "syncInterval"
 
 // ModuleName == Registry
 const ModuleName = "Registry"
+
+// ReloadRegistryIdleTimeout defines the cooling down period after receiving a file watcher notification, before
+// the registry is reloaded (from disk).
+var ReloadRegistryIdleTimeout time.Duration
 
 // RegistryClient is the interface to be implemented by any remote or local client
 type RegistryClient interface {
@@ -89,22 +93,28 @@ type RegistryConfig struct {
 
 // Registry holds the config and Db reference
 type Registry struct {
-	Config     RegistryConfig
-	Db         db.Db
-	configOnce sync.Once
-	_logger    *logrus.Entry
-	closers    []chan struct{}
-	OnChange   func(registry *Registry)
+	Config      RegistryConfig
+	Db          db.Db
+	EventSystem events.EventSystem
+	configOnce  sync.Once
+	_logger     *logrus.Entry
+	closers     []chan struct{}
+	OnChange    func(registry *Registry)
 }
 
 var instance *Registry
 var oneRegistry sync.Once
 
+func init() {
+	ReloadRegistryIdleTimeout = 3 * time.Second
+}
+
 // RegistryInstance returns the singleton Registry
 func RegistryInstance() *Registry {
 	oneRegistry.Do(func() {
 		instance = &Registry{
-			_logger: logrus.StandardLogger().WithField("module", ModuleName),
+			EventSystem: events.NewEventSystem(),
+			_logger:     logrus.StandardLogger().WithField("module", ModuleName),
 		}
 	})
 
@@ -117,14 +127,47 @@ func (r *Registry) Configure() error {
 
 	r.configOnce.Do(func() {
 		if r.Config.Mode == "server" {
-			// load static Db
+			r.registerEventHandlers()
+			// Apply stored events
 			r.Db = db.New()
-			if err := r.Db.Load(r.Config.Datadir); err != nil {
+			if err := r.EventSystem.LoadAndApplyEvents(r.getEventsDir()); err != nil {
 				r.logger().WithError(err).Warn("unable to load registry files")
 			}
 		}
 	})
 	return err
+}
+
+func (r *Registry) registerEventHandlers() {
+	r.EventSystem.RegisterEventHandler(events.RegisterOrganization, func(e events.Event) error {
+		event := events.RegisterOrganizationEvent{}
+		if err := e.Unmarshal(&event); err != nil {
+			return err
+		}
+		return r.Db.RegisterOrganization(event.Organization)
+	})
+	r.EventSystem.RegisterEventHandler(events.RegisterEndpoint, func(e events.Event) error {
+		event := events.RegisterEndpointEvent{}
+		if err := e.Unmarshal(&event); err != nil {
+			return err
+		}
+		r.Db.RegisterEndpoint(event.Endpoint)
+		return nil
+	})
+	r.EventSystem.RegisterEventHandler(events.RegisterEndpointOrganization, func(e events.Event) error {
+		event := events.RegisterEndpointOrganizationEvent{}
+		if err := e.Unmarshal(&event); err != nil {
+			return err
+		}
+		return r.Db.RegisterEndpointOrganization(event.EndpointOrganization)
+	})
+	r.EventSystem.RegisterEventHandler(events.RemoveOrganization, func(e events.Event) error {
+		event := events.RemoveOrganizationEvent{}
+		if err := e.Unmarshal(&event); err != nil {
+			return err
+		}
+		return r.Db.RemoveOrganization(event.OrganizationID)
+	})
 }
 
 // EndpointsByOrganization is a wrapper for sam func on DB
@@ -144,12 +187,20 @@ func (r *Registry) OrganizationById(id string) (*db.Organization, error) {
 
 // RemoveOrganization is a wrapper for sam func on DB
 func (r *Registry) RemoveOrganization(id string) error {
-	return r.Db.RemoveOrganization(id)
+	event, err := events.CreateEvent(events.RemoveOrganization, events.RemoveOrganizationEvent{OrganizationID: id})
+	if err != nil {
+		return err
+	}
+	return r.EventSystem.PublishEvent(event)
 }
 
 // RegisterOrganization is a wrapper for sam func on DB
 func (r *Registry) RegisterOrganization(org db.Organization) error {
-	return r.Db.RegisterOrganization(org)
+	event, err := events.CreateEvent(events.RegisterOrganization, events.RegisterOrganizationEvent{Organization: org})
+	if err != nil {
+		return err
+	}
+	return r.EventSystem.PublishEvent(event)
 }
 
 func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
@@ -165,7 +216,7 @@ func (r *Registry) Start() error {
 		case "github":
 			return r.startGithubSync()
 		default:
-			return errors.New(fmt.Sprintf("invalid syncMode: %s", cm))
+			return fmt.Errorf("invalid syncMode: %s", cm)
 		}
 	}
 	return nil
@@ -185,7 +236,7 @@ func (r *Registry) Shutdown() error {
 
 // Load signals the Db to (re)load sources. On success the OnChange func is called
 func (r *Registry) Load() error {
-	if err := r.Db.Load(r.Config.Datadir); err != nil {
+	if err := r.EventSystem.LoadAndApplyEvents(r.getEventsDir()); err != nil {
 		return err
 	}
 
@@ -194,6 +245,10 @@ func (r *Registry) Load() error {
 	}
 
 	return nil
+}
+
+func (r *Registry) getEventsDir() string {
+	return r.Config.Datadir + "/events"
 }
 
 func (r *Registry) startFileSystemWatcher() error {
@@ -205,10 +260,8 @@ func (r *Registry) startFileSystemWatcher() error {
 	closer := make(chan struct{})
 
 	go func() {
-		orgs := false
-		ends := false
-		eos := false
-
+		// Timer needs to be initialized, otherwise Go panics. Reloading after an hour or so isn't a problem.
+		var reloadRegistryTimer = time.NewTimer(time.Hour)
 		for {
 			select {
 			case event, ok := <-w.Events:
@@ -216,27 +269,21 @@ func (r *Registry) startFileSystemWatcher() error {
 					return
 				}
 
-				// we need to receive all 3 events before reloading the files
 				r.logger().Debugf("Received file watcher event: %s", event.String())
-				if strings.Contains(event.Name, "/organizations.json") && event.Op&fsnotify.Write == fsnotify.Write {
-					orgs = true
+				if strings.HasSuffix(event.Name, ".json") &&
+					(event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create) {
+					// When copying or extracting files, we have no guarantees that the filewatcher notifies us about
+					// the files in natural order (of filenames), which we use for our event ordering. To circumvent
+					// conflicts, we schedule an 'idle time-out' before actually reloading the registry as to wait for
+					// new notifications. If a file is added while waiting, the reload timer is rescheduled.
+					reloadRegistryTimer.Stop()
+					reloadRegistryTimer = time.NewTimer(ReloadRegistryIdleTimeout)
 				}
-				if strings.Contains(event.Name, "/endpoints.json") && event.Op&fsnotify.Write == fsnotify.Write {
-					ends = true
-				}
-				if strings.Contains(event.Name, "/endpoints_organizations.json") && event.Op&fsnotify.Write == fsnotify.Write {
-					eos = true
-				}
-
-				if orgs && ends && eos {
-					if r.Db != nil {
-						if err := r.Load(); err != nil {
-							r.logger().WithError(err).Error("error during reloading of registry files")
-						}
+			case <-reloadRegistryTimer.C:
+				if r.Db != nil {
+					if err := r.Load(); err != nil {
+						r.logger().WithError(err).Error("error during reloading of registry files")
 					}
-					orgs = false
-					ends = false
-					eos = false
 				}
 			case err, ok := <-w.Errors:
 				if !ok {
@@ -250,7 +297,7 @@ func (r *Registry) startFileSystemWatcher() error {
 		}
 	}()
 
-	if err := w.Add(r.Config.Datadir); err != nil {
+	if err := w.Add(r.getEventsDir()); err != nil {
 		return err
 	}
 
@@ -273,7 +320,7 @@ func (r *Registry) startGithubSync() error {
 		for {
 			var err error
 
-			r.logger().Debugf("Downloading registry files from %s to %s", r.Config.SyncAddress, r.Config.Datadir)
+			r.logger().Debugf("Downloading registry files from %s to %s", r.Config.SyncAddress, r.getEventsDir())
 			if eTag, err = r.downloadAndUnzip(eTag); err != nil {
 				r.logger().WithError(err).Error("Error downloading registry files")
 			}
@@ -388,7 +435,7 @@ func (r *Registry) unzip() error {
 			continue
 		case tar.TypeReg:
 			if strings.Index(name, ".json") > 0 {
-				targetPath := fmt.Sprintf("%s/%s", r.Config.Datadir, name)
+				targetPath := fmt.Sprintf("%s/%s", r.getEventsDir(), name)
 
 				dst, err := os.Create(targetPath)
 				if err != nil {

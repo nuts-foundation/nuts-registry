@@ -69,95 +69,6 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestMemoryDb_Load(t *testing.T) {
-	t.Run("Complete valid example", func(t *testing.T) {
-		validDb := New()
-		err := validDb.Load("../../test_data/valid_files")
-
-		if err != nil {
-			t.Errorf("Expected no error, got: %s", err.Error())
-		}
-
-		if len(validDb.organizationIndex) != 2 {
-			t.Errorf("Expected 2 entries, got: %d", len(validDb.organizationIndex))
-		}
-
-		// bug of duplicate organization
-		if validDb.organizationIndex["urn:oid:2.16.840.1.113883.2.4.6.1:00000001"] == validDb.organizationIndex["urn:oid:2.16.840.1.113883.2.4.6.1:00000000"] {
-			t.Error("Expected 2 different entries")
-		}
-
-		if len(validDb.organizationToEndpointIndex) != 2 {
-			t.Errorf("Expected 2 entry, got: %d", len(validDb.organizationToEndpointIndex))
-		}
-	})
-
-	t.Run("from invalid location does not give error", func(t *testing.T) {
-		validDb := New()
-		err := validDb.Load("non-existing")
-
-		if err != nil {
-			t.Errorf("Expected no error, got: %s", err.Error())
-		}
-	})
-
-	t.Run("Loading from location with missing files ignores err", func(t *testing.T) {
-		validDb := New()
-		err := validDb.Load("../../test_data/missing_files/")
-
-		if err != nil {
-			t.Errorf("Expected no error, got [%v]", err)
-			return
-		}
-
-		if len(validDb.organizationIndex) != 0 {
-			t.Error("Expected db to be empty")
-		}
-	})
-
-	t.Run("Loading from location with invalid endpoints json gives err", func(t *testing.T) {
-		validDb := New()
-		err := validDb.Load("../../test_data/invalid_files/invalid_endpoints")
-
-		if err == nil {
-			t.Errorf("Expected error")
-		}
-
-		expected := "invalid character '[' looking for beginning of object key string"
-		if err.Error() != expected {
-			t.Errorf("Expected [%s], got [%s]", expected, err.Error())
-		}
-	})
-
-	t.Run("Loading from location with invalid organization json gives err", func(t *testing.T) {
-		validDb := New()
-		err := validDb.Load("../../test_data/invalid_files/invalid_organizations")
-
-		if err == nil {
-			t.Errorf("Expected error")
-		}
-
-		expected := "invalid character '{' looking for beginning of object key string"
-		if err.Error() != expected {
-			t.Errorf("Expected [%s], got [%s]", expected, err.Error())
-		}
-	})
-
-	t.Run("Loading from location with missing mappings json gives err", func(t *testing.T) {
-		validDb := New()
-		err := validDb.Load("../../test_data/invalid_files/invalid_mappings")
-
-		if err == nil {
-			t.Errorf("Expected error")
-		}
-
-		expected := "invalid character '{' looking for beginning of object key string"
-		if err.Error() != expected {
-			t.Errorf("Expected [%s], got [%s]", expected, err.Error())
-		}
-	})
-}
-
 func TestMemoryDb_RegisterOrganization(t *testing.T) {
 
 	t.Run("Valid example", func(t *testing.T) {
@@ -190,7 +101,7 @@ func TestMemoryDb_RegisterOrganization(t *testing.T) {
 	t.Run("duplicate entry", func(t *testing.T) {
 		validDb := New()
 
-		validDb.RegisterOrganization(organization)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
 		err := validDb.RegisterOrganization(organization)
 
 		if assert.Error(t, err) {
@@ -203,7 +114,7 @@ func TestMemoryDb_RemoveOrganization(t *testing.T) {
 
 	t.Run("Valid example", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
 
 		err := validDb.RemoveOrganization(string(organization.Identifier))
 
@@ -236,9 +147,9 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 
 	t.Run("Valid example", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
-		validDb.appendEndpoint(&endpoint)
-		validDb.appendEO(mapping)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
+		validDb.RegisterEndpoint(endpoint)
+		assert.NoError(t, validDb.RegisterEndpointOrganization(mapping))
 
 		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
 
@@ -253,9 +164,9 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 
 	t.Run("Valid example with type", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
-		validDb.appendEndpoint(&endpoint)
-		validDb.appendEO(mapping)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
+		validDb.RegisterEndpoint(endpoint)
+		assert.NoError(t, validDb.RegisterEndpointOrganization(mapping))
 
 		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", &endpoint.EndpointType)
 
@@ -270,9 +181,9 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 
 	t.Run("incorrect type", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
-		validDb.appendEndpoint(&endpoint)
-		validDb.appendEO(mapping)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
+		validDb.RegisterEndpoint(endpoint)
+		assert.NoError(t, validDb.RegisterEndpointOrganization(mapping))
 
 		unknown := "unknown type"
 		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", &unknown)
@@ -288,11 +199,11 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 
 	t.Run("Inactive mappings are not returned", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
-		validDb.appendEndpoint(&endpoint)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
+		validDb.RegisterEndpoint(endpoint)
 		mappingCopy := EndpointOrganization(mapping)
 		mappingCopy.Status = "inactive"
-		validDb.appendEO(mappingCopy)
+		assert.NoError(t, validDb.RegisterEndpointOrganization(mappingCopy))
 
 		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
 
@@ -307,11 +218,11 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 
 	t.Run("Inactive organizations are not returned", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
 		endpointCopy := Endpoint(endpoint)
 		endpointCopy.Status = "inactive"
-		validDb.appendEndpoint(&endpointCopy)
-		validDb.appendEO(mapping)
+		validDb.RegisterEndpoint(endpointCopy)
+		assert.NoError(t, validDb.RegisterEndpointOrganization(mapping))
 
 		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
 
@@ -326,8 +237,8 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 
 	t.Run("no mapping", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
-		validDb.appendEndpoint(&endpoint)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
+		validDb.RegisterEndpoint(endpoint)
 
 		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
 
@@ -356,13 +267,12 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 	})
 }
 
-func TestMemoryDb_appendEO(t *testing.T) {
+func TestMemoryDb_RegisterEndpointOrganization(t *testing.T) {
 	t.Run("Appending mappings for unknown endpoint gives err", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
-		validDb.appendEO(mapping)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
 
-		err := validDb.appendEO(mapping)
+		err := validDb.RegisterEndpointOrganization(mapping)
 
 		if err == nil {
 			t.Errorf("Expected error")
@@ -376,10 +286,9 @@ func TestMemoryDb_appendEO(t *testing.T) {
 
 	t.Run("Appending mappings for unknown organization gives err", func(t *testing.T) {
 		validDb := New()
-		validDb.appendEndpoint(&endpoint)
-		validDb.appendEO(mapping)
+		validDb.RegisterEndpoint(endpoint)
 
-		err := validDb.appendEO(mapping)
+		err := validDb.RegisterEndpointOrganization(mapping)
 
 		if err == nil {
 			t.Errorf("Expected error")
@@ -395,8 +304,8 @@ func TestMemoryDb_appendEO(t *testing.T) {
 func TestMemoryDb_SearchOrganizations(t *testing.T) {
 	t.Run("complete valid example", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
-		validDb.appendOrganization(&hiddenOrganization)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
+		assert.NoError(t, validDb.RegisterOrganization(hiddenOrganization))
 
 		result := validDb.SearchOrganizations("test")
 
@@ -407,7 +316,7 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 
 	t.Run("partial match returns organization", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
 
 		result := validDb.SearchOrganizations("ts")
 
@@ -418,8 +327,8 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 
 	t.Run("wide match returns 2 organization", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
-		validDb.appendOrganization(&hiddenOrganization)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
+		assert.NoError(t, validDb.RegisterOrganization(hiddenOrganization))
 
 		result := validDb.SearchOrganizations("e")
 
@@ -434,7 +343,7 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 
 	t.Run("searching for unknown organization returns empty list", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
 
 		result := validDb.SearchOrganizations("tset")
 
@@ -446,7 +355,7 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 
 func TestMemoryDb_ReverseLookup(t *testing.T) {
 	validDb := New()
-	validDb.appendOrganization(&organization)
+	assert.NoError(t, validDb.RegisterOrganization(organization))
 
 	t.Run("finds exact match", func(t *testing.T) {
 		result, err := validDb.ReverseLookup("test")
@@ -475,7 +384,7 @@ func TestMemoryDb_ReverseLookup(t *testing.T) {
 func TestMemoryDb_OrganizationById(t *testing.T) {
 	t.Run("organization is found", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
 
 		result, err := validDb.OrganizationById("urn:nuts:system:value")
 
@@ -490,7 +399,7 @@ func TestMemoryDb_OrganizationById(t *testing.T) {
 
 	t.Run("organization is not found", func(t *testing.T) {
 		validDb := New()
-		validDb.appendOrganization(&organization)
+		assert.NoError(t, validDb.RegisterOrganization(organization))
 
 		_, err := validDb.OrganizationById("test")
 

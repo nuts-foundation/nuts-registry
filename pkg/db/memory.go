@@ -20,10 +20,8 @@
 package db
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -43,7 +41,8 @@ var ErrDuplicateOrganization = errors.New("duplicate organization")
 var ErrUnknownOrganization = errors.New("unknown organization")
 
 func (db *MemoryDb) RegisterOrganization(org Organization) error {
-	o := db.organizationIndex[string(org.Identifier)]
+	id := string(org.Identifier)
+	o := db.organizationIndex[id]
 
 	if o != nil {
 		return fmt.Errorf("error registering organization with id %s: %w", org.Identifier, ErrDuplicateOrganization)
@@ -54,17 +53,17 @@ func (db *MemoryDb) RegisterOrganization(org Organization) error {
 		return fmt.Errorf("error registering organization with id %s: %w", org.Identifier, err)
 	}
 
-	db.appendOrganization(&org)
+	db.organizationIndex[id] = &org
+	db.organizationToEndpointIndex[id] = []EndpointOrganization{}
 
 	for _, e := range org.Endpoints {
-		db.appendEndpoint(&e)
-		err := db.appendEO(
+		db.RegisterEndpoint(e)
+		err := db.RegisterEndpointOrganization(
 			EndpointOrganization{
 				Status:       StatusActive,
 				Organization: org.Identifier,
 				Endpoint:     e.Identifier,
 			})
-
 		if err != nil {
 			return err
 		}
@@ -101,80 +100,39 @@ func New() *MemoryDb {
 	}
 }
 
-func (i *MemoryDb) appendEO(eo EndpointOrganization) error {
+// RegisterEndpointOrganization registers an organization <-> endpoint mapping. It returns an error if the specified
+// endpoint or organization doesn't exist.
+func (db *MemoryDb) RegisterEndpointOrganization(eo EndpointOrganization) error {
 	ois := eo.Organization.String()
 	eis := eo.Endpoint.String()
 
-	_, f := i.organizationToEndpointIndex[ois]
+	_, f := db.organizationToEndpointIndex[ois]
 	if !f {
 		return fmt.Errorf("Endpoint <> Organization mapping references unknown organization with identifier [%s]", ois)
 	}
 
-	_, f = i.endpointToOrganizationIndex[eis]
+	_, f = db.endpointToOrganizationIndex[eis]
 	if !f {
 		return fmt.Errorf("Endpoint <> Organization mapping references unknown endpoint with identifier [%s]", eis)
 	}
 
-	i.organizationToEndpointIndex[ois] = append(i.organizationToEndpointIndex[ois], eo)
-	i.endpointToOrganizationIndex[eis] = append(i.endpointToOrganizationIndex[eis], eo)
+	db.organizationToEndpointIndex[ois] = append(db.organizationToEndpointIndex[ois], eo)
+	db.endpointToOrganizationIndex[eis] = append(db.endpointToOrganizationIndex[eis], eo)
 
 	logrus.Tracef("Added mapping between: %s <-> %s", ois, eis)
 
 	return nil
 }
 
-func (db *MemoryDb) appendEndpoint(e *Endpoint) {
-	cp := *e
-	db.endpointIndex[e.Identifier.String()] = &cp
+// RegisterEndpoint registers an endpoint.
+func (db *MemoryDb) RegisterEndpoint(e Endpoint) {
+	cp := &e
+	db.endpointIndex[e.Identifier.String()] = cp
 
 	// also create empty slice at this map R
 	db.endpointToOrganizationIndex[e.Identifier.String()] = []EndpointOrganization{}
 
 	logrus.Tracef("Added endpoint: %s", e.Identifier)
-}
-
-func (db *MemoryDb) appendOrganization(o *Organization) {
-	cp := *o
-	db.organizationIndex[o.Identifier.String()] = &cp
-
-	// also create empty slice at this map R
-	db.organizationToEndpointIndex[o.Identifier.String()] = []EndpointOrganization{}
-
-	logrus.Tracef("Added Organization: %s", o.Identifier)
-}
-
-// Load the db files from the configured datadir
-func (db *MemoryDb) Load(location string) error {
-	err := validateLocation(location)
-
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			logrus.Warnf("No database files found at %s, starting with empty registry", location)
-			return nil
-		}
-		if errors.Is(err, ErrMissingRequiredFiles) {
-			logrus.Warnf("No database files found at %s, starting with empty registry", location)
-			return nil
-		}
-
-		return err
-	}
-
-	err = db.loadEndpoints(location)
-	if err != nil {
-		return err
-	}
-
-	err = db.loadOrganizations(location)
-	if err != nil {
-		return err
-	}
-
-	err = db.loadEndpointsOrganizations(location)
-
-	logrus.Infof("Finished loading registry files from %s", location)
-
-	return err
 }
 
 func (db *MemoryDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error) {
@@ -276,86 +234,3 @@ func searchRecursive(query []string, orgName []string) bool {
 	}
 }
 
-func (db *MemoryDb) loadEndpoints(location string) error {
-
-	data, err := ReadFile(location, fileEndpoints)
-
-	if err != nil {
-		return err
-	}
-
-	var stub []Endpoint
-	err = json.Unmarshal(data, &stub)
-
-	if err != nil {
-		return err
-	}
-
-	db.endpointIndex = make(map[string]*Endpoint)
-	db.endpointToOrganizationIndex = make(map[string][]EndpointOrganization)
-	for _, e := range stub {
-		db.appendEndpoint(&e)
-	}
-
-	logrus.Debugf("Added %d Endpoints to db", len(db.endpointIndex))
-
-	return nil
-}
-
-func (db *MemoryDb) loadOrganizations(location string) error {
-
-	data, err := ReadFile(location, fileOrganizations)
-
-	if err != nil {
-		return err
-	}
-
-	var stub []Organization
-	err = json.Unmarshal(data, &stub)
-
-	if err != nil {
-		return err
-	}
-
-	db.organizationIndex = make(map[string]*Organization)
-	db.organizationToEndpointIndex = make(map[string][]EndpointOrganization)
-	for _, e := range stub {
-		// also validate the keys parsed from json
-		if _, err := e.KeysAsSet(); err != nil {
-			return fmt.Errorf("failed to load organization %s: %w", e.Name, err)
-		}
-
-		db.appendOrganization(&e)
-	}
-
-	logrus.Debugf("Added %d Organizations to db", len(db.organizationIndex))
-
-	return nil
-}
-
-func (db *MemoryDb) loadEndpointsOrganizations(location string) error {
-	data, err := ReadFile(location, fileEndpointsOrganizations)
-
-	if err != nil {
-		return err
-	}
-
-	var stub []EndpointOrganization
-	err = json.Unmarshal(data, &stub)
-
-	if err != nil {
-		return err
-	}
-
-	for _, e := range stub {
-		// all map values should be present, appending
-		err = db.appendEO(e)
-		if err != nil {
-			return err
-		}
-	}
-
-	logrus.Debugf("Added %d mappings of endpoint <-> organization to db", len(stub))
-
-	return nil
-}

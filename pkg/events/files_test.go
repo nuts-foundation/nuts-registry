@@ -17,30 +17,18 @@
  *
  */
 
-package db
+package events
 
 import (
-	"errors"
+	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 )
 
 func TestValidateLocation(t *testing.T) {
-	t.Run("Missing files gives err", func(t *testing.T) {
-		err := validateLocation("../../test_data/missing_files")
-
-		if err == nil {
-			t.Errorf("Expected error: %v", ErrMissingRequiredFiles)
-		} else if !errors.Is(err, ErrMissingRequiredFiles) {
-			t.Errorf("Expected error: [%v], got [%v]", ErrMissingRequiredFiles, err)
-		}
-	})
-
-	t.Run("All files present", func(t *testing.T) {
-		err := validateLocation("../../test_data/all_empty_files")
-
-		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
-		}
+	t.Run("Location is a file", func(t *testing.T) {
+		err := validateLocation("../../test_data/invalid_location")
+		assert.Error(t, err)
 	})
 
 	t.Run("All files present with trailing slash", func(t *testing.T) {
@@ -50,19 +38,20 @@ func TestValidateLocation(t *testing.T) {
 			t.Errorf("Unexpected error: %v", err)
 		}
 	})
+
+	t.Run("Non-existing location is created", func(t *testing.T) {
+		const target = "../../test_data/non-existing/"
+		err := validateLocation(target)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+		err = os.Remove(target)
+		if !assert.NoError(t, err, "unable to remove test directory") {
+			return
+		}
+	})
 }
 
-func TestReadFile(t *testing.T) {
-	data, err := ReadFile("../../test_data/all_empty_files", "endpoints.json")
-
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-		return
-	}
-
-	expected := "[]"
-	got := string(data)
-	if got != expected {
-		t.Errorf("Expected empty json file with: [[]], got [%s]", got)
-	}
+func TestNormalizeLocation(t *testing.T) {
+	assert.Equal(t, "foo/bar/file", normalizeLocation("foo/bar/", "file"))
 }
