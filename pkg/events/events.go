@@ -96,7 +96,7 @@ type VendorClaimEvent struct {
 	OrgName          string        `json:"orgName"`
 	OrgKeys          []interface{} `json:"orgKeys,omitempty"`
 	Start            time.Time     `json:"start"`
-	End              time.Time     `json:"end,omitempty"`
+	End              *time.Time    `json:"end,omitempty"`
 }
 
 type jsonEvent struct {

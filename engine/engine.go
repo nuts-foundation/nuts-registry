@@ -20,19 +20,20 @@
 package engine
 
 import (
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"os"
-	"os/signal"
-
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/api"
 	"github.com/nuts-foundation/nuts-registry/client"
 	"github.com/nuts-foundation/nuts-registry/pkg"
+	"github.com/nuts-foundation/nuts-registry/pkg/db"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"os"
+	"os/signal"
+	"time"
 )
 
 // NewRegistryEngine returns the core definition for the registry
@@ -126,6 +127,50 @@ func cmd() *cobra.Command {
 			name := args[0]
 			identifier := events.Identifier(args[1])
 			event, _ := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{Name: name, Identifier: identifier})
+			logrus.Info(events.SuggestEventFileName(event))
+			logrus.Info(string(event.Marshal()))
+		},
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "vendor-claim [vendor-identifier] [org-identifier] [org-name]",
+		Short: "Registers a vendor claim.",
+		Long:  "Registers a vendor claiming a care organization as its client.",
+		Args:  cobra.ExactArgs(3),
+		Run: func(cmd *cobra.Command, args []string) {
+			vendorID := events.Identifier(args[0])
+			orgID := events.Identifier(args[1])
+			orgName := args[2]
+			event, _ := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+				VendorIdentifier: vendorID,
+				OrgIdentifier:    orgID,
+				OrgName:          orgName,
+				OrgKeys:          nil,
+				Start:            time.Now(),
+			})
+			logrus.Info(events.SuggestEventFileName(event))
+			logrus.Info(string(event.Marshal()))
+		},
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "register-endpoint [org-identifier] [identifier] [type] [url]",
+		Short: "Registers an endpoint",
+		Long:  "Registers an endpoint for an organization.",
+		Args:  cobra.ExactArgs(4),
+		Run: func(cmd *cobra.Command, args []string) {
+			orgID := events.Identifier(args[0])
+			id := events.Identifier(args[1])
+			t := args[2]
+			url := args[3]
+			event, _ := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
+				Organization: orgID,
+				URL:          url,
+				EndpointType: t,
+				Identifier:   id,
+				Status:       db.StatusActive,
+				Version:      "1.0",
+			})
 			logrus.Info(events.SuggestEventFileName(event))
 			logrus.Info(string(event.Marshal()))
 		},
