@@ -55,6 +55,10 @@ type MockDb struct {
 	endpointsError error
 }
 
+func (mdb *MockDb) OrganizationsByVendorID(id string) []*db.Organization {
+	panic("implement me")
+}
+
 func (mdb *MockDb) VendorByID(id string) *db.Vendor {
 	panic("implement me")
 }

@@ -57,6 +57,9 @@ const ConfSyncAddress = "syncAddress"
 // ConfSyncInterval is the config name for the interval in minutes to look for new registry files online
 const ConfSyncInterval = "syncInterval"
 
+// ConfOrganisationCertificateValidity is the config name for the number of days organisation certificates are valid
+const ConfOrganisationCertificateValidity = "organisationCertificateValidity"
+
 // ModuleName == Registry
 const ModuleName = "Registry"
 
@@ -91,13 +94,14 @@ type RegistryClient interface {
 
 // RegistryConfig holds the config
 type RegistryConfig struct {
-	Mode                        string
-	SyncMode                    string
-	SyncAddress                 string
-	SyncInterval                int
-	Datadir                     string
-	Address                     string
-	VendorCACertificateValidity int
+	Mode                            string
+	SyncMode                        string
+	SyncAddress                     string
+	SyncInterval                    int
+	Datadir                         string
+	Address                         string
+	VendorCACertificateValidity     int
+	OrganisationCertificateValidity int
 }
 
 // Registry holds the config and Db reference

@@ -2,10 +2,7 @@ package pkg
 
 import (
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -34,37 +31,55 @@ func (m mockConfig) GetEngineMode(engineMode string) string {
 }
 
 func TestRegistry_verifyAndMigrateRegistry(t *testing.T) {
-	repo, err := test.NewTestRepo(t.Name())
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer repo.Cleanup()
-	registry := createRegistry(*repo)
-	defer registry.Shutdown()
-
+	vendorId := "vendorId"
+	vendorName := "vendorName"
+	orgId := "orgId"
+	orgName := "orgName"
 	t.Run("vendor not registered", func(t *testing.T) {
-		registry.verifyAndMigrateRegistry(mockConfig{"abc"})
+		cxt := createTestContext(t)
+		defer cxt.close()
+		cxt.registry.verifyAndMigrateRegistry(mockConfig{vendorId})
 	})
 	t.Run("vendor has no certificates", func(t *testing.T) {
-		err := registry.EventSystem.PublishEvent(events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{Name: "Some Vendor", Identifier: "noCerts"}))
+		cxt := createTestContext(t)
+		defer cxt.close()
+		err := cxt.registry.EventSystem.PublishEvent(events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
+			Name:       vendorName,
+			Identifier: events.Identifier(vendorId),
+		}))
 		if !assert.NoError(t, err) {
 			return
 		}
-		registry.verifyAndMigrateRegistry(mockConfig{"noCerts"})
+		cxt.registry.verifyAndMigrateRegistry(mockConfig{vendorId})
 	})
 	t.Run("vendor has certificates but no key material", func(t *testing.T) {
-		_, err := registry.RegisterVendor("certsWithoutKeyMaterial", "Vendor", events.HealthcareDomain)
+		cxt := createTestContext(t)
+		defer cxt.close()
+		_, err := cxt.registry.RegisterVendor(vendorId, vendorName, events.HealthcareDomain)
 		if !assert.NoError(t, err) {
 			return
 		}
+		cxt.empty()
+		cxt.registry.verifyAndMigrateRegistry(mockConfig{vendorId})
+	})
+	t.Run("org has no certificates", func(t *testing.T) {
+		cxt := createTestContext(t)
+		defer cxt.close()
+		cxt.registry.RegisterVendor(vendorId, vendorName, events.HealthcareDomain)
+		cxt.registry.EventSystem.PublishEvent(events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+			VendorIdentifier: events.Identifier(vendorId),
+			OrgIdentifier:    events.Identifier(orgId),
+			OrgName:          orgName,
+		}))
+		cxt.registry.verifyAndMigrateRegistry(mockConfig{vendorId})
+	})
+	t.Run("org has certificates but no key material", func(t *testing.T) {
+		cxt := createTestContext(t)
+		defer cxt.close()
+		cxt.registry.RegisterVendor(vendorId, vendorName, events.HealthcareDomain)
+		cxt.registry.VendorClaim(vendorId, orgId, vendorName, nil)
 		// Empty key material directory
-		eventsDirectory := filepath.Join(repo.Directory, "keys")
-		if !assert.NoError(t, os.RemoveAll(eventsDirectory)) {
-			return
-		}
-		if !assert.NoError(t, os.MkdirAll(eventsDirectory, os.ModePerm)) {
-			return
-		}
-		registry.verifyAndMigrateRegistry(mockConfig{"certsWithoutKeyMaterial"})
+		cxt.empty()
+		cxt.registry.verifyAndMigrateRegistry(mockConfig{vendorId})
 	})
 }

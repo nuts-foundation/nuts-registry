@@ -154,3 +154,7 @@ func TestOrganization_CurrentPublicKey(t *testing.T) {
 func TestVendor_GetActiveCertificates(t *testing.T) {
 	assert.Len(t, Vendor{}.GetActiveCertificates(), 0)
 }
+
+func TestOrganization_GetActiveCertificates(t *testing.T) {
+	assert.Len(t, Organization{}.GetActiveCertificates(), 0)
+}

@@ -99,3 +99,7 @@ func withMock(test func(t *testing.T, client *mock.MockRegistryClient)) func(t *
 		test(t, registryClient)
 	}
 }
+
+func Test_flagSet(t *testing.T) {
+	assert.NotNil(t, flagSet())
+}
