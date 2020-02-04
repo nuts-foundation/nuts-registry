@@ -22,14 +22,12 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"net/url"
-	"strings"
-
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/stretchr/testify/assert"
+	"net/url"
 
 	"net/http"
 	"net/http/httptest"
@@ -54,12 +52,12 @@ type MockDb struct {
 	endpointsError error
 }
 
-func (mdb *MockDb) RegisterEndpoint(endpoint db.Endpoint) {
+func (mdb *MockDb) RegisterEventHandlers(system events.EventSystem) {
 
 }
 
-func (mdb *MockDb) RegisterEndpointOrganization(endpointOrg db.EndpointOrganization) error {
-	return nil
+func (mdb *MockDb) RegisterEndpoint(endpoint db.Endpoint) {
+
 }
 
 func (mdb *MockDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error) {
@@ -183,98 +181,6 @@ func TestIdentifier_String(t *testing.T) {
 	if i.String() != "urn:nuts:system:value" {
 		t.Errorf("Expected [urn:nuts:system:value], got [%s]", i.String())
 	}
-}
-
-func TestApiWrapper_RegisterOrganization(t *testing.T) {
-	t.Run("201", func(t *testing.T) {
-		eventHandled := false
-		eventSystem := events.NewEventSystem()
-		eventSystem.RegisterEventHandler(events.RegisterOrganization, func(event events.Event) error {
-			eventHandled = true
-			return nil
-		})
-		e, wrapper := initEchoWithEventSystem(&MockDb{}, eventSystem)
-
-		b, _ := json.Marshal(Organization{}.fromDb(organizations[0]))
-
-		req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetPath("/api/organizations")
-
-		err := wrapper.RegisterOrganization(c)
-
-		if err != nil {
-			t.Errorf("Got err during call: %s", err.Error())
-		}
-
-		if rec.Code != http.StatusCreated {
-			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusCreated)
-		}
-
-		assert.True(t, eventHandled, "expected RegisterOrganization event to be fired and handled")
-	})
-
-	t.Run("400 - Invalid JSON", func(t *testing.T) {
-		e, wrapper := initEcho(&MockDb{organizations: organizations})
-
-		req := httptest.NewRequest(echo.POST, "/", strings.NewReader("{{[[][}{"))
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetPath("/api/organizations")
-
-		err := wrapper.RegisterOrganization(c)
-
-		if err != nil {
-			t.Errorf("Got err during call: %s", err.Error())
-		}
-
-		if rec.Code != http.StatusBadRequest {
-			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
-		}
-	})
-
-	t.Run("400 - Identifier missing", func(t *testing.T) {
-		e, wrapper := initEcho(&MockDb{organizations: organizations})
-
-		b, _ := json.Marshal(Organization{})
-
-		req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetPath("/api/organizations")
-
-		err := wrapper.RegisterOrganization(c)
-
-		if err != nil {
-			t.Errorf("Got err during call: %s", err.Error())
-		}
-
-		if rec.Code != http.StatusBadRequest {
-			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
-		}
-	})
-
-	t.Run("400 - Duplicate organization ID", func(t *testing.T) {
-		e, wrapper := initEcho(&MockDb{organizations: organizations})
-
-		b, _ := json.Marshal(Organization{}.fromDb(organizations[0]))
-
-		req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetPath("/api/organizations")
-
-		err := wrapper.RegisterOrganization(c)
-
-		if err != nil {
-			t.Errorf("Got err during call: %s", err.Error())
-		}
-
-		if rec.Code != http.StatusBadRequest {
-			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
-		}
-	})
 }
 
 func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
@@ -645,58 +551,6 @@ func TestApiResource_OrganizationById(t *testing.T) {
 
 		if result.Name != "test" {
 			t.Errorf("Got result with Name: [%s], want [test]", result.Name)
-		}
-	})
-}
-
-func TestApiResource_DeregisterOrganization(t *testing.T) {
-	t.Run("202", func(t *testing.T) {
-		eventHandled := false
-		system := events.NewEventSystem()
-		system.RegisterEventHandler(events.RemoveOrganization, func(event events.Event) error {
-			eventHandled = true
-			return nil
-		})
-		e, wrapper := initEchoWithEventSystem(&MockDb{organizations: organizations}, system)
-
-		req := httptest.NewRequest(echo.DELETE, "/", nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetPath("/api/organization/:id")
-		c.SetParamNames("id")
-		c.SetParamValues("https%3A//system%23value")
-
-		err := wrapper.DeregisterOrganization(c)
-
-		if err != nil {
-			t.Errorf("Got err during call: %s", err.Error())
-		}
-
-		if rec.Code != http.StatusAccepted {
-			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusAccepted)
-		}
-
-		assert.True(t, eventHandled, "expected RemoveOrganization event to be fired and handled")
-	})
-
-	t.Run("404", func(t *testing.T) {
-		e, wrapper := initEcho(&MockDb{})
-
-		req := httptest.NewRequest(echo.DELETE, "/", nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetPath("/api/organization/:id")
-		c.SetParamNames("id")
-		c.SetParamValues("https%3A//system%23value")
-
-		err := wrapper.DeregisterOrganization(c)
-
-		if err != nil {
-			t.Errorf("Got err during call: %s", err.Error())
-		}
-
-		if rec.Code != http.StatusNotFound {
-			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusNotFound)
 		}
 	})
 }

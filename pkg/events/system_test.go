@@ -54,8 +54,13 @@ func TestNoEventHandler(t *testing.T) {
 
 func TestLoadEvents(t *testing.T) {
 	system := NewEventSystem()
+	vendorsCreated := 0
+	system.RegisterEventHandler(RegisterVendor, func(e Event) error {
+		vendorsCreated++
+		return nil
+	})
 	organizationsCreated := 0
-	system.RegisterEventHandler(RegisterOrganization, func(e Event) error {
+	system.RegisterEventHandler(VendorClaim, func(e Event) error {
 		organizationsCreated++
 		return nil
 	})
@@ -64,16 +69,11 @@ func TestLoadEvents(t *testing.T) {
 		endpointsCreated++
 		return nil
 	})
-	endpointOrganizationsCreated := 0
-	system.RegisterEventHandler(RegisterEndpointOrganization, func(e Event) error {
-		endpointOrganizationsCreated++
-		return nil
-	})
 
-	assertEventsHandled := func(oc int, ec int, eoc int) {
-		assert.Equal(t, oc, organizationsCreated, "unexpected number of events for: RegisterOrganization")
+	assertEventsHandled := func(vc int, oc int, ec int) {
+		assert.Equal(t, vc, vendorsCreated, "unexpected number of events for: RegisterVendor")
+		assert.Equal(t, oc, organizationsCreated, "unexpected number of events for: VendorClaim")
 		assert.Equal(t, ec, endpointsCreated, "unexpected number of events for: RegisterEndpoint")
-		assert.Equal(t, eoc, endpointOrganizationsCreated, "unexpected number of events for: RegisterEndpointOrganization")
 	}
 
 	const dir = "../../test_data/valid_files/events"
@@ -82,12 +82,12 @@ func TestLoadEvents(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		assertEventsHandled(2, 2, 2)
+		assertEventsHandled(1, 2, 2)
 	})
 
-	const newFile = dir + "/20210123091400006-RegisterEndpointOrganizationEvent.json"
+	const newFile = dir + "/20210123091400005-RegisterEndpointEvent.json"
 	t.Run("New event file, should trigger an incremental change", func(t *testing.T) {
-		err := cp(dir+"/20200123091400006-RegisterEndpointOrganizationEvent.json", newFile)
+		err := cp(dir+"/20200123091400005-RegisterEndpointEvent.json", newFile)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -95,7 +95,7 @@ func TestLoadEvents(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		assertEventsHandled(2, 2, 3)
+		assertEventsHandled(1, 2, 3)
 	})
 	defer os.Remove(newFile)
 
@@ -104,7 +104,7 @@ func TestLoadEvents(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		assertEventsHandled(2, 2, 3)
+		assertEventsHandled(1, 2, 3)
 	})
 }
 
@@ -154,11 +154,11 @@ func TestParseTimestamp(t *testing.T) {
 func TestPublishEventCallsEventHandlers(t *testing.T) {
 	system := NewEventSystem()
 	called := 0
-	system.RegisterEventHandler(RegisterOrganization, func(event Event) error {
+	system.RegisterEventHandler(RegisterVendor, func(event Event) error {
 		called++
 		return nil
 	})
-	err := system.PublishEvent(jsonEvent{EventType: string(RegisterOrganization)})
+	err := system.PublishEvent(jsonEvent{EventType: string(RegisterVendor)})
 	assert.NoError(t, err)
 	assert.Equal(t, called, 1)
 }

@@ -52,13 +52,6 @@ func (o Organization) fromDb(db db.Organization) Organization {
 	return o
 }
 
-func (eo EndpointOrganization) fromDb(db db.EndpointOrganization) EndpointOrganization {
-	eo.Endpoint = Identifier(db.Endpoint)
-	eo.Organization = Identifier(db.Organization)
-	eo.Status = db.Status
-	return eo
-}
-
 func (o Organization) toDb() db.Organization {
 	org := db.Organization{
 		Identifier: db.Identifier(o.Identifier),

@@ -20,6 +20,7 @@
 package engine
 
 import (
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"os"
 	"os/signal"
 
@@ -114,6 +115,19 @@ func cmd() *cobra.Command {
 
 			go recoverFromEcho()
 			<-sigc
+		},
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "register-vendor [name] [identifier]",
+		Short: "Registers a vendor",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			name := args[0]
+			identifier := events.Identifier(args[1])
+			event, _ := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{Name: name, Identifier: identifier})
+			logrus.Info(events.SuggestEventFileName(event))
+			logrus.Info(string(event.Marshal()))
 		},
 	})
 

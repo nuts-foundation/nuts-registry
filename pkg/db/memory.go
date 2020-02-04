@@ -22,158 +22,185 @@ package db
 import (
 	"errors"
 	"fmt"
+	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	errors2 "github.com/pkg/errors"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 )
 
 type MemoryDb struct {
-	endpointIndex               map[string]*Endpoint
-	organizationIndex           map[string]*Organization
-	endpointToOrganizationIndex map[string][]EndpointOrganization
-	organizationToEndpointIndex map[string][]EndpointOrganization
+	vendors map[string]*vendor
 }
 
-// ErrDuplicateOrganization is given for an organization with an identifier that has already been stored
-var ErrDuplicateOrganization = errors.New("duplicate organization")
+type vendor struct {
+	events.RegisterVendorEvent
+	orgs map[string]*org
+}
 
-// ErrUnknownOrganization is given when an organization does not exist for given identifier
-var ErrUnknownOrganization = errors.New("unknown organization")
+type org struct {
+	events.VendorClaimEvent
+	endpoints map[string]*endpoint
+}
 
-func (db *MemoryDb) RegisterOrganization(org Organization) error {
-	id := string(org.Identifier)
-	o := db.organizationIndex[id]
+type endpoint struct {
+	events.RegisterEndpointEvent
+}
 
-	if o != nil {
-		return fmt.Errorf("error registering organization with id %s: %w", org.Identifier, ErrDuplicateOrganization)
+func (o org) toDb() Organization {
+	return Organization{
+		Identifier: toDbIdentifier(o.OrgIdentifier),
+		Name:       o.OrgName,
+		Keys:       o.OrgKeys,
+		Endpoints:  o.toDbEndpoints(),
+	}
+}
+
+// copyKeys is needed since the jwkSet.extractMap consumes the contents
+func copyKeys(src []interface{}) []interface{} {
+	var keys []interface{}
+	for _, k := range src {
+		nk := map[string]interface{}{}
+		m := k.(map[string]interface{})
+		for k, v := range m {
+			nk[k] = v
+		}
+		keys = append(keys, nk)
+	}
+	return keys
+}
+
+// KeysAsSet transforms the raw map in Keys to a jwk.Set. If no keys are present, it'll return an empty set
+func keysAsSet(keys []interface{}) (jwk.Set, error) {
+	var set jwk.Set
+	if len(keys) == 0 {
+		return set, nil
 	}
 
-	// also validate the keys parsed from json
-	if _, err := org.KeysAsSet(); err != nil {
-		return fmt.Errorf("error registering organization with id %s: %w", org.Identifier, err)
+	m := make(map[string]interface{})
+
+	m["keys"] = copyKeys(keys)
+	err := set.ExtractMap(m)
+	return set, err
+}
+
+func (e endpoint) toDb() Endpoint {
+	return Endpoint{
+		URL:          e.URL,
+		EndpointType: e.EndpointType,
+		Identifier:   toDbIdentifier(e.Identifier),
+		Status:       e.Status,
+		Version:      e.Version,
 	}
+}
 
-	db.organizationIndex[id] = &org
-	db.organizationToEndpointIndex[id] = []EndpointOrganization{}
+func (o org) toDbEndpoints() []Endpoint {
+	r := make([]Endpoint, 0, len(o.endpoints))
+	for _, e := range o.endpoints {
+		r = append(r, e.toDb())
+	}
+	return r
+}
 
-	for _, e := range org.Endpoints {
-		db.RegisterEndpoint(e)
-		err := db.RegisterEndpointOrganization(
-			EndpointOrganization{
-				Status:       StatusActive,
-				Organization: org.Identifier,
-				Endpoint:     e.Identifier,
-			})
-		if err != nil {
+func (db *MemoryDb) RegisterEventHandlers(system events.EventSystem) {
+	system.RegisterEventHandler(events.RegisterVendor, func(e events.Event) error {
+		// Unmarshal
+		event := events.RegisterVendorEvent{}
+		if err := e.Unmarshal(&event); err != nil {
 			return err
 		}
-	}
+		// Validate
+		id := string(event.Identifier)
+		if db.vendors[id] != nil {
+			return fmt.Errorf("vendor already registered (id = %s)", event.Identifier)
+		}
+		// Process
+		db.vendors[id] = &vendor{
+			RegisterVendorEvent: event,
+			orgs:                make(map[string]*org),
+		}
+		return nil
+	})
+	system.RegisterEventHandler(events.VendorClaim, func(e events.Event) error {
+		// Unmarshal
+		event := events.VendorClaimEvent{}
+		if err := e.Unmarshal(&event); err != nil {
+			return err
+		}
+		// Validate
+		orgID := string(event.OrgIdentifier)
+		vendorID := string(event.VendorIdentifier)
+		_, err := db.OrganizationById(orgID)
+		if err != ErrOrganizationNotFound {
+			return fmt.Errorf("organization already registered (id = %s)", event.OrgIdentifier)
+		}
+		if db.vendors[vendorID] == nil {
+			return fmt.Errorf("vendor is not registered (id = %s)", event.VendorIdentifier)
+		}
+		_, err = keysAsSet(event.OrgKeys)
+		if err != nil {
+			return errors2.Wrap(err, "invalid JWK")
+		}
+		// Process
+		db.vendors[vendorID].orgs[orgID] = &org{
+			VendorClaimEvent: event,
+			endpoints:        make(map[string]*endpoint),
+		}
+		return nil
+	})
+	system.RegisterEventHandler(events.RegisterEndpoint, func(e events.Event) error {
+		// Unmarshal
+		event := events.RegisterEndpointEvent{}
+		if err := e.Unmarshal(&event); err != nil {
+			return err
+		}
+		// Validate
+		orgID := string(event.Organization)
+		o := db.lookupOrg(orgID)
+		if o == nil {
+			return fmt.Errorf("organization not registered (id = %s)", orgID)
+		}
+		// Process
+		o.endpoints[string(event.Identifier)] = &endpoint{
+			RegisterEndpointEvent: event,
+		}
+		return nil
+	})
 
+}
+
+func (db *MemoryDb) lookupOrg(orgID string) *org {
+	for _, vendor := range db.vendors {
+		o := vendor.orgs[orgID]
+		if o != nil {
+			return o
+		}
+	}
 	return nil
 }
 
-func (db *MemoryDb) RemoveOrganization(id string) error {
-	o := db.organizationIndex[id]
-	eos := db.organizationToEndpointIndex[id]
-
-	if o == nil {
-		return fmt.Errorf("error removing organization with id %s: %w", id, ErrUnknownOrganization)
-	}
-
-	for _, v := range eos {
-		delete(db.endpointIndex, string(v.Endpoint))
-		delete(db.endpointToOrganizationIndex, string(v.Endpoint))
-	}
-
-	delete(db.organizationToEndpointIndex, id)
-	delete(db.organizationIndex, id)
-
-	return nil
+func toDbIdentifier(identifier events.Identifier) Identifier {
+	return Identifier(string(identifier))
 }
 
 func New() *MemoryDb {
 	return &MemoryDb{
-		make(map[string]*Endpoint),
-		make(map[string]*Organization),
-		make(map[string][]EndpointOrganization),
-		make(map[string][]EndpointOrganization),
+		make(map[string]*vendor),
 	}
-}
-
-// RegisterEndpointOrganization registers an organization <-> endpoint mapping. It returns an error if the specified
-// endpoint or organization doesn't exist.
-func (db *MemoryDb) RegisterEndpointOrganization(eo EndpointOrganization) error {
-	ois := eo.Organization.String()
-	eis := eo.Endpoint.String()
-
-	_, f := db.organizationToEndpointIndex[ois]
-	if !f {
-		return fmt.Errorf("Endpoint <> Organization mapping references unknown organization with identifier [%s]", ois)
-	}
-
-	_, f = db.endpointToOrganizationIndex[eis]
-	if !f {
-		return fmt.Errorf("Endpoint <> Organization mapping references unknown endpoint with identifier [%s]", eis)
-	}
-
-	db.organizationToEndpointIndex[ois] = append(db.organizationToEndpointIndex[ois], eo)
-	db.endpointToOrganizationIndex[eis] = append(db.endpointToOrganizationIndex[eis], eo)
-
-	logrus.Tracef("Added mapping between: %s <-> %s", ois, eis)
-
-	return nil
-}
-
-// RegisterEndpoint registers an endpoint.
-func (db *MemoryDb) RegisterEndpoint(e Endpoint) {
-	cp := &e
-	db.endpointIndex[e.Identifier.String()] = cp
-
-	// also create empty slice at this map R
-	db.endpointToOrganizationIndex[e.Identifier.String()] = []EndpointOrganization{}
-
-	logrus.Tracef("Added endpoint: %s", e.Identifier)
 }
 
 func (db *MemoryDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error) {
-
-	_, exists := db.organizationIndex[organizationIdentifier]
-
-	// not found
-	if !exists {
+	o := db.lookupOrg(organizationIdentifier)
+	if o == nil {
 		return nil, fmt.Errorf("organization with identifier [%s] does not exist", organizationIdentifier)
 	}
-
-	mappings := db.organizationToEndpointIndex[organizationIdentifier]
-
-	// filter inactive mappings
-	filtered := mappings[:0]
-	for _, x := range mappings {
-		if x.Status == StatusActive {
-			filtered = append(filtered, x)
-		}
-	}
-
-	if len(filtered) == 0 {
-		return []Endpoint{}, nil
-	}
-
-	// map to endpoints
 	var endpoints []Endpoint
-	for _, f := range filtered {
-		es := db.endpointIndex[f.Endpoint.String()]
-
-		if es.Status == StatusActive {
-			if endpointType != nil {
-				if *endpointType == es.EndpointType {
-					endpoints = append(endpoints, *es)
-				}
-			} else {
-				endpoints = append(endpoints, *es)
+	for _, e := range o.endpoints {
+		if e.Status == StatusActive {
+			if endpointType == nil || *endpointType == e.EndpointType {
+				endpoints = append(endpoints, e.toDb())
 			}
 		}
 	}
-
 	return endpoints, nil
 }
 
@@ -185,9 +212,11 @@ func (db *MemoryDb) SearchOrganizations(query string) []Organization {
 	// continue until one is empty
 	// if query is empty, match is found
 	var matches []Organization
-	for _, o := range db.organizationIndex {
-		if searchRecursive(strings.Split(strings.ToLower(query), ""), strings.Split(strings.ToLower(o.Name), "")) {
-			matches = append(matches, *o)
+	for _, v := range db.vendors {
+		for _, o := range v.orgs {
+			if searchRecursive(strings.Split(strings.ToLower(query), ""), strings.Split(strings.ToLower(o.OrgName), "")) {
+				matches = append(matches, o.toDb())
+			}
 		}
 	}
 	return matches
@@ -197,23 +226,24 @@ func (db *MemoryDb) SearchOrganizations(query string) []Organization {
 var ErrOrganizationNotFound = errors.New("organization not found")
 
 func (db *MemoryDb) ReverseLookup(name string) (*Organization, error) {
-	for _, o := range db.organizationIndex {
-		if strings.ToLower(name) == strings.ToLower(o.Name) {
-			return o, nil
+	for _, v := range db.vendors {
+		for _, o := range v.orgs {
+			if strings.ToLower(name) == strings.ToLower(o.OrgName) {
+				r := o.toDb()
+				return &r, nil
+			}
 		}
 	}
-
 	return nil, fmt.Errorf("reverse lookup failed for %s: %w", name, ErrOrganizationNotFound)
 }
 
 func (db *MemoryDb) OrganizationById(id string) (*Organization, error) {
-
-	for _, o := range db.organizationIndex {
-		if id == o.Identifier.String() {
-			return o, nil
-		}
+	org := db.lookupOrg(id)
+	if org == nil {
+		return nil, fmt.Errorf("%s: %w", id, ErrOrganizationNotFound)
 	}
-	return nil, fmt.Errorf("%s: %w", id, ErrOrganizationNotFound)
+	r := org.toDb()
+	return &r, nil
 }
 
 func searchRecursive(query []string, orgName []string) bool {
@@ -233,4 +263,3 @@ func searchRecursive(query []string, orgName []string) bool {
 		return searchRecursive(query, orgName[1:])
 	}
 }
-

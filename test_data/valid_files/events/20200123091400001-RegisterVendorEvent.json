@@ -1,0 +1,7 @@
+{
+  "type": "RegisterVendorEvent",
+  "payload": {
+    "name": "Nedap Healthcare",
+    "identifier": "08013836"
+  }
+}

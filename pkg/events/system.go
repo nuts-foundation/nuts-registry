@@ -37,6 +37,7 @@ var eventFileRegex *regexp.Regexp
 // ErrInvalidTimestamp is returned when a timestamp does not match the required pattern
 var ErrInvalidTimestamp = errors.New("event timestamp does not match required pattern (yyyyMMddHHmmssmmm)")
 
+const eventTimestampLayout = "20060102150405.000"
 const eventFileFormat = "(\\d{17})-([a-zA-Z]+)\\.json"
 
 func init() {
@@ -139,6 +140,10 @@ func (system *eventSystem) LoadAndApplyEvents(location string) error {
 	return nil
 }
 
+func SuggestEventFileName(event Event) string {
+	return strings.Replace(event.IssuedAt().UTC().Format(eventTimestampLayout), ".", "", 1) + "-" + string(event.Type()) + ".json"
+}
+
 func (system eventSystem) findStartIndex(entries []os.FileInfo) int {
 	if system.lastLoadedEvent.IsZero() {
 		// No entries were ever loaded
@@ -168,7 +173,7 @@ func parseTimestamp(timestamp string) (time.Time, error) {
 	if len(timestamp) != 17 {
 		return time.Time{}, ErrInvalidTimestamp
 	}
-	t, err := time.Parse("20060102150405.000", timestamp[0:14]+"."+timestamp[14:])
+	t, err := time.Parse(eventTimestampLayout, timestamp[0:14]+"."+timestamp[14:])
 	if err != nil {
 		return time.Time{}, ErrInvalidTimestamp
 	}
@@ -183,9 +188,6 @@ func readEvent(file string, timestamp string) (Event, error) {
 	event, err := EventFromJSON(data)
 	if err != nil {
 		return nil, err
-	}
-	if !event.IssuedAt().IsZero() {
-		return nil, fmt.Errorf("event from file should not contain issuedAt, since it's derived from the file name")
 	}
 	t, err := parseTimestamp(timestamp)
 	if err != nil {
