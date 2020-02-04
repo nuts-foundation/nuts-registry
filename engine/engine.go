@@ -22,6 +22,7 @@ package engine
 import (
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/api"
 	"github.com/nuts-foundation/nuts-registry/client"
@@ -66,6 +67,7 @@ func flagSet() *pflag.FlagSet {
 	flagSet.String(pkg.ConfSyncMode, "fs", "The method for updating the data, 'fs' for a filesystem watch or 'github' for a periodic download from github")
 	flagSet.String(pkg.ConfSyncAddress, "https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master", "The remote url to download the latest registry data from github")
 	flagSet.Int(pkg.ConfSyncInterval, 30, "The interval in minutes between looking for updated registry files on github")
+	flagSet.Int(pkg.ConfVendorCACertificateValidity, 365, "Number of days vendor CA certificates are valid, defaults to 1 year.")
 
 	return flagSet
 }
@@ -103,6 +105,8 @@ func cmd() *cobra.Command {
 			i := pkg.RegistryInstance()
 
 			echo := echo.New()
+			echo.HideBanner = true
+			echo.Use(middleware.Logger())
 			api.RegisterHandlers(echo, &api.ApiWrapper{R: i})
 
 			// todo move to nuts-go-core
@@ -122,12 +126,16 @@ func cmd() *cobra.Command {
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "register-vendor [identifier] [name]",
+		Use:   "register-vendor [identifier] [name] [(optional) domain]",
 		Short: "Registers a vendor",
-		Args:  cobra.ExactArgs(2),
+		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl := registryClientCreator()
-			event, err := cl.RegisterVendor(args[0], args[1])
+			var domain = ""
+			if len(args) == 3 {
+				domain = args[2]
+			}
+			event, err := cl.RegisterVendor(args[0], args[1], domain)
 			if err != nil {
 				logrus.Errorf("Unable to register vendor: %v", err)
 				return err

@@ -125,16 +125,16 @@ func (mr *MockRegistryClientMockRecorder) VendorClaim(vendorID, orgID, orgName, 
 }
 
 // RegisterVendor mocks base method
-func (m *MockRegistryClient) RegisterVendor(id, name string) (events.Event, error) {
+func (m *MockRegistryClient) RegisterVendor(id, name, domain string) (events.Event, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RegisterVendor", id, name)
+	ret := m.ctrl.Call(m, "RegisterVendor", id, name, domain)
 	ret0, _ := ret[0].(events.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RegisterVendor indicates an expected call of RegisterVendor
-func (mr *MockRegistryClientMockRecorder) RegisterVendor(id, name interface{}) *gomock.Call {
+func (mr *MockRegistryClientMockRecorder) RegisterVendor(id, name, domain interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterVendor", reflect.TypeOf((*MockRegistryClient)(nil).RegisterVendor), id, name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterVendor", reflect.TypeOf((*MockRegistryClient)(nil).RegisterVendor), id, name, domain)
 }

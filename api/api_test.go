@@ -562,11 +562,13 @@ func TestApiResource_RegisterVendor(t *testing.T) {
 		t.Run("200", func(t *testing.T) {
 			var registryClient = mock.NewMockRegistryClient(mockCtrl)
 			e, wrapper := initMockEcho(registryClient)
-			registryClient.EXPECT().RegisterVendor("abc", "def")
+			registryClient.EXPECT().RegisterVendor("abc", "def", "xyz")
 
+			domain := "xyz"
 			b, _ := json.Marshal(Vendor{
 				Identifier: "abc",
 				Name:       "def",
+				Domain:     &domain,
 			})
 
 			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))

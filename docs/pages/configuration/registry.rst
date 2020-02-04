@@ -15,16 +15,17 @@ By default it uses the config in the master branch.
 
 The following configuration parameters are available for the registry.
 
-===================================     ====================================================================================================    ================================================================================
-Key                                     Default                 Description
-===================================     ====================================================================================================    ================================================================================
-registry.datadir                        ./data                                                                                                  Location of data files
-registry.mode                           server                                                                                                  server or client, when client it uses the HttpClient
-registry.address                        localhost:1323                                                                                          Interface and port for http server to bind to
-registry.syncMode                       fs                                                                                                      ``fs`` or ``github``
-registry.syncInterval                   30                                                                                                      Interval in minutes to check for new registry data on github
-registry.syncAddress                    https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master                     The tar.gz to download from github
-===================================     ====================================================================================================    ================================================================================
+====================================     ====================================================================================================    ================================================================================
+Key                                      Default                 Description
+====================================     ====================================================================================================    ================================================================================
+registry.datadir                         ./data                                                                                                  Location of data files
+registry.mode                            server                                                                                                  server or client, when client it uses the HttpClient
+registry.address                         localhost:1323                                                                                          Interface and port for http server to bind to
+registry.syncMode                        fs                                                                                                      ``fs`` or ``github``
+registry.syncInterval                    30                                                                                                      Interval in minutes to check for new registry data on github
+registry.syncAddress                     https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master                     The tar.gz to download from github
+registry.vendorCACertificateValidity     365                                                                                                     Validity of the vendor CA certificates in days
+====================================     ====================================================================================================    ================================================================================
 
 As with all other properties for nuts-go, they can be set through yaml:
 

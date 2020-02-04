@@ -248,6 +248,10 @@ components:
           example: Medicare Software for People B.V.
         identifier:
           $ref: "#/components/schemas/Identifier"
+        domain:
+          type: string
+          description: domain the vendor (and its organisations) is active in
+          example: healthcare
     Organization:
       required:
         - name
@@ -306,6 +310,12 @@ components:
           example: Medicare Software for People B.V.
         identifier:
           $ref: "#/components/schemas/Identifier"
+        domain:
+          $ref: "#/components/schemas/Domain"
+        orgKeys:
+          type: array
+          items:
+            $ref: "#/components/schemas/JWK"
     VendorClaimEvent:
       required:
         - vendorIdentifier
@@ -358,6 +368,10 @@ components:
         Generic identifier used for representing BSN, agbcode, etc.
         It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
       example: urn:oid:2.16.840.1.113883.2.4.6.3:999999990
+    Domain:
+      type: string
+      description: Domain the entity operates in.
+      example: health
     JWK:
       description: as described by https://tools.ietf.org/html/rfc7517. Modelled as object so libraries can parse the tokens themselves.
       additionalProperties: {}

@@ -85,8 +85,10 @@ type RegisterEndpointEvent struct {
 
 // RegisterVendorEvent event
 type RegisterVendorEvent struct {
-	Identifier Identifier `json:"identifier"`
-	Name       string     `json:"name"`
+	Identifier Identifier    `json:"identifier"`
+	Name       string        `json:"name"`
+	Domain     string        `json:"domain,omitempty"`
+	Keys       []interface{} `json:"keys,omitempty"`
 }
 
 // VendorClaimEvent event

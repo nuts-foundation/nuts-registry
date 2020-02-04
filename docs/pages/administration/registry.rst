@@ -58,7 +58,7 @@ The syntax of this command is as follows:
 
 .. code-block:: shell
 
-    ./nuts registry register-vendor <identifier> <name>
+    ./nuts registry register-vendor <identifier> <name> <opt. domain>
 
 To register vendor "BecauseWeCare B.V." identified by Chamber of Commerce registration number "00000001", run the following command:
 
