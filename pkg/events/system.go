@@ -140,6 +140,7 @@ func (system *eventSystem) LoadAndApplyEvents(location string) error {
 	return nil
 }
 
+// SuggestEventFileName suggests a file name for a event, when writing that event to disk.
 func SuggestEventFileName(event Event) string {
 	return strings.Replace(event.IssuedAt().UTC().Format(eventTimestampLayout), ".", "", 1) + "-" + string(event.Type()) + ".json"
 }

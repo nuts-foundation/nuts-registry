@@ -124,7 +124,7 @@ func pub(t *testing.T, eventSystem events.EventSystem, events ...events.Event) b
 }
 
 func TestMemoryDb_RegisterVendor(t *testing.T) {
-	var err error = nil
+	var err error
 	t.Run("valid example", func(t *testing.T) {
 		eventSystem, db := initDb()
 		err = eventSystem.PublishEvent(registerVendor1)
@@ -150,7 +150,7 @@ func TestMemoryDb_RegisterVendor(t *testing.T) {
 }
 
 func TestMemoryDb_VendorClaim(t *testing.T) {
-	var err error = nil
+	var err error
 
 	t.Run("valid example", func(t *testing.T) {
 		eventSystem, db := initDb()

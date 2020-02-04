@@ -131,6 +131,7 @@ func pemToPublicKey(pub []byte) (*rsa.PublicKey, error) {
 
 // todo: Db temporary abstraction
 type Db interface {
+	// RegisterEventHandlers registers event handlers on this database
 	RegisterEventHandlers(system events.EventSystem)
 	FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error)
 	SearchOrganizations(query string) []Organization
