@@ -80,7 +80,7 @@ func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) erro
 	return ctx.NoContent(http.StatusNoContent)
 }
 
-// RegisterEndpoint is the Api implementation for registering a vendor claim.
+// VendorClaim is the Api implementation for registering a vendor claim.
 func (apiResource ApiWrapper) VendorClaim(ctx echo.Context, id string) error {
 	unescapedID, err := url.PathUnescape(id)
 	if err != nil {
@@ -115,7 +115,7 @@ func (apiResource ApiWrapper) VendorClaim(ctx echo.Context, id string) error {
 	return ctx.NoContent(http.StatusNoContent)
 }
 
-// RegisterEndpoint is the Api implementation for registering a vendor.
+// RegisterVendor is the Api implementation for registering a vendor.
 func (apiResource ApiWrapper) RegisterVendor(ctx echo.Context) error {
 	bytes, err := ioutil.ReadAll(ctx.Request().Body)
 	if err != nil {
