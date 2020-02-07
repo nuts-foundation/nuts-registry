@@ -60,12 +60,7 @@ func (o Organization) toDb() db.Organization {
 	}
 
 	if o.Keys != nil {
-		ks := *o.Keys
-		em := make([]interface{}, len(ks))
-		for i, k := range ks {
-			em[i] = k.AdditionalProperties
-		}
-		org.Keys = em
+		org.Keys = jwkToMap(*o.Keys)
 	}
 
 	if o.Endpoints != nil {
@@ -83,6 +78,14 @@ func (a Endpoint) toDb() db.Endpoint {
 		Status:       a.Status,
 		Version:      a.Version,
 	}
+}
+
+func jwkToMap(jwk []JWK) []interface{} {
+	em := make([]interface{}, len(jwk))
+	for i, k := range jwk {
+		em[i] = k.AdditionalProperties
+	}
+	return em
 }
 
 func organizationsArrayFromDb(organizationsIn []db.Organization) []Organization {

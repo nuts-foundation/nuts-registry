@@ -28,6 +28,7 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/stretchr/testify/assert"
 	"net/url"
+	"strings"
 
 	"net/http"
 	"net/http/httptest"
@@ -56,24 +57,12 @@ func (mdb *MockDb) RegisterEventHandlers(system events.EventSystem) {
 
 }
 
-func (mdb *MockDb) RegisterEndpoint(endpoint db.Endpoint) {
-
-}
-
 func (mdb *MockDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error) {
 	if mdb.endpointsError != nil {
 		return nil, mdb.endpointsError
 	}
 
 	return mdb.endpoints, nil
-}
-
-func (mdb *MockDb) RemoveOrganization(id string) error {
-	return nil
-}
-
-func (mdb *MockDb) RegisterOrganization(org db.Organization) error {
-	return nil
 }
 
 func (mdb *MockDb) SearchOrganizations(query string) []db.Organization {
@@ -552,5 +541,247 @@ func TestApiResource_OrganizationById(t *testing.T) {
 		if result.Name != "test" {
 			t.Errorf("Got result with Name: [%s], want [test]", result.Name)
 		}
+	})
+}
+
+func TestApiResource_RegisterVendor(t *testing.T) {
+	t.Run("register vendor", func(t *testing.T) {
+		t.Run("201", func(t *testing.T) {
+			eventHandled := false
+			eventSystem := events.NewEventSystem()
+			eventSystem.RegisterEventHandler(events.RegisterVendor, func(event events.Event) error {
+				eventHandled = true
+				return nil
+			})
+			e, wrapper := initEchoWithEventSystem(&MockDb{}, eventSystem)
+
+			b, _ := json.Marshal(Vendor{
+				Identifier: "abc",
+				Name:       "def",
+			})
+
+			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/vendors")
+
+			err := wrapper.RegisterVendor(c)
+
+			if err != nil {
+				t.Errorf("Got err during call: %s", err.Error())
+			}
+
+			if rec.Code != http.StatusNoContent {
+				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusNoContent)
+			}
+
+			assert.True(t, eventHandled, "expected event to be fired and handled")
+		})
+
+		t.Run("400 - Invalid JSON", func(t *testing.T) {
+			e, wrapper := initEcho(&MockDb{organizations: organizations})
+
+			req := httptest.NewRequest(echo.POST, "/", strings.NewReader("{{[[][}{"))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/vendors")
+
+			err := wrapper.RegisterVendor(c)
+
+			if err != nil {
+				t.Errorf("Got err during call: %s", err.Error())
+			}
+
+			if rec.Code != http.StatusBadRequest {
+				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
+			}
+		})
+
+		t.Run("400 - validation failed", func(t *testing.T) {
+			e, wrapper := initEcho(&MockDb{organizations: organizations})
+
+			b, _ := json.Marshal(Vendor{})
+
+			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/vendors")
+
+			err := wrapper.RegisterVendor(c)
+
+			if err != nil {
+				t.Errorf("Got err during call: %s", err.Error())
+			}
+
+			if rec.Code != http.StatusBadRequest {
+				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
+			}
+		})
+	})
+}
+
+func TestApiResource_VendorClaim(t *testing.T) {
+	t.Run("vendor claim", func(t *testing.T) {
+		t.Run("204", func(t *testing.T) {
+			eventHandled := false
+			eventSystem := events.NewEventSystem()
+			eventSystem.RegisterEventHandler(events.VendorClaim, func(event events.Event) error {
+				eventHandled = true
+				return nil
+			})
+			e, wrapper := initEchoWithEventSystem(&MockDb{}, eventSystem)
+
+			b, _ := json.Marshal(Organization{
+				Identifier: "abc",
+				Name:       "def",
+				Keys:       &[]JWK{{AdditionalProperties: map[string]interface{}{}}},
+			})
+
+			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/vendor/:id/claim")
+			c.SetParamNames("id")
+			c.SetParamValues("1")
+
+			err := wrapper.VendorClaim(c)
+
+			if err != nil {
+				t.Errorf("Got err during call: %s", err.Error())
+			}
+
+			if rec.Code != http.StatusNoContent {
+				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusNoContent)
+			}
+
+			assert.True(t, eventHandled, "expected event to be fired and handled")
+		})
+
+		t.Run("400 - Invalid JSON", func(t *testing.T) {
+			e, wrapper := initEcho(&MockDb{organizations: organizations})
+
+			req := httptest.NewRequest(echo.POST, "/", strings.NewReader("{{[[][}{"))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/vendor/:id/claim")
+			c.SetParamNames("id")
+			c.SetParamValues("1")
+
+			err := wrapper.VendorClaim(c)
+
+			if err != nil {
+				t.Errorf("Got err during call: %s", err.Error())
+			}
+
+			if rec.Code != http.StatusBadRequest {
+				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
+			}
+		})
+
+		t.Run("400 - validation failed", func(t *testing.T) {
+			e, wrapper := initEcho(&MockDb{organizations: organizations})
+
+			b, _ := json.Marshal(Organization{})
+
+			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/vendor/:id/claim")
+			c.SetParamNames("id")
+			c.SetParamValues("1")
+
+			err := wrapper.VendorClaim(c)
+
+			if err != nil {
+				t.Errorf("Got err during call: %s", err.Error())
+			}
+
+			if rec.Code != http.StatusBadRequest {
+				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
+			}
+		})
+	})
+}
+
+func TestApiResource_RegisterEndpoint(t *testing.T) {
+	t.Run("register endpoint", func(t *testing.T) {
+		t.Run("201", func(t *testing.T) {
+			eventHandled := false
+			eventSystem := events.NewEventSystem()
+			eventSystem.RegisterEventHandler(events.RegisterEndpoint, func(event events.Event) error {
+				eventHandled = true
+				return nil
+			})
+			e, wrapper := initEchoWithEventSystem(&MockDb{}, eventSystem)
+
+			b, _ := json.Marshal(Endpoint{
+				Identifier:   "abc",
+				URL:          "foo:bar",
+				EndpointType: "fhir",
+			})
+
+			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/organization/:id/endpoints")
+			c.SetParamNames("id")
+			c.SetParamValues("1")
+
+			err := wrapper.RegisterEndpoint(c)
+
+			if err != nil {
+				t.Errorf("Got err during call: %s", err.Error())
+			}
+
+			if rec.Code != http.StatusNoContent {
+				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusNoContent)
+			}
+
+			assert.True(t, eventHandled, "expected event to be fired and handled")
+		})
+
+		t.Run("400 - Invalid JSON", func(t *testing.T) {
+			e, wrapper := initEcho(&MockDb{organizations: organizations})
+
+			req := httptest.NewRequest(echo.POST, "/", strings.NewReader("{{[[][}{"))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/organization/:id/endpoints")
+			c.SetParamNames("id")
+			c.SetParamValues("1")
+
+			err := wrapper.RegisterEndpoint(c)
+
+			if err != nil {
+				t.Errorf("Got err during call: %s", err.Error())
+			}
+
+			if rec.Code != http.StatusBadRequest {
+				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
+			}
+		})
+
+		t.Run("400 - validation failed", func(t *testing.T) {
+			e, wrapper := initEcho(&MockDb{organizations: organizations})
+
+			b, _ := json.Marshal(Endpoint{})
+
+			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/organization/:id/endpoints")
+			c.SetParamNames("id")
+			c.SetParamValues("1")
+
+			err := wrapper.RegisterVendor(c)
+
+			if err != nil {
+				t.Errorf("Got err during call: %s", err.Error())
+			}
+
+			if rec.Code != http.StatusBadRequest {
+				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
+			}
+		})
 	})
 }

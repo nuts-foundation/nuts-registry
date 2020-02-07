@@ -101,7 +101,7 @@ func (o org) toDbEndpoints() []Endpoint {
 	return r
 }
 
-// RegisterEventHandlers registers event handlers on this database
+// RegisterEventHandlers registers event handlers on this database`
 func (db *MemoryDb) RegisterEventHandlers(system events.EventSystem) {
 	system.RegisterEventHandler(events.RegisterVendor, func(e events.Event) error {
 		// Unmarshal

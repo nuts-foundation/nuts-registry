@@ -51,63 +51,63 @@ func (hb HttpClient) client() ClientInterface {
 }
 
 // RemoveOrganization removes an organization and its endpoints from the registry
-func (hb HttpClient) RemoveOrganization(id string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
-	defer cancel()
-
-	result, err := hb.client().DeregisterOrganization(ctx, id)
-	if err != nil {
-		logrus.Error("error while removing organization from registry", err)
-		return core.Wrap(err)
-	}
-
-	parsed, err := ParsederegisterOrganizationResponse(result)
-	if err != nil {
-		logrus.Error("error while reading response body", err)
-		return err
-	}
-
-	if result.StatusCode != http.StatusAccepted {
-		err = fmt.Errorf("registry returned %d, reason: %s", result.StatusCode, parsed.Body)
-		logrus.Error(err)
-		return err
-	}
-
-	return nil
-}
+//func (hb HttpClient) RemoveOrganization(id string) error {
+//	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
+//	defer cancel()
+//
+//	result, err := hb.client().DeregisterOrganization(ctx, id)
+//	if err != nil {
+//		logrus.Error("error while removing organization from registry", err)
+//		return core.Wrap(err)
+//	}
+//
+//	parsed, err := ParsederegisterOrganizationResponse(result)
+//	if err != nil {
+//		logrus.Error("error while reading response body", err)
+//		return err
+//	}
+//
+//	if result.StatusCode != http.StatusAccepted {
+//		err = fmt.Errorf("registry returned %d, reason: %s", result.StatusCode, parsed.Body)
+//		logrus.Error(err)
+//		return err
+//	}
+//
+//	return nil
+//}
 
 // RegisterOrganization adds an organization to the registry
-func (hb HttpClient) RegisterOrganization(org db.Organization) error {
-	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
-	defer cancel()
-
-	e := endpointsArrayFromDb(org.Endpoints)
-	req := RegisterOrganizationJSONRequestBody{
-		Endpoints:  &e,
-		Identifier: Identifier(string(org.Identifier)),
-		Name:       org.Name,
-		PublicKey:  org.PublicKey,
-	}
-	result, err := hb.client().RegisterOrganization(ctx, req)
-	if err != nil {
-		logrus.Error("error while registering organization in registry", err)
-		return core.Wrap(err)
-	}
-
-	parsed, err := ParseregisterOrganizationResponse(result)
-	if err != nil {
-		logrus.Error("error while reading response body", err)
-		return err
-	}
-
-	if result.StatusCode != http.StatusCreated {
-		err = fmt.Errorf("registry returned %d, reason: %s", result.StatusCode, parsed.Body)
-		logrus.Error(err)
-		return err
-	}
-
-	return nil
-}
+//func (hb HttpClient) RegisterOrganization(org db.Organization) error {
+//	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
+//	defer cancel()
+//
+//	e := endpointsArrayFromDb(org.Endpoints)
+//	req := RegisterOrganizationJSONRequestBody{
+//		Endpoints:  &e,
+//		Identifier: Identifier(string(org.Identifier)),
+//		Name:       org.Name,
+//		PublicKey:  org.PublicKey,
+//	}
+//	result, err := hb.client().RegisterOrganization(ctx, req)
+//	if err != nil {
+//		logrus.Error("error while registering organization in registry", err)
+//		return core.Wrap(err)
+//	}
+//
+//	parsed, err := ParseregisterOrganizationResponse(result)
+//	if err != nil {
+//		logrus.Error("error while reading response body", err)
+//		return err
+//	}
+//
+//	if result.StatusCode != http.StatusCreated {
+//		err = fmt.Errorf("registry returned %d, reason: %s", result.StatusCode, parsed.Body)
+//		logrus.Error(err)
+//		return err
+//	}
+//
+//	return nil
+//}
 
 // EndpointsByOrganization is the client Api implementation for getting all or certain types of endpoints for an organization
 func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpointType *string) ([]db.Endpoint, error) {

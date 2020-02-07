@@ -30,13 +30,19 @@ import (
 
 type RestInterfaceStub struct{}
 
-func (e RestInterfaceStub) DeregisterOrganization(ctx echo.Context, id string) error {
+func (e RestInterfaceStub) RegisterEndpoint(ctx echo.Context, id string) error {
 	var err error
 
 	return err
 }
 
-func (e RestInterfaceStub) RegisterOrganization(ctx echo.Context) error {
+func (e RestInterfaceStub) VendorClaim(ctx echo.Context, id string) error {
+	var err error
+
+	return err
+}
+
+func (e RestInterfaceStub) RegisterVendor(ctx echo.Context) error {
 	var err error
 
 	return err

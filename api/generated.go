@@ -26,13 +26,6 @@ type Endpoint struct {
 	Version      string     `json:"version"`
 }
 
-// EndpointOrganization defines model for EndpointOrganization.
-type EndpointOrganization struct {
-	Endpoint     Identifier `json:"endpoint"`
-	Organization Identifier `json:"organization"`
-	Status       string     `json:"status"`
-}
-
 // Identifier defines model for Identifier.
 type Identifier string
 
@@ -50,6 +43,12 @@ type Organization struct {
 	PublicKey  *string     `json:"publicKey,omitempty"`
 }
 
+// Vendor defines model for Vendor.
+type Vendor struct {
+	Identifier Identifier `json:"identifier"`
+	Name       string     `json:"name"`
+}
+
 // EndpointsByOrganisationIdParams defines parameters for EndpointsByOrganisationId.
 type EndpointsByOrganisationIdParams struct {
 	OrgIds []string `json:"orgIds"`
@@ -57,17 +56,29 @@ type EndpointsByOrganisationIdParams struct {
 	Strict *bool    `json:"strict,omitempty"`
 }
 
+// registerEndpointJSONBody defines parameters for RegisterEndpoint.
+type registerEndpointJSONBody Endpoint
+
 // SearchOrganizationsParams defines parameters for SearchOrganizations.
 type SearchOrganizationsParams struct {
 	Query string `json:"query"`
 	Exact *bool  `json:"exact,omitempty"`
 }
 
-// registerOrganizationJSONBody defines parameters for RegisterOrganization.
-type registerOrganizationJSONBody Organization
+// vendorClaimJSONBody defines parameters for VendorClaim.
+type vendorClaimJSONBody Organization
 
-// RegisterOrganizationRequestBody defines body for RegisterOrganization for application/json ContentType.
-type RegisterOrganizationJSONRequestBody registerOrganizationJSONBody
+// registerVendorJSONBody defines parameters for RegisterVendor.
+type registerVendorJSONBody Vendor
+
+// RegisterEndpointRequestBody defines body for RegisterEndpoint for application/json ContentType.
+type RegisterEndpointJSONRequestBody registerEndpointJSONBody
+
+// VendorClaimRequestBody defines body for VendorClaim for application/json ContentType.
+type VendorClaimJSONRequestBody vendorClaimJSONBody
+
+// RegisterVendorRequestBody defines body for RegisterVendor for application/json ContentType.
+type RegisterVendorJSONRequestBody registerVendorJSONBody
 
 // Getter for additional properties for JWK. Returns the specified
 // element and whether it was found
@@ -144,38 +155,30 @@ type ClientInterface interface {
 	// EndpointsByOrganisationId request
 	EndpointsByOrganisationId(ctx context.Context, params *EndpointsByOrganisationIdParams) (*http.Response, error)
 
-	// DeregisterOrganization request
-	DeregisterOrganization(ctx context.Context, id string) (*http.Response, error)
-
 	// OrganizationById request
 	OrganizationById(ctx context.Context, id string) (*http.Response, error)
+
+	// RegisterEndpoint request  with any body
+	RegisterEndpointWithBody(ctx context.Context, id string, contentType string, body io.Reader) (*http.Response, error)
+
+	RegisterEndpoint(ctx context.Context, id string, body RegisterEndpointJSONRequestBody) (*http.Response, error)
 
 	// SearchOrganizations request
 	SearchOrganizations(ctx context.Context, params *SearchOrganizationsParams) (*http.Response, error)
 
-	// RegisterOrganization request  with any body
-	RegisterOrganizationWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+	// VendorClaim request  with any body
+	VendorClaimWithBody(ctx context.Context, id string, contentType string, body io.Reader) (*http.Response, error)
 
-	RegisterOrganization(ctx context.Context, body RegisterOrganizationJSONRequestBody) (*http.Response, error)
+	VendorClaim(ctx context.Context, id string, body VendorClaimJSONRequestBody) (*http.Response, error)
+
+	// RegisterVendor request  with any body
+	RegisterVendorWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+
+	RegisterVendor(ctx context.Context, body RegisterVendorJSONRequestBody) (*http.Response, error)
 }
 
 func (c *Client) EndpointsByOrganisationId(ctx context.Context, params *EndpointsByOrganisationIdParams) (*http.Response, error) {
 	req, err := NewEndpointsByOrganisationIdRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(req, ctx)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) DeregisterOrganization(ctx context.Context, id string) (*http.Response, error) {
-	req, err := NewDeregisterOrganizationRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -204,6 +207,36 @@ func (c *Client) OrganizationById(ctx context.Context, id string) (*http.Respons
 	return c.Client.Do(req)
 }
 
+func (c *Client) RegisterEndpointWithBody(ctx context.Context, id string, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewRegisterEndpointRequestWithBody(c.Server, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RegisterEndpoint(ctx context.Context, id string, body RegisterEndpointJSONRequestBody) (*http.Response, error) {
+	req, err := NewRegisterEndpointRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) SearchOrganizations(ctx context.Context, params *SearchOrganizationsParams) (*http.Response, error) {
 	req, err := NewSearchOrganizationsRequest(c.Server, params)
 	if err != nil {
@@ -219,8 +252,8 @@ func (c *Client) SearchOrganizations(ctx context.Context, params *SearchOrganiza
 	return c.Client.Do(req)
 }
 
-func (c *Client) RegisterOrganizationWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
-	req, err := NewRegisterOrganizationRequestWithBody(c.Server, contentType, body)
+func (c *Client) VendorClaimWithBody(ctx context.Context, id string, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewVendorClaimRequestWithBody(c.Server, id, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -234,8 +267,38 @@ func (c *Client) RegisterOrganizationWithBody(ctx context.Context, contentType s
 	return c.Client.Do(req)
 }
 
-func (c *Client) RegisterOrganization(ctx context.Context, body RegisterOrganizationJSONRequestBody) (*http.Response, error) {
-	req, err := NewRegisterOrganizationRequest(c.Server, body)
+func (c *Client) VendorClaim(ctx context.Context, id string, body VendorClaimJSONRequestBody) (*http.Response, error) {
+	req, err := NewVendorClaimRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RegisterVendorWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewRegisterVendorRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RegisterVendor(ctx context.Context, body RegisterVendorJSONRequestBody) (*http.Response, error) {
+	req, err := NewRegisterVendorRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -300,27 +363,6 @@ func NewEndpointsByOrganisationIdRequest(server string, params *EndpointsByOrgan
 	return req, nil
 }
 
-// NewDeregisterOrganizationRequest generates requests for DeregisterOrganization
-func NewDeregisterOrganizationRequest(server string, id string) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParam("simple", false, "id", id)
-	if err != nil {
-		return nil, err
-	}
-
-	queryUrl := fmt.Sprintf("%s/api/organization/%s", server, pathParam0)
-
-	req, err := http.NewRequest("DELETE", queryUrl, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 // NewOrganizationByIdRequest generates requests for OrganizationById
 func NewOrganizationByIdRequest(server string, id string) (*http.Request, error) {
 	var err error
@@ -339,6 +381,39 @@ func NewOrganizationByIdRequest(server string, id string) (*http.Request, error)
 		return nil, err
 	}
 
+	return req, nil
+}
+
+// NewRegisterEndpointRequest calls the generic RegisterEndpoint builder with application/json body
+func NewRegisterEndpointRequest(server string, id string, body RegisterEndpointJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRegisterEndpointRequestWithBody(server, id, "application/json", bodyReader)
+}
+
+// NewRegisterEndpointRequestWithBody generates requests for RegisterEndpoint with any type of body
+func NewRegisterEndpointRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "id", id)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl := fmt.Sprintf("%s/api/organization/%s/endpoints", server, pathParam0)
+
+	req, err := http.NewRequest("POST", queryUrl, body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 	return req, nil
 }
 
@@ -382,22 +457,55 @@ func NewSearchOrganizationsRequest(server string, params *SearchOrganizationsPar
 	return req, nil
 }
 
-// NewRegisterOrganizationRequest calls the generic RegisterOrganization builder with application/json body
-func NewRegisterOrganizationRequest(server string, body RegisterOrganizationJSONRequestBody) (*http.Request, error) {
+// NewVendorClaimRequest calls the generic VendorClaim builder with application/json body
+func NewVendorClaimRequest(server string, id string, body VendorClaimJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewRegisterOrganizationRequestWithBody(server, "application/json", bodyReader)
+	return NewVendorClaimRequestWithBody(server, id, "application/json", bodyReader)
 }
 
-// NewRegisterOrganizationRequestWithBody generates requests for RegisterOrganization with any type of body
-func NewRegisterOrganizationRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+// NewVendorClaimRequestWithBody generates requests for VendorClaim with any type of body
+func NewVendorClaimRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
-	queryUrl := fmt.Sprintf("%s/api/organizations", server)
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "id", id)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl := fmt.Sprintf("%s/api/vendor/%s/claim", server, pathParam0)
+
+	req, err := http.NewRequest("POST", queryUrl, body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+	return req, nil
+}
+
+// NewRegisterVendorRequest calls the generic RegisterVendor builder with application/json body
+func NewRegisterVendorRequest(server string, body RegisterVendorJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRegisterVendorRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewRegisterVendorRequestWithBody generates requests for RegisterVendor with any type of body
+func NewRegisterVendorRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	queryUrl := fmt.Sprintf("%s/api/vendors", server)
 
 	req, err := http.NewRequest("POST", queryUrl, body)
 	if err != nil {
@@ -455,27 +563,6 @@ func (r endpointsByOrganisationIdResponse) StatusCode() int {
 	return 0
 }
 
-type deregisterOrganizationResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r deregisterOrganizationResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r deregisterOrganizationResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type organizationByIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -491,6 +578,27 @@ func (r organizationByIdResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r organizationByIdResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type registerEndpointResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r registerEndpointResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r registerEndpointResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -518,13 +626,13 @@ func (r searchOrganizationsResponse) StatusCode() int {
 	return 0
 }
 
-type registerOrganizationResponse struct {
+type vendorClaimResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 }
 
 // Status returns HTTPResponse.Status
-func (r registerOrganizationResponse) Status() string {
+func (r vendorClaimResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -532,7 +640,28 @@ func (r registerOrganizationResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r registerOrganizationResponse) StatusCode() int {
+func (r vendorClaimResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type registerVendorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r registerVendorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r registerVendorResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -548,15 +677,6 @@ func (c *ClientWithResponses) EndpointsByOrganisationIdWithResponse(ctx context.
 	return ParseendpointsByOrganisationIdResponse(rsp)
 }
 
-// DeregisterOrganizationWithResponse request returning *DeregisterOrganizationResponse
-func (c *ClientWithResponses) DeregisterOrganizationWithResponse(ctx context.Context, id string) (*deregisterOrganizationResponse, error) {
-	rsp, err := c.DeregisterOrganization(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return ParsederegisterOrganizationResponse(rsp)
-}
-
 // OrganizationByIdWithResponse request returning *OrganizationByIdResponse
 func (c *ClientWithResponses) OrganizationByIdWithResponse(ctx context.Context, id string) (*organizationByIdResponse, error) {
 	rsp, err := c.OrganizationById(ctx, id)
@@ -564,6 +684,23 @@ func (c *ClientWithResponses) OrganizationByIdWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseorganizationByIdResponse(rsp)
+}
+
+// RegisterEndpointWithBodyWithResponse request with arbitrary body returning *RegisterEndpointResponse
+func (c *ClientWithResponses) RegisterEndpointWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader) (*registerEndpointResponse, error) {
+	rsp, err := c.RegisterEndpointWithBody(ctx, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseregisterEndpointResponse(rsp)
+}
+
+func (c *ClientWithResponses) RegisterEndpointWithResponse(ctx context.Context, id string, body RegisterEndpointJSONRequestBody) (*registerEndpointResponse, error) {
+	rsp, err := c.RegisterEndpoint(ctx, id, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseregisterEndpointResponse(rsp)
 }
 
 // SearchOrganizationsWithResponse request returning *SearchOrganizationsResponse
@@ -575,21 +712,38 @@ func (c *ClientWithResponses) SearchOrganizationsWithResponse(ctx context.Contex
 	return ParsesearchOrganizationsResponse(rsp)
 }
 
-// RegisterOrganizationWithBodyWithResponse request with arbitrary body returning *RegisterOrganizationResponse
-func (c *ClientWithResponses) RegisterOrganizationWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*registerOrganizationResponse, error) {
-	rsp, err := c.RegisterOrganizationWithBody(ctx, contentType, body)
+// VendorClaimWithBodyWithResponse request with arbitrary body returning *VendorClaimResponse
+func (c *ClientWithResponses) VendorClaimWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader) (*vendorClaimResponse, error) {
+	rsp, err := c.VendorClaimWithBody(ctx, id, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	return ParseregisterOrganizationResponse(rsp)
+	return ParsevendorClaimResponse(rsp)
 }
 
-func (c *ClientWithResponses) RegisterOrganizationWithResponse(ctx context.Context, body RegisterOrganizationJSONRequestBody) (*registerOrganizationResponse, error) {
-	rsp, err := c.RegisterOrganization(ctx, body)
+func (c *ClientWithResponses) VendorClaimWithResponse(ctx context.Context, id string, body VendorClaimJSONRequestBody) (*vendorClaimResponse, error) {
+	rsp, err := c.VendorClaim(ctx, id, body)
 	if err != nil {
 		return nil, err
 	}
-	return ParseregisterOrganizationResponse(rsp)
+	return ParsevendorClaimResponse(rsp)
+}
+
+// RegisterVendorWithBodyWithResponse request with arbitrary body returning *RegisterVendorResponse
+func (c *ClientWithResponses) RegisterVendorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*registerVendorResponse, error) {
+	rsp, err := c.RegisterVendorWithBody(ctx, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseregisterVendorResponse(rsp)
+}
+
+func (c *ClientWithResponses) RegisterVendorWithResponse(ctx context.Context, body RegisterVendorJSONRequestBody) (*registerVendorResponse, error) {
+	rsp, err := c.RegisterVendor(ctx, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseregisterVendorResponse(rsp)
 }
 
 // ParseendpointsByOrganisationIdResponse parses an HTTP response from a EndpointsByOrganisationIdWithResponse call
@@ -606,25 +760,10 @@ func ParseendpointsByOrganisationIdResponse(rsp *http.Response) (*endpointsByOrg
 	}
 
 	switch {
-	}
-
-	return response, nil
-}
-
-// ParsederegisterOrganizationResponse parses an HTTP response from a DeregisterOrganizationWithResponse call
-func ParsederegisterOrganizationResponse(rsp *http.Response) (*deregisterOrganizationResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &deregisterOrganizationResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
+	case rsp.StatusCode == 200:
+	// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 400:
+		// Content-type (text/plain) unsupported
 	}
 
 	return response, nil
@@ -644,6 +783,33 @@ func ParseorganizationByIdResponse(rsp *http.Response) (*organizationByIdRespons
 	}
 
 	switch {
+	case rsp.StatusCode == 200:
+	// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		// Content-type (text/plain) unsupported
+	}
+
+	return response, nil
+}
+
+// ParseregisterEndpointResponse parses an HTTP response from a RegisterEndpointWithResponse call
+func ParseregisterEndpointResponse(rsp *http.Response) (*registerEndpointResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &registerEndpointResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+	case rsp.StatusCode == 400:
+		break // No content-type
 	}
 
 	return response, nil
@@ -663,25 +829,56 @@ func ParsesearchOrganizationsResponse(rsp *http.Response) (*searchOrganizationsR
 	}
 
 	switch {
+	case rsp.StatusCode == 200:
+	// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 400:
+		// Content-type (text/plain) unsupported
 	}
 
 	return response, nil
 }
 
-// ParseregisterOrganizationResponse parses an HTTP response from a RegisterOrganizationWithResponse call
-func ParseregisterOrganizationResponse(rsp *http.Response) (*registerOrganizationResponse, error) {
+// ParsevendorClaimResponse parses an HTTP response from a VendorClaimWithResponse call
+func ParsevendorClaimResponse(rsp *http.Response) (*vendorClaimResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &registerOrganizationResponse{
+	response := &vendorClaimResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+	case rsp.StatusCode == 400:
+		break // No content-type
+	}
+
+	return response, nil
+}
+
+// ParseregisterVendorResponse parses an HTTP response from a RegisterVendorWithResponse call
+func ParseregisterVendorResponse(rsp *http.Response) (*registerVendorResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &registerVendorResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+	case rsp.StatusCode == 400:
+		break // No content-type
 	}
 
 	return response, nil
@@ -691,14 +888,16 @@ func ParseregisterOrganizationResponse(rsp *http.Response) (*registerOrganizatio
 type ServerInterface interface {
 	// Find endpoints based on organisation identifiers and type of endpoint (optional)// (GET /api/endpoints)
 	EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error
-	// Remove organization by id// (DELETE /api/organization/{id})
-	DeregisterOrganization(ctx echo.Context, id string) error
 	// Get organization by id// (GET /api/organization/{id})
 	OrganizationById(ctx echo.Context, id string) error
+	// Adds an endpoint for this organisation to the registry// (POST /api/organization/{id}/endpoints)
+	RegisterEndpoint(ctx echo.Context, id string) error
 	// Search for organizations// (GET /api/organizations)
 	SearchOrganizations(ctx echo.Context, params SearchOrganizationsParams) error
-	// Add an organization to the registry// (POST /api/organizations)
-	RegisterOrganization(ctx echo.Context) error
+	// Claim an organization for a vendor (registers an organization under a vendor in the registry).// (POST /api/vendor/{id}/claim)
+	VendorClaim(ctx echo.Context, id string) error
+	// Adds a vendor to the registry// (POST /api/vendors)
+	RegisterVendor(ctx echo.Context) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -749,22 +948,6 @@ func (w *ServerInterfaceWrapper) EndpointsByOrganisationId(ctx echo.Context) err
 	return err
 }
 
-// DeregisterOrganization converts echo context to params.
-func (w *ServerInterfaceWrapper) DeregisterOrganization(ctx echo.Context) error {
-	var err error
-	// ------------- Path parameter "id" -------------
-	var id string
-
-	err = runtime.BindStyledParameter("simple", false, "id", ctx.Param("id"), &id)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
-	}
-
-	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.DeregisterOrganization(ctx, id)
-	return err
-}
-
 // OrganizationById converts echo context to params.
 func (w *ServerInterfaceWrapper) OrganizationById(ctx echo.Context) error {
 	var err error
@@ -778,6 +961,22 @@ func (w *ServerInterfaceWrapper) OrganizationById(ctx echo.Context) error {
 
 	// Invoke the callback with all the unmarshalled arguments
 	err = w.Handler.OrganizationById(ctx, id)
+	return err
+}
+
+// RegisterEndpoint converts echo context to params.
+func (w *ServerInterfaceWrapper) RegisterEndpoint(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameter("simple", false, "id", ctx.Param("id"), &id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.RegisterEndpoint(ctx, id)
 	return err
 }
 
@@ -814,12 +1013,28 @@ func (w *ServerInterfaceWrapper) SearchOrganizations(ctx echo.Context) error {
 	return err
 }
 
-// RegisterOrganization converts echo context to params.
-func (w *ServerInterfaceWrapper) RegisterOrganization(ctx echo.Context) error {
+// VendorClaim converts echo context to params.
+func (w *ServerInterfaceWrapper) VendorClaim(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameter("simple", false, "id", ctx.Param("id"), &id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.VendorClaim(ctx, id)
+	return err
+}
+
+// RegisterVendor converts echo context to params.
+func (w *ServerInterfaceWrapper) RegisterVendor(ctx echo.Context) error {
 	var err error
 
 	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.RegisterOrganization(ctx)
+	err = w.Handler.RegisterVendor(ctx)
 	return err
 }
 
@@ -831,10 +1046,11 @@ func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
 	}
 
 	router.GET("/api/endpoints", wrapper.EndpointsByOrganisationId)
-	router.DELETE("/api/organization/:id", wrapper.DeregisterOrganization)
 	router.GET("/api/organization/:id", wrapper.OrganizationById)
+	router.POST("/api/organization/:id/endpoints", wrapper.RegisterEndpoint)
 	router.GET("/api/organizations", wrapper.SearchOrganizations)
-	router.POST("/api/organizations", wrapper.RegisterOrganization)
+	router.POST("/api/vendor/:id/claim", wrapper.VendorClaim)
+	router.POST("/api/vendors", wrapper.RegisterVendor)
 
 }
 
