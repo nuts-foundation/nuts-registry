@@ -60,7 +60,6 @@ func (e Endpoint) validate() error {
 func nonEmptyString(value string, name string) error {
 	if len(value) == 0 {
 		return errors.New("missing " + name)
-	} else {
-		return nil
 	}
+	return nil
 }

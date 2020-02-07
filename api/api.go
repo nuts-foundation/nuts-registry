@@ -45,8 +45,9 @@ type ApiWrapper struct {
 	R *pkg.Registry
 }
 
+// RegisterEndpoint is the Api implementation for registering an endpoint.
 func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) error {
-	unescapedId, err := url.PathUnescape(id)
+	unescapedID, err := url.PathUnescape(id)
 	if err != nil {
 		return err
 	}
@@ -63,7 +64,7 @@ func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) erro
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
 	event, err := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
-		Organization: events.Identifier(unescapedId),
+		Organization: events.Identifier(unescapedID),
 		URL:          ep.URL,
 		EndpointType: ep.EndpointType,
 		Identifier:   events.Identifier(ep.Identifier.String()),
@@ -79,8 +80,9 @@ func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) erro
 	return ctx.NoContent(http.StatusNoContent)
 }
 
+// RegisterEndpoint is the Api implementation for registering a vendor claim.
 func (apiResource ApiWrapper) VendorClaim(ctx echo.Context, id string) error {
-	unescapedId, err := url.PathUnescape(id)
+	unescapedID, err := url.PathUnescape(id)
 	if err != nil {
 		return err
 	}
@@ -96,12 +98,12 @@ func (apiResource ApiWrapper) VendorClaim(ctx echo.Context, id string) error {
 	if err = org.validate(); err != nil {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-	var keys []interface{} = nil
+	var keys []interface{}
 	if org.Keys != nil {
 		keys = jwkToMap(*org.Keys)
 	}
 	event, err := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
-		VendorIdentifier: events.Identifier(unescapedId),
+		VendorIdentifier: events.Identifier(unescapedID),
 		OrgIdentifier:    events.Identifier(org.Identifier.String()),
 		OrgName:          org.Name,
 		OrgKeys:          keys,
@@ -113,6 +115,7 @@ func (apiResource ApiWrapper) VendorClaim(ctx echo.Context, id string) error {
 	return ctx.NoContent(http.StatusNoContent)
 }
 
+// RegisterEndpoint is the Api implementation for registering a vendor.
 func (apiResource ApiWrapper) RegisterVendor(ctx echo.Context) error {
 	bytes, err := ioutil.ReadAll(ctx.Request().Body)
 	if err != nil {
