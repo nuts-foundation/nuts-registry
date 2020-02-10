@@ -141,7 +141,7 @@ func (db *MemoryDb) FindEndpointsByOrganizationAndType(organizationIdentifier st
 
 	// not found
 	if !exists {
-		return nil, fmt.Errorf("Organization with identifier [%s] does not exist", organizationIdentifier)
+		return nil, fmt.Errorf("organization with identifier [%s] does not exist", organizationIdentifier)
 	}
 
 	mappings := db.organizationToEndpointIndex[organizationIdentifier]
@@ -203,7 +203,7 @@ func (db *MemoryDb) ReverseLookup(name string) (*Organization, error) {
 		}
 	}
 
-	return nil, ErrOrganizationNotFound
+	return nil, fmt.Errorf("reverse lookup failed for %s: %w", name, ErrOrganizationNotFound)
 }
 
 func (db *MemoryDb) OrganizationById(id string) (*Organization, error) {
@@ -213,7 +213,7 @@ func (db *MemoryDb) OrganizationById(id string) (*Organization, error) {
 			return o, nil
 		}
 	}
-	return nil, ErrOrganizationNotFound
+	return nil, fmt.Errorf("%s: %w", id, ErrOrganizationNotFound)
 }
 
 func searchRecursive(query []string, orgName []string) bool {

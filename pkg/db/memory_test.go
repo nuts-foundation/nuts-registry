@@ -260,7 +260,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 			t.Errorf("Expected error")
 		}
 
-		expected := "Organization with identifier [urn:nuts:system:value] does not exist"
+		expected := "organization with identifier [urn:nuts:system:value] does not exist"
 		if err.Error() != expected {
 			t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
 		}
@@ -402,10 +402,6 @@ func TestMemoryDb_OrganizationById(t *testing.T) {
 		assert.NoError(t, validDb.RegisterOrganization(organization))
 
 		_, err := validDb.OrganizationById("test")
-
-		expected := "organization not found"
-		if err.Error() != expected {
-			t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
-		}
+		assert.True(t, errors.Is(err, ErrOrganizationNotFound))
 	})
 }
