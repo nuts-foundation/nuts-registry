@@ -71,12 +71,6 @@ type RegistryClient interface {
 	// OrganizationById returns an Organization given the Id or an error if it doesn't exist
 	OrganizationById(id string) (*db.Organization, error)
 
-	// RemoveOrganization removes the organization identified by id from the registry or returns an error if the organization does not exist
-	RemoveOrganization(id string) error
-
-	// RegisterOrganization adds the organization identified by id to the registry or returns an error if the organization already exists
-	RegisterOrganization(db.Organization) error
-
 	// ReverseLookup finds an exact match on name or returns an error if not found
 	ReverseLookup(name string) (*db.Organization, error)
 }
@@ -127,47 +121,15 @@ func (r *Registry) Configure() error {
 
 	r.configOnce.Do(func() {
 		if r.Config.Mode == "server" {
-			r.registerEventHandlers()
 			// Apply stored events
 			r.Db = db.New()
+			r.Db.RegisterEventHandlers(r.EventSystem)
 			if err := r.EventSystem.LoadAndApplyEvents(r.getEventsDir()); err != nil {
 				r.logger().WithError(err).Warn("unable to load registry files")
 			}
 		}
 	})
 	return err
-}
-
-func (r *Registry) registerEventHandlers() {
-	r.EventSystem.RegisterEventHandler(events.RegisterOrganization, func(e events.Event) error {
-		event := events.RegisterOrganizationEvent{}
-		if err := e.Unmarshal(&event); err != nil {
-			return err
-		}
-		return r.Db.RegisterOrganization(event.Organization)
-	})
-	r.EventSystem.RegisterEventHandler(events.RegisterEndpoint, func(e events.Event) error {
-		event := events.RegisterEndpointEvent{}
-		if err := e.Unmarshal(&event); err != nil {
-			return err
-		}
-		r.Db.RegisterEndpoint(event.Endpoint)
-		return nil
-	})
-	r.EventSystem.RegisterEventHandler(events.RegisterEndpointOrganization, func(e events.Event) error {
-		event := events.RegisterEndpointOrganizationEvent{}
-		if err := e.Unmarshal(&event); err != nil {
-			return err
-		}
-		return r.Db.RegisterEndpointOrganization(event.EndpointOrganization)
-	})
-	r.EventSystem.RegisterEventHandler(events.RemoveOrganization, func(e events.Event) error {
-		event := events.RemoveOrganizationEvent{}
-		if err := e.Unmarshal(&event); err != nil {
-			return err
-		}
-		return r.Db.RemoveOrganization(event.Identifier.String())
-	})
 }
 
 // EndpointsByOrganization is a wrapper for sam func on DB
@@ -185,23 +147,7 @@ func (r *Registry) OrganizationById(id string) (*db.Organization, error) {
 	return r.Db.OrganizationById(id)
 }
 
-// RemoveOrganization is a wrapper for sam func on DB
-func (r *Registry) RemoveOrganization(id string) error {
-	event, err := events.CreateEvent(events.RemoveOrganization, events.RemoveOrganizationEvent{Identifier: db.Identifier(id)})
-	if err != nil {
-		return err
-	}
-	return r.EventSystem.PublishEvent(event)
-}
 
-// RegisterOrganization is a wrapper for sam func on DB
-func (r *Registry) RegisterOrganization(org db.Organization) error {
-	event, err := events.CreateEvent(events.RegisterOrganization, events.RegisterOrganizationEvent{Organization: org})
-	if err != nil {
-		return err
-	}
-	return r.EventSystem.PublishEvent(event)
-}
 
 func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
 	return r.Db.ReverseLookup(name)

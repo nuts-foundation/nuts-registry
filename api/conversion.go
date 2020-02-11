@@ -52,13 +52,6 @@ func (o Organization) fromDb(db db.Organization) Organization {
 	return o
 }
 
-func (eo EndpointOrganization) fromDb(db db.EndpointOrganization) EndpointOrganization {
-	eo.Endpoint = Identifier(db.Endpoint)
-	eo.Organization = Identifier(db.Organization)
-	eo.Status = db.Status
-	return eo
-}
-
 func (o Organization) toDb() db.Organization {
 	org := db.Organization{
 		Identifier: db.Identifier(o.Identifier),
@@ -67,12 +60,7 @@ func (o Organization) toDb() db.Organization {
 	}
 
 	if o.Keys != nil {
-		ks := *o.Keys
-		em := make([]interface{}, len(ks))
-		for i, k := range ks {
-			em[i] = k.AdditionalProperties
-		}
-		org.Keys = em
+		org.Keys = jwkToMap(*o.Keys)
 	}
 
 	if o.Endpoints != nil {
@@ -92,12 +80,12 @@ func (a Endpoint) toDb() db.Endpoint {
 	}
 }
 
-func organizationsArrayFromDb(organizationsIn []db.Organization) []Organization {
-	os := make([]Organization, len(organizationsIn))
-	for i, a := range organizationsIn {
-		os[i] = Organization{}.fromDb(a)
+func jwkToMap(jwk []JWK) []interface{} {
+	em := make([]interface{}, len(jwk))
+	for i, k := range jwk {
+		em[i] = k.AdditionalProperties
 	}
-	return os
+	return em
 }
 
 func endpointsArrayFromDb(endpointsIn []db.Endpoint) []Endpoint {

@@ -80,56 +80,6 @@ func TestHttpClient_OrganizationById(t *testing.T) {
 	})
 }
 
-func TestHttpClient_RegisterOrganization(t *testing.T) {
-	t.Run("duplicate", func(t *testing.T) {
-		s := httptest.NewServer(handler{statusCode: 400, bytes: genericError})
-		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
-
-		err := c.RegisterOrganization(organizations[0])
-
-		expected := "registry returned 400, reason: error reason"
-		if err.Error() != expected {
-			t.Errorf("Expected error [%s], got [%v]", expected, err)
-		}
-	})
-
-	t.Run("201", func(t *testing.T) {
-		s := httptest.NewServer(handler{statusCode: 201, bytes: []byte{}})
-		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
-
-		err := c.RegisterOrganization(organizations[0])
-
-		if err != nil {
-			t.Errorf("Expected no error, got [%v]", err)
-		}
-	})
-}
-
-func TestHttpClient_RemoveOrganization(t *testing.T) {
-	t.Run("unknown", func(t *testing.T) {
-		s := httptest.NewServer(handler{statusCode: 404, bytes: genericError})
-		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
-
-		err := c.RemoveOrganization("id")
-
-		expected := "registry returned 404, reason: error reason"
-		if err.Error() != expected {
-			t.Errorf("Expected error [%s], got [%v]", expected, err)
-		}
-	})
-
-	t.Run("202", func(t *testing.T) {
-		s := httptest.NewServer(handler{statusCode: 202, bytes: []byte{}})
-		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
-
-		err := c.RemoveOrganization("id")
-
-		if err != nil {
-			t.Errorf("Expected no error, got [%s]", err.Error())
-		}
-	})
-}
-
 func TestHttpClient_SearchOrganizations(t *testing.T) {
 	t.Run("200", func(t *testing.T) {
 		org, _ := json.Marshal(organizations)

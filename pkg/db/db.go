@@ -25,6 +25,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 )
 
 // StatusActive represents the "active" status
@@ -37,13 +38,6 @@ type Endpoint struct {
 	Identifier   Identifier `json:"identifier"`
 	Status       string     `json:"status"`
 	Version      string     `json:"version"`
-}
-
-// EndpointOrganization defines component schema for EndpointOrganization.
-type EndpointOrganization struct {
-	Endpoint     Identifier `json:"endpoint"`
-	Organization Identifier `json:"organization"`
-	Status       string     `json:"status"`
 }
 
 // Identifier defines component schema for Identifier.
@@ -137,12 +131,9 @@ func pemToPublicKey(pub []byte) (*rsa.PublicKey, error) {
 
 // todo: Db temporary abstraction
 type Db interface {
+	RegisterEventHandlers(system events.EventSystem)
 	FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error)
 	SearchOrganizations(query string) []Organization
 	OrganizationById(id string) (*Organization, error)
-	RemoveOrganization(id string) error
-	RegisterOrganization(org Organization) error
-	RegisterEndpoint(endpoint Endpoint)
-	RegisterEndpointOrganization(endpointOrg EndpointOrganization) error
 	ReverseLookup(name string) (*Organization, error)
 }

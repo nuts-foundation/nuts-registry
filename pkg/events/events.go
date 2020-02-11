@@ -23,7 +23,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"io"
 	"time"
 )
@@ -40,14 +39,12 @@ type Event interface {
 type EventType string
 
 const (
-	// RegisterOrganization event type
-	RegisterOrganization EventType = "RegisterOrganizationEvent"
-	// RemoveOrganization event type
-	RemoveOrganization EventType = "RemoveOrganizationEvent"
 	// RegisterEndpoint event type
 	RegisterEndpoint EventType = "RegisterEndpointEvent"
-	// RegisterEndpointOrganization event type
-	RegisterEndpointOrganization EventType = "RegisterEndpointOrganizationEvent"
+	// RegisterVendor event type
+	RegisterVendor EventType = "RegisterVendorEvent"
+	// VendorClaim event type
+	VendorClaim EventType = "VendorClaimEvent"
 )
 
 // ErrMissingEventType is given when the event being unmarshalled has no type attribute.
@@ -57,10 +54,9 @@ var eventTypes []EventType
 
 func init() {
 	eventTypes = []EventType{
-		RegisterOrganization,
-		RemoveOrganization,
 		RegisterEndpoint,
-		RegisterEndpointOrganization,
+		RegisterVendor,
+		VendorClaim,
 	}
 }
 
@@ -74,24 +70,37 @@ func IsEventType(eventType EventType) bool {
 	return false
 }
 
-// RegisterOrganizationEvent event
-type RegisterOrganizationEvent struct {
-	db.Organization
-}
-
-// RemoveOrganizationEvent event
-type RemoveOrganizationEvent struct {
-	Identifier db.Identifier
-}
+// Identifier defines component schema for Identifier.
+type Identifier string
 
 // RegisterEndpointEvent event
 type RegisterEndpointEvent struct {
-	db.Endpoint
+	Organization Identifier `json:"organization"`
+	URL          string     `json:"URL"`
+	EndpointType string     `json:"endpointType"`
+	Identifier   Identifier `json:"identifier"`
+	Status       string     `json:"status"`
+	Version      string     `json:"version"`
 }
 
-// RegisterEndpointOrganizationEvent event
-type RegisterEndpointOrganizationEvent struct {
-	db.EndpointOrganization
+// RegisterVendorEvent event
+type RegisterVendorEvent struct {
+	Identifier Identifier `json:"identifier"`
+	Name       string     `json:"name"`
+}
+
+// VendorClaimEvent event
+type VendorClaimEvent struct {
+	VendorIdentifier Identifier    `json:"vendorIdentifier"`
+	OrgIdentifier    Identifier    `json:"orgIdentifier"`
+	OrgName          string        `json:"orgName"`
+	// OrgKeys is a list of JWKs which are used to
+	// 1. encrypt data to be decrypted by the organization,
+	// 2. sign consent JWTs,
+	// 3. sign organization related events (e.g. endpoint registration).
+	OrgKeys          []interface{} `json:"orgKeys,omitempty"`
+	Start            time.Time     `json:"start"`
+	End              *time.Time    `json:"end,omitempty"`
 }
 
 type jsonEvent struct {

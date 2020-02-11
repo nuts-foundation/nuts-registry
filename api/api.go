@@ -23,9 +23,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
@@ -43,56 +45,100 @@ type ApiWrapper struct {
 	R *pkg.Registry
 }
 
-// DeregisterOrganization is the api implementation of removing an organization from the registry
-func (apiResource ApiWrapper) DeregisterOrganization(ctx echo.Context, id string) error {
-	result, err := apiResource.R.OrganizationById(id)
-
-	if result == nil {
-		return ctx.NoContent(http.StatusNotFound)
-	}
-
-	err = apiResource.R.RemoveOrganization(id)
-
+// RegisterEndpoint is the Api implementation for registering an endpoint.
+func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) error {
+	unescapedID, err := url.PathUnescape(id)
 	if err != nil {
 		return err
 	}
-
-	return ctx.NoContent(http.StatusAccepted)
-}
-
-// RegisterOrganization is the api implementation for adding a new organization to the registry
-func (apiResource ApiWrapper) RegisterOrganization(ctx echo.Context) error {
 	bytes, err := ioutil.ReadAll(ctx.Request().Body)
-
 	if err != nil {
 		return err
 	}
-
-	org := Organization{}
-
-	err = json.Unmarshal(bytes, &org)
-
+	ep := Endpoint{}
+	err = json.Unmarshal(bytes, &ep)
 	if err != nil {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-
-	if len(org.Identifier) == 0 {
-		return ctx.String(http.StatusBadRequest, "missing identifier on organization")
+	if err = ep.validate(); err != nil {
+		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-
-	result, err := apiResource.R.OrganizationById(string(org.Identifier))
-
-	if result != nil {
-		return ctx.String(http.StatusBadRequest, "duplicate organization for identifier")
-	}
-
-	err = apiResource.R.RegisterOrganization(org.toDb())
-
+	event, err := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
+		Organization: events.Identifier(unescapedID),
+		URL:          ep.URL,
+		EndpointType: ep.EndpointType,
+		Identifier:   events.Identifier(ep.Identifier.String()),
+		Status:       ep.Status,
+		Version:      ep.Version,
+	})
 	if err != nil {
-		return ctx.String(http.StatusInternalServerError, err.Error())
+		return err
 	}
+	if err := apiResource.R.EventSystem.PublishEvent(event); err != nil {
+		return err
+	}
+	return ctx.NoContent(http.StatusNoContent)
+}
 
-	return ctx.NoContent(http.StatusCreated)
+// VendorClaim is the Api implementation for registering a vendor claim.
+func (apiResource ApiWrapper) VendorClaim(ctx echo.Context, id string) error {
+	unescapedID, err := url.PathUnescape(id)
+	if err != nil {
+		return err
+	}
+	bytes, err := ioutil.ReadAll(ctx.Request().Body)
+	if err != nil {
+		return err
+	}
+	org := Organization{}
+	err = json.Unmarshal(bytes, &org)
+	if err != nil {
+		return ctx.String(http.StatusBadRequest, err.Error())
+	}
+	if err = org.validate(); err != nil {
+		return ctx.String(http.StatusBadRequest, err.Error())
+	}
+	var keys []interface{}
+	if org.Keys != nil {
+		keys = jwkToMap(*org.Keys)
+	}
+	event, err := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+		VendorIdentifier: events.Identifier(unescapedID),
+		OrgIdentifier:    events.Identifier(org.Identifier.String()),
+		OrgName:          org.Name,
+		OrgKeys:          keys,
+		Start:            time.Now(),
+	})
+	if err := apiResource.R.EventSystem.PublishEvent(event); err != nil {
+		return err
+	}
+	return ctx.NoContent(http.StatusNoContent)
+}
+
+// RegisterVendor is the Api implementation for registering a vendor.
+func (apiResource ApiWrapper) RegisterVendor(ctx echo.Context) error {
+	bytes, err := ioutil.ReadAll(ctx.Request().Body)
+	if err != nil {
+		return err
+	}
+	v := Vendor{}
+	if err := json.Unmarshal(bytes, &v); err != nil {
+		return ctx.String(http.StatusBadRequest, err.Error())
+	}
+	if err := v.validate(); err != nil {
+		return ctx.String(http.StatusBadRequest, err.Error())
+	}
+	event, err := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
+		Name:       v.Name,
+		Identifier: events.Identifier(v.Identifier.String()),
+	})
+	if err != nil {
+		return err
+	}
+	if err := apiResource.R.EventSystem.PublishEvent(event); err != nil {
+		return err
+	}
+	return ctx.NoContent(http.StatusNoContent)
 }
 
 // OrganizationById is the Api implementation for getting an organization based on its Id.
@@ -187,10 +233,6 @@ func (apiResource ApiWrapper) SearchOrganizations(ctx echo.Context, params Searc
 	result := make([]Organization, len(searchResult))
 	for i, o := range searchResult {
 		result[i] = Organization{}.fromDb(o)
-	}
-
-	if result == nil {
-		result = []Organization{}
 	}
 
 	return ctx.JSON(http.StatusOK, result)

@@ -24,7 +24,6 @@ package pkg
 import (
 	"fmt"
 	"github.com/labstack/gommon/random"
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -257,66 +256,6 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 	})
 }
 
-func TestRegistry_EventsOnUpdate(t *testing.T) {
-	t.Run("Check event emitted: register organization", func(t *testing.T) {
-		eventSystem := &MockEventSystem{Events: []events.Event{}}
-		registry := Registry{
-			Config: RegistryConfig{
-			},
-			EventSystem: eventSystem,
-		}
-		err := registry.RegisterOrganization(db.Organization{Name: "bla"})
-		if !assert.NoError(t, err) {
-			return
-		}
-		assert.Equal(t, 1, len(eventSystem.Events))
-		assert.Equal(t, "RegisterOrganizationEvent", string(eventSystem.Events[0].Type()))
-		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
-		event := events.RegisterOrganizationEvent{}
-		if assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
-			assert.Equal(t, "bla", event.Organization.Name)
-		}
-	})
-	t.Run("Check event emitted: update organization", func(t *testing.T) {
-		eventSystem := &MockEventSystem{Events: []events.Event{}}
-		registry := Registry{
-			Config: RegistryConfig{
-			},
-			EventSystem: eventSystem,
-		}
-		err := registry.RemoveOrganization("abc")
-		if !assert.NoError(t, err) {
-			return
-		}
-		assert.Equal(t, 1, len(eventSystem.Events))
-		assert.Equal(t, "RemoveOrganizationEvent", string(eventSystem.Events[0].Type()))
-		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
-		event := events.RemoveOrganizationEvent{}
-		if assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
-			assert.Equal(t, "abc", event.Identifier.String())
-		}
-	})
-	t.Run("Check event emitted: update organization", func(t *testing.T) {
-		eventSystem := &MockEventSystem{Events: []events.Event{}}
-		registry := Registry{
-			Config: RegistryConfig{
-			},
-			EventSystem: eventSystem,
-		}
-		err := registry.RemoveOrganization("abc")
-		if !assert.NoError(t, err) {
-			return
-		}
-		assert.Equal(t, 1, len(eventSystem.Events))
-		assert.Equal(t, "RemoveOrganizationEvent", string(eventSystem.Events[0].Type()))
-		assert.False(t, eventSystem.Events[0].IssuedAt().IsZero())
-		event := events.RemoveOrganizationEvent{}
-		if assert.NoError(t, eventSystem.Events[0].Unmarshal(&event)) {
-			assert.Equal(t, "abc", event.Identifier.String())
-		}
-	})
-}
-
 func configureIdleTimeout() {
 	ReloadRegistryIdleTimeout = 100 * time.Millisecond
 }
@@ -369,27 +308,4 @@ func cleanup() {
 	if err != nil {
 		logrus.Warnf("unable to clean tmp dir: %v", err)
 	}
-}
-
-type MockEventSystem struct {
-	Events []events.Event
-}
-
-func (m MockEventSystem) RegisterEventHandler(events.EventType, events.EventHandler) {
-	// NOP
-}
-
-func (m MockEventSystem) ProcessEvent(events.Event) error {
-	// NOP
-	return nil
-}
-
-func (m *MockEventSystem) PublishEvent(event events.Event) error {
-	m.Events = append(m.Events, event)
-	return nil
-}
-
-func (m MockEventSystem) LoadAndApplyEvents(string) error {
-	// NOP
-	return nil
 }

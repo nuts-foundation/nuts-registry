@@ -21,387 +21,361 @@ package db
 
 import (
 	"errors"
-	"testing"
-
-	"github.com/labstack/gommon/random"
+	//"errors"
+	//"github.com/labstack/gommon/random"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-var endpoint = Endpoint{
-	Identifier:   Identifier("urn:nuts:system:value"),
-	EndpointType: "urn:nuts:endpoint:type",
+// Test data:
+// v1 Vendor Uno
+//   o1 Organization Uno
+//     e1 Endpoint Uno
+//     e2 Endpoint Dos
+//   o2 Organization Dos
+// v2 Vendor Dos
+
+var registerVendor1, _ = events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
+	Identifier: "v1",
+	Name:       "Vendor Uno",
+})
+var registerVendor2, _ = events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
+	Identifier: "v2",
+	Name:       "Vendor Dos",
+})
+
+var vendorClaim1, _ = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+	VendorIdentifier: "v1",
+	OrgIdentifier:    "o1",
+	OrgName:          "Organization Uno",
+	OrgKeys:          nil,
+})
+
+var vendorClaim2, _ = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+	VendorIdentifier: "v1",
+	OrgIdentifier:    "o2",
+	OrgName:          "Organization Dos",
+	OrgKeys:          nil,
+})
+
+var registerEndpoint1, _ = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
+	Organization: "o1",
+	URL:          "foo:bar",
+	EndpointType: "simple",
+	Identifier:   "e1",
 	Status:       StatusActive,
-}
+	Version:      "1.0",
+})
+var registerEndpoint2, _ = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
+	Organization: "o1",
+	URL:          "foo:bar",
+	EndpointType: "simple",
+	Identifier:   "e2",
+	Status:       "inactive",
+	Version:      "1.0",
+})
 
-var organization = Organization{
-	Identifier: Identifier("urn:nuts:system:value"),
-	Name:       "test",
-}
-
-var hiddenOrganization = Organization{
-	Identifier: Identifier("urn:nuts:hidden"),
-	Name:       "hidden",
-}
-
-var mapping = EndpointOrganization{
-	Endpoint:     Identifier("urn:nuts:system:value"),
-	Organization: Identifier("urn:nuts:system:value"),
-	Status:       StatusActive,
-}
+//var endpoint = Endpoint{
+//	Identifier:   Identifier("urn:nuts:system:value"),
+//	EndpointType: "urn:nuts:endpoint:type",
+//	Status:       StatusActive,
+//}
+//
+//var organization = Organization{
+//	Identifier: Identifier("urn:nuts:system:value"),
+//	Name:       "test",
+//}
+//
+//var hiddenOrganization = Organization{
+//	Identifier: Identifier("urn:nuts:hidden"),
+//	Name:       "hidden",
+//}
+//
+//var mapping = EndpointOrganization{
+//	Endpoint:     Identifier("urn:nuts:system:value"),
+//	Organization: Identifier("urn:nuts:system:value"),
+//	Status:       StatusActive,
+//}
 
 func TestNew(t *testing.T) {
 	emptyDb := New()
 
-	if len(emptyDb.organizationIndex) != 0 {
-		t.Errorf("Expected 0 len structure, got [%d]", len(emptyDb.organizationIndex))
-	}
-
-	if len(emptyDb.endpointIndex) != 0 {
-		t.Errorf("Expected 0 len structure, got [%d]", len(emptyDb.endpointIndex))
-	}
-
-	if len(emptyDb.endpointToOrganizationIndex) != 0 {
-		t.Errorf("Expected 0 len structure, got [%d]", len(emptyDb.endpointToOrganizationIndex))
-	}
-
-	if len(emptyDb.organizationToEndpointIndex) != 0 {
-		t.Errorf("Expected 0 len structure, got [%d]", len(emptyDb.organizationToEndpointIndex))
+	if len(emptyDb.vendors) != 0 {
+		t.Errorf("Expected 0 len structure, got [%d]", len(emptyDb.vendors))
 	}
 }
 
-func TestMemoryDb_RegisterOrganization(t *testing.T) {
+func initDb() (events.EventSystem, *MemoryDb) {
+	db := New()
+	eventSystem := events.NewEventSystem()
+	db.RegisterEventHandlers(eventSystem)
+	return eventSystem, db
+}
 
-	t.Run("Valid example", func(t *testing.T) {
-		validDb := New()
+func pub(t *testing.T, eventSystem events.EventSystem, events ...events.Event) bool {
+	for _, e := range events {
+		err := eventSystem.PublishEvent(e)
+		if !assert.NoError(t, err) {
+			return false
+		}
+	}
+	return true
+}
 
-		err := validDb.RegisterOrganization(organization)
-
+func TestMemoryDb_RegisterVendor(t *testing.T) {
+	var err error
+	t.Run("valid example", func(t *testing.T) {
+		eventSystem, db := initDb()
+		err = eventSystem.PublishEvent(registerVendor1)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Len(t, db.vendors, 1)
+		err = eventSystem.PublishEvent(registerVendor2)
 		if assert.NoError(t, err) {
-			assert.Len(t, validDb.organizationIndex, 1)
+			assert.Len(t, db.vendors, 2)
 		}
 	})
 
-	t.Run("organization with invalid key set", func(t *testing.T) {
-		validDb := New()
+	t.Run("duplicate entry", func(t *testing.T) {
+		eventSystem, _ := initDb()
+		err = eventSystem.PublishEvent(registerVendor1)
+		if !assert.NoError(t, err) {
+			return
+		}
+		err = eventSystem.PublishEvent(registerVendor1)
+		assert.Error(t, err)
+	})
+}
 
-		o := Organization{
-			Identifier: Identifier(random.String(8)),
-			Name:       random.String(8),
-			Keys: []interface{}{
+func TestMemoryDb_VendorClaim(t *testing.T) {
+	var err error
+
+	t.Run("valid example", func(t *testing.T) {
+		eventSystem, db := initDb()
+		err = eventSystem.PublishEvent(registerVendor1)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Len(t, db.vendors["v1"].orgs, 0)
+		err = eventSystem.PublishEvent(vendorClaim1)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Len(t, db.vendors["v1"].orgs, 1)
+		err = eventSystem.PublishEvent(vendorClaim2)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Len(t, db.vendors["v1"].orgs, 2)
+	})
+
+	t.Run("organization with invalid key set", func(t *testing.T) {
+		eventSystem, db := initDb()
+		err = eventSystem.PublishEvent(registerVendor1)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		e, _ := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+			VendorIdentifier: "v1",
+			OrgKeys: []interface{}{
 				map[string]interface{}{
 					"kty": "EC",
 				},
 			},
-		}
-		err := validDb.RegisterOrganization(o)
+		})
+		err = eventSystem.PublishEvent(e)
+		assert.Error(t, err)
+		assert.Len(t, db.vendors["v1"].orgs, 0)
+	})
 
+	t.Run("unknown vendor", func(t *testing.T) {
+		eventSystem, _ := initDb()
+		err = eventSystem.PublishEvent(vendorClaim1)
 		assert.Error(t, err)
 	})
 
-	t.Run("duplicate entry", func(t *testing.T) {
-		validDb := New()
-
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-		err := validDb.RegisterOrganization(organization)
-
-		if assert.Error(t, err) {
-			assert.True(t, errors.Is(err, ErrDuplicateOrganization))
-		}
-	})
-}
-
-func TestMemoryDb_RemoveOrganization(t *testing.T) {
-
-	t.Run("Valid example", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-
-		err := validDb.RemoveOrganization(string(organization.Identifier))
-
-		if err != nil {
-			t.Errorf("Expected no error, got: %s", err.Error())
-		}
-
-		if len(validDb.organizationIndex) != 0 {
-			t.Errorf("Expected 0 entry in db, got: %d", len(validDb.organizationIndex))
-		}
-	})
-
-	t.Run("unknown entry", func(t *testing.T) {
-		validDb := New()
-
-		err := validDb.RemoveOrganization(string(organization.Identifier))
-
-		if err == nil {
-			t.Errorf("Expected error, got nothing")
+	t.Run("duplicate organization", func(t *testing.T) {
+		eventSystem, _ := initDb()
+		err = eventSystem.PublishEvent(registerVendor1)
+		if !assert.NoError(t, err) {
 			return
 		}
-
-		if !errors.Is(err, ErrUnknownOrganization) {
-			t.Errorf("Expected error [%v], got: [%v]", ErrUnknownOrganization, err)
+		err = eventSystem.PublishEvent(vendorClaim1)
+		if !assert.NoError(t, err) {
+			return
 		}
+		err = eventSystem.PublishEvent(vendorClaim1)
+		assert.Error(t, err)
 	})
 }
 
 func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
-
 	t.Run("Valid example", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-		validDb.RegisterEndpoint(endpoint)
-		assert.NoError(t, validDb.RegisterEndpointOrganization(mapping))
-
-		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
-
-		if err != nil {
-			t.Errorf("Expected no error, got: %s", err.Error())
+		eventSystem, db := initDb()
+		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
+			return
 		}
 
-		if len(result) != 1 {
-			t.Errorf("Expected 1 result, got: %d", len(result))
+		result, err := db.FindEndpointsByOrganizationAndType("o1", nil)
+		if !assert.NoError(t, err) {
+			return
 		}
+		assert.Len(t, result, 1)
 	})
 
 	t.Run("Valid example with type", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-		validDb.RegisterEndpoint(endpoint)
-		assert.NoError(t, validDb.RegisterEndpointOrganization(mapping))
-
-		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", &endpoint.EndpointType)
-
-		if err != nil {
-			t.Errorf("Expected no error, got: %s", err.Error())
+		eventSystem, db := initDb()
+		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
+			return
 		}
 
-		if len(result) != 1 {
-			t.Errorf("Expected 1 result, got: %d", len(result))
+		et := "simple"
+		result, err := db.FindEndpointsByOrganizationAndType("o1", &et)
+		if !assert.NoError(t, err) {
+			return
 		}
+		assert.Len(t, result, 1)
 	})
 
 	t.Run("incorrect type", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-		validDb.RegisterEndpoint(endpoint)
-		assert.NoError(t, validDb.RegisterEndpointOrganization(mapping))
-
-		unknown := "unknown type"
-		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", &unknown)
-
-		if err != nil {
-			t.Errorf("Expected no error, got: %s", err.Error())
+		eventSystem, db := initDb()
+		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
+			return
 		}
 
-		if len(result) != 0 {
-			t.Errorf("Expected 0 result, got: %d", len(result))
+		et := "unknown"
+		result, err := db.FindEndpointsByOrganizationAndType("o1", &et)
+		if !assert.NoError(t, err) {
+			return
 		}
+		assert.Len(t, result, 0)
 	})
 
 	t.Run("Inactive mappings are not returned", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-		validDb.RegisterEndpoint(endpoint)
-		mappingCopy := EndpointOrganization(mapping)
-		mappingCopy.Status = "inactive"
-		assert.NoError(t, validDb.RegisterEndpointOrganization(mappingCopy))
-
-		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
-
-		if err != nil {
-			t.Errorf("Expected no error, got: %s", err.Error())
+		eventSystem, db := initDb()
+		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1, registerEndpoint2) {
+			return
 		}
 
-		if len(result) != 0 {
-			t.Errorf("Expected 0 result, got: %d", len(result))
+		result, err := db.FindEndpointsByOrganizationAndType("o1", nil)
+		if !assert.NoError(t, err) {
+			return
 		}
-	})
-
-	t.Run("Inactive organizations are not returned", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-		endpointCopy := Endpoint(endpoint)
-		endpointCopy.Status = "inactive"
-		validDb.RegisterEndpoint(endpointCopy)
-		assert.NoError(t, validDb.RegisterEndpointOrganization(mapping))
-
-		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
-
-		if err != nil {
-			t.Errorf("Expected no error, got: %s", err.Error())
-		}
-
-		if len(result) != 0 {
-			t.Errorf("Expected 0 result, got: %d", len(result))
-		}
+		assert.Len(t, result, 1)
 	})
 
 	t.Run("no mapping", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-		validDb.RegisterEndpoint(endpoint)
-
-		result, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
-
-		if err != nil {
-			t.Errorf("Expected no error, got: %s", err.Error())
+		eventSystem, db := initDb()
+		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
+			return
 		}
 
-		if len(result) != 0 {
-			t.Errorf("Expected 0 result, got: %d", len(result))
+		result, err := db.FindEndpointsByOrganizationAndType("o1", nil)
+		if !assert.NoError(t, err) {
+			return
 		}
+		assert.Len(t, result, 0)
 	})
 
 	t.Run("Organization unknown", func(t *testing.T) {
-		validDb := New()
-
-		_, err := validDb.FindEndpointsByOrganizationAndType("urn:nuts:system:value", nil)
-
-		if err == nil {
-			t.Errorf("Expected error")
+		eventSystem, db := initDb()
+		err := eventSystem.PublishEvent(registerVendor1)
+		if !assert.NoError(t, err) {
+			return
 		}
 
-		expected := "organization with identifier [urn:nuts:system:value] does not exist"
-		if err.Error() != expected {
-			t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
+		result, err := db.FindEndpointsByOrganizationAndType("o1", nil)
+		if !assert.Error(t, err) {
+			return
 		}
+		assert.Len(t, result, 0)
 	})
 }
 
-func TestMemoryDb_RegisterEndpointOrganization(t *testing.T) {
-	t.Run("Appending mappings for unknown endpoint gives err", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-
-		err := validDb.RegisterEndpointOrganization(mapping)
-
-		if err == nil {
-			t.Errorf("Expected error")
-		}
-
-		expected := "Endpoint <> Organization mapping references unknown endpoint with identifier [urn:nuts:system:value]"
-		if err.Error() != expected {
-			t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
-		}
-	})
-
-	t.Run("Appending mappings for unknown organization gives err", func(t *testing.T) {
-		validDb := New()
-		validDb.RegisterEndpoint(endpoint)
-
-		err := validDb.RegisterEndpointOrganization(mapping)
-
-		if err == nil {
-			t.Errorf("Expected error")
-		}
-
-		expected := "Endpoint <> Organization mapping references unknown organization with identifier [urn:nuts:system:value]"
-		if err.Error() != expected {
-			t.Errorf("Expected [%s], got: [%s]", expected, err.Error())
-		}
+func TestMemoryDb_RegisterEndpoint(t *testing.T) {
+	t.Run("unknown organization", func(t *testing.T) {
+		eventSystem, _ := initDb()
+		err := eventSystem.PublishEvent(registerEndpoint1)
+		assert.Error(t, err)
 	})
 }
 
 func TestMemoryDb_SearchOrganizations(t *testing.T) {
+	eventSystem, db := initDb()
+	if !pub(t, eventSystem, registerVendor1, vendorClaim1, vendorClaim2) {
+		return
+	}
+
 	t.Run("complete valid example", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-		assert.NoError(t, validDb.RegisterOrganization(hiddenOrganization))
-
-		result := validDb.SearchOrganizations("test")
-
-		if len(result) != 1 {
-			t.Errorf("Expected 1 result, got: %d", len(result))
-		}
+		result := db.SearchOrganizations("organization uno")
+		assert.Len(t, result, 1)
 	})
 
 	t.Run("partial match returns organization", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-
-		result := validDb.SearchOrganizations("ts")
-
-		if len(result) != 1 {
-			t.Errorf("Expected 1 result, got: %d", len(result))
-		}
+		result := db.SearchOrganizations("uno")
+		assert.Len(t, result, 1)
 	})
 
 	t.Run("wide match returns 2 organization", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-		assert.NoError(t, validDb.RegisterOrganization(hiddenOrganization))
-
-		result := validDb.SearchOrganizations("e")
-
-		if len(result) != 2 {
-			t.Errorf("Expected 2 result, got: %d", len(result))
-		}
-
-		if result[0].Name == result[1].Name {
-			t.Error("Expected 2 unique results")
-		}
+		result := db.SearchOrganizations("organization")
+		assert.Len(t, result, 2)
 	})
 
 	t.Run("searching for unknown organization returns empty list", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-
-		result := validDb.SearchOrganizations("tset")
-
-		if len(result) != 0 {
-			t.Errorf("Expected 0 result, got: %d", len(result))
-		}
+		result := db.SearchOrganizations("organization tres")
+		assert.Len(t, result, 0)
 	})
 }
 
 func TestMemoryDb_ReverseLookup(t *testing.T) {
-	validDb := New()
-	assert.NoError(t, validDb.RegisterOrganization(organization))
+	eventSystem, db := initDb()
+	if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
+		return
+	}
 
 	t.Run("finds exact match", func(t *testing.T) {
-		result, err := validDb.ReverseLookup("test")
-
-		assert.Nil(t, err)
+		result, err := db.ReverseLookup("organization uno")
+		assert.NoError(t, err)
 		assert.NotNil(t, result)
 	})
 
 	t.Run("finds exact match, case insensitive", func(t *testing.T) {
-		result, err := validDb.ReverseLookup("TEST")
-
-		assert.Nil(t, err)
+		result, err := db.ReverseLookup("ORGANIZATION UNO")
+		assert.NoError(t, err)
 		assert.NotNil(t, result)
 	})
 
 	t.Run("does not fn partial match", func(t *testing.T) {
-		result, err := validDb.ReverseLookup("tst")
-
+		result, err := db.ReverseLookup("uno")
+		assert.True(t, errors.Is(err, ErrOrganizationNotFound))
 		assert.Nil(t, result)
-		if assert.NotNil(t, err) {
-			assert.True(t, errors.Is(err, ErrOrganizationNotFound))
-		}
 	})
 }
 
 func TestMemoryDb_OrganizationById(t *testing.T) {
 	t.Run("organization is found", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
-
-		result, err := validDb.OrganizationById("urn:nuts:system:value")
-
-		if err != nil {
-			t.Errorf("Expected no error, got: %s", err.Error())
+		eventSystem, db := initDb()
+		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
+			return
 		}
 
-		if result.Name != "test" {
-			t.Errorf("Expected 1 result with name test, got: %s", result.Name)
+		result, err := db.OrganizationById("o1")
+		if !assert.NoError(t, err) {
+			return
 		}
+		assert.NotNil(t, result)
 	})
 
 	t.Run("organization is not found", func(t *testing.T) {
-		validDb := New()
-		assert.NoError(t, validDb.RegisterOrganization(organization))
+		eventSystem, db := initDb()
+		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
+			return
+		}
 
-		_, err := validDb.OrganizationById("test")
+		_, err := db.OrganizationById("unknown")
 		assert.True(t, errors.Is(err, ErrOrganizationNotFound))
 	})
 }

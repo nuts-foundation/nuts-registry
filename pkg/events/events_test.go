@@ -1,7 +1,6 @@
 package events
 
 import (
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"testing"
@@ -17,7 +16,7 @@ func TestEventFromJSON(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.Equal(t, RegisterOrganization, event.Type())
+	assert.Equal(t, VendorClaim, event.Type())
 }
 
 func TestMarshalEvent(t *testing.T) {
@@ -40,20 +39,20 @@ func TestUnmarshalJSONPayload(t *testing.T) {
 		data: data,
 	}
 
-	r := RegisterOrganizationEvent{}
+	r := VendorClaimEvent{}
 	err = event.Unmarshal(&r)
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.Equal(t, "Zorggroep Nuts", r.Organization.Name)
+	assert.Equal(t, "Zorggroep Nuts", r.OrgName)
 }
 
 func TestUnmarshalEventWithoutPayload(t *testing.T) {
-	event, err := EventFromJSON([]byte("{\"type\": \"" + RegisterOrganization + "\"}"))
+	event, err := EventFromJSON([]byte("{\"type\": \"" + RegisterVendor + "\"}"))
 	if !assert.NoError(t, err) {
 		return
 	}
-	payload := RegisterOrganizationEvent{}
+	payload := RegisterVendorEvent{}
 	err = event.Unmarshal(&payload)
 	assert.EqualError(t, err, "event has no payload")
 }
@@ -64,19 +63,19 @@ func TestMissingEventType(t *testing.T) {
 }
 
 func TestCreateEvent(t *testing.T) {
-	event, err := CreateEvent(RegisterOrganization, RegisterOrganizationEvent{db.Organization{Name: "bla"}})
+	event, err := CreateEvent(RegisterVendor, RegisterVendorEvent{Name: "bla"})
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.Equal(t, RegisterOrganization, event.Type())
-	assert.Equal(t, int64(0), time.Now().Unix() - event.IssuedAt().Unix())
+	assert.Equal(t, RegisterVendor, event.Type())
+	assert.Equal(t, int64(0), time.Now().Unix()-event.IssuedAt().Unix())
 }
 
 func TestIsEventType(t *testing.T) {
-	assert.True(t, IsEventType(RegisterOrganization))
+	assert.True(t, IsEventType(VendorClaim))
 	assert.False(t, IsEventType("NonExistingEvent"))
 }
 
 func readTestEvent() ([]byte, error) {
-	return ioutil.ReadFile("../../test_data/valid_files/events/20200123091400001-RegisterOrganizationEvent.json")
+	return ioutil.ReadFile("../../test_data/valid_files/events/20200123091400002-VendorClaimEvent.json")
 }
