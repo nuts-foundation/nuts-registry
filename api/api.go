@@ -127,7 +127,11 @@ func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params
 		}
 
 		if strict != nil && *strict && len(dbEndpoints) == 0 {
-			return ctx.JSON(http.StatusBadRequest, fmt.Sprintf("organization with id %s does not have an endpoint of type %v", id, params.Type))
+			var t = ""
+			if params.Type != nil {
+				t = *params.Type
+			}
+			return ctx.JSON(http.StatusBadRequest, fmt.Sprintf("organization with id %s does not have an endpoint of type %s", id, t))
 		}
 	}
 

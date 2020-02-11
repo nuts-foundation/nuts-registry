@@ -428,9 +428,11 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 			t.Errorf("Got err during call: %s", err.Error())
 		}
 
-		if rec.Code != http.StatusBadRequest {
-			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
-		}
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		var responseText = ""
+		err = json.Unmarshal(rec.Body.Bytes(), &responseText)
+		assert.NoError(t, err)
+		assert.Equal(t, "organization with id 1 does not have an endpoint of type otherType#value", responseText)
 	})
 
 	t.Run("by Id 200 empty result", func(t *testing.T) {
