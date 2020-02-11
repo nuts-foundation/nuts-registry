@@ -88,14 +88,6 @@ func jwkToMap(jwk []JWK) []interface{} {
 	return em
 }
 
-func organizationsArrayFromDb(organizationsIn []db.Organization) []Organization {
-	os := make([]Organization, len(organizationsIn))
-	for i, a := range organizationsIn {
-		os[i] = Organization{}.fromDb(a)
-	}
-	return os
-}
-
 func endpointsArrayFromDb(endpointsIn []db.Endpoint) []Endpoint {
 	es := make([]Endpoint, len(endpointsIn))
 	for i, a := range endpointsIn {

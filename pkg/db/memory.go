@@ -131,7 +131,7 @@ func (db *MemoryDb) RegisterEventHandlers(system events.EventSystem) {
 		orgID := string(event.OrgIdentifier)
 		vendorID := string(event.VendorIdentifier)
 		_, err := db.OrganizationById(orgID)
-		if err != ErrOrganizationNotFound {
+		if !errors.Is(err, ErrOrganizationNotFound) {
 			return fmt.Errorf("organization already registered (id = %s)", event.OrgIdentifier)
 		}
 		if db.vendors[vendorID] == nil {

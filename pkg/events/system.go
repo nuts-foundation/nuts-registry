@@ -81,6 +81,7 @@ func (system *eventSystem) ProcessEvent(event Event) error {
 	if !IsEventType(event.Type()) {
 		return fmt.Errorf("unknown event type: %s", event.Type())
 	}
+	logrus.Infof("Processing event: %v - %s", event.IssuedAt(), event.Type())
 	handler := system.eventHandlers[event.Type()]
 	if handler == nil {
 		return fmt.Errorf("no handler registered for event (type = %s), handlers are: %v", event.Type(), system.eventHandlers)
@@ -88,7 +89,6 @@ func (system *eventSystem) ProcessEvent(event Event) error {
 	err := handler(event)
 	if err == nil {
 		system.lastLoadedEvent = event.IssuedAt()
-		logrus.Infof("Processed event: %v - %s", event.IssuedAt(), event.Type())
 	}
 	return err
 }

@@ -94,6 +94,10 @@ type VendorClaimEvent struct {
 	VendorIdentifier Identifier    `json:"vendorIdentifier"`
 	OrgIdentifier    Identifier    `json:"orgIdentifier"`
 	OrgName          string        `json:"orgName"`
+	// OrgKeys is a list of JWKs which are used to
+	// 1. encrypt data to be decrypted by the organization,
+	// 2. sign consent JWTs,
+	// 3. sign organization related events (e.g. endpoint registration).
 	OrgKeys          []interface{} `json:"orgKeys,omitempty"`
 	Start            time.Time     `json:"start"`
 	End              *time.Time    `json:"end,omitempty"`

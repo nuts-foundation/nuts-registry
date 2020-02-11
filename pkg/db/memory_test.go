@@ -350,7 +350,7 @@ func TestMemoryDb_ReverseLookup(t *testing.T) {
 
 	t.Run("does not fn partial match", func(t *testing.T) {
 		result, err := db.ReverseLookup("uno")
-		assert.EqualError(t, err, ErrOrganizationNotFound.Error())
+		assert.True(t, errors.Is(err, ErrOrganizationNotFound))
 		assert.Nil(t, result)
 	})
 }
