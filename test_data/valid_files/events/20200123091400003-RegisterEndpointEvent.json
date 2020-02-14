@@ -3,7 +3,7 @@
   "payload": {
     "organization": "urn:oid:2.16.840.1.113883.2.4.6.1:00000000",
     "endpointType": "urn:nuts:endpoint:consent",
-    "identifier": "urn:ietf:rfc:1779::O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local",
+    "identifier": "urn:ietf:rfc:1779::O=BecauseWeCare Software Inc., C=NL, ST=Gelderland, L=Utrecht, CN=nuts_corda_development_local",
     "status": "active",
     "version": "0.1.0",
     "URL": "tcp://127.0.0.1:1234"

@@ -1,7 +1,7 @@
 {
   "type": "RegisterVendorEvent",
   "payload": {
-    "name": "Nedap Healthcare",
+    "name": "BecauseWeCare Software Inc.",
     "identifier": "08013836"
   }
 }
