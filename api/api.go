@@ -23,16 +23,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"time"
-
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/sirupsen/logrus"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 )
 
 // String converts an identifier to string
@@ -42,7 +39,7 @@ func (i Identifier) String() string {
 
 // ApiWrapper is needed to connect the implementation to the echo ServiceWrapper
 type ApiWrapper struct {
-	R *pkg.Registry
+	R pkg.RegistryClient
 }
 
 // RegisterEndpoint is the Api implementation for registering an endpoint.
@@ -63,19 +60,9 @@ func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) erro
 	if err = ep.validate(); err != nil {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-	event, err := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
-		Organization: events.Identifier(unescapedID),
-		URL:          ep.URL,
-		EndpointType: ep.EndpointType,
-		Identifier:   events.Identifier(ep.Identifier.String()),
-		Status:       ep.Status,
-		Version:      ep.Version,
-	})
+	err = apiResource.R.RegisterEndpoint(unescapedID, ep.Identifier.String(), ep.URL, ep.EndpointType, ep.Status, ep.Version)
 	if err != nil {
-		return err
-	}
-	if err := apiResource.R.EventSystem.PublishEvent(event); err != nil {
-		return err
+		return ctx.String(http.StatusInternalServerError, err.Error())
 	}
 	return ctx.NoContent(http.StatusNoContent)
 }
@@ -102,15 +89,9 @@ func (apiResource ApiWrapper) VendorClaim(ctx echo.Context, id string) error {
 	if org.Keys != nil {
 		keys = jwkToMap(*org.Keys)
 	}
-	event, err := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
-		VendorIdentifier: events.Identifier(unescapedID),
-		OrgIdentifier:    events.Identifier(org.Identifier.String()),
-		OrgName:          org.Name,
-		OrgKeys:          keys,
-		Start:            time.Now(),
-	})
-	if err := apiResource.R.EventSystem.PublishEvent(event); err != nil {
-		return err
+	err = apiResource.R.VendorClaim(unescapedID, org.Identifier.String(), org.Name, keys)
+	if err != nil {
+		return ctx.String(http.StatusInternalServerError, err.Error())
 	}
 	return ctx.NoContent(http.StatusNoContent)
 }
@@ -128,14 +109,7 @@ func (apiResource ApiWrapper) RegisterVendor(ctx echo.Context) error {
 	if err := v.validate(); err != nil {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-	event, err := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
-		Name:       v.Name,
-		Identifier: events.Identifier(v.Identifier.String()),
-	})
-	if err != nil {
-		return err
-	}
-	if err := apiResource.R.EventSystem.PublishEvent(event); err != nil {
+	if err := apiResource.R.RegisterVendor(v.Identifier.String(), v.Name); err != nil {
 		return err
 	}
 	return ctx.NoContent(http.StatusNoContent)

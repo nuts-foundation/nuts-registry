@@ -78,34 +78,6 @@ func (mr *MockRegistryClientMockRecorder) OrganizationById(id interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OrganizationById", reflect.TypeOf((*MockRegistryClient)(nil).OrganizationById), id)
 }
 
-// RemoveOrganization mocks base method
-func (m *MockRegistryClient) RemoveOrganization(id string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoveOrganization", id)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RemoveOrganization indicates an expected call of RemoveOrganization
-func (mr *MockRegistryClientMockRecorder) RemoveOrganization(id interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveOrganization", reflect.TypeOf((*MockRegistryClient)(nil).RemoveOrganization), id)
-}
-
-// RegisterOrganization mocks base method
-func (m *MockRegistryClient) RegisterOrganization(arg0 db.Organization) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RegisterOrganization", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RegisterOrganization indicates an expected call of RegisterOrganization
-func (mr *MockRegistryClientMockRecorder) RegisterOrganization(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterOrganization", reflect.TypeOf((*MockRegistryClient)(nil).RegisterOrganization), arg0)
-}
-
 // ReverseLookup mocks base method
 func (m *MockRegistryClient) ReverseLookup(name string) (*db.Organization, error) {
 	m.ctrl.T.Helper()
@@ -119,4 +91,46 @@ func (m *MockRegistryClient) ReverseLookup(name string) (*db.Organization, error
 func (mr *MockRegistryClientMockRecorder) ReverseLookup(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReverseLookup", reflect.TypeOf((*MockRegistryClient)(nil).ReverseLookup), name)
+}
+
+// RegisterEndpoint mocks base method
+func (m *MockRegistryClient) RegisterEndpoint(organizationId, id, url, endpointType, status, version string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RegisterEndpoint", organizationId, id, url, endpointType, status, version)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RegisterEndpoint indicates an expected call of RegisterEndpoint
+func (mr *MockRegistryClientMockRecorder) RegisterEndpoint(organizationId, id, url, endpointType, status, version interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterEndpoint", reflect.TypeOf((*MockRegistryClient)(nil).RegisterEndpoint), organizationId, id, url, endpointType, status, version)
+}
+
+// VendorClaim mocks base method
+func (m *MockRegistryClient) VendorClaim(vendorId, orgId, orgName string, orgKeys []interface{}) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VendorClaim", vendorId, orgId, orgName, orgKeys)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VendorClaim indicates an expected call of VendorClaim
+func (mr *MockRegistryClientMockRecorder) VendorClaim(vendorId, orgId, orgName, orgKeys interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VendorClaim", reflect.TypeOf((*MockRegistryClient)(nil).VendorClaim), vendorId, orgId, orgName, orgKeys)
+}
+
+// RegisterVendor mocks base method
+func (m *MockRegistryClient) RegisterVendor(id, name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RegisterVendor", id, name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RegisterVendor indicates an expected call of RegisterVendor
+func (mr *MockRegistryClientMockRecorder) RegisterVendor(id, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterVendor", reflect.TypeOf((*MockRegistryClient)(nil).RegisterVendor), id, name)
 }
