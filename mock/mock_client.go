@@ -102,9 +102,9 @@ func (m *MockRegistryClient) RegisterEndpoint(organizationID, id, url, endpointT
 }
 
 // RegisterEndpoint indicates an expected call of RegisterEndpoint
-func (mr *MockRegistryClientMockRecorder) RegisterEndpoint(organizationId, id, url, endpointType, status, version interface{}) *gomock.Call {
+func (mr *MockRegistryClientMockRecorder) RegisterEndpoint(organizationID, id, url, endpointType, status, version interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterEndpoint", reflect.TypeOf((*MockRegistryClient)(nil).RegisterEndpoint), organizationId, id, url, endpointType, status, version)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterEndpoint", reflect.TypeOf((*MockRegistryClient)(nil).RegisterEndpoint), organizationID, id, url, endpointType, status, version)
 }
 
 // VendorClaim mocks base method
