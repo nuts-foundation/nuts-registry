@@ -19,8 +19,12 @@ paths:
             schema:
               $ref: '#/components/schemas/Vendor'
       responses:
-        '204':
+        '201':
           description: "Vendor has been created successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
         '400':
           description: "incorrect data"
   /api/vendor/{id}/claim:
@@ -68,8 +72,12 @@ paths:
             schema:
               $ref: '#/components/schemas/Organization'
       responses:
-        '204':
+        '201':
           description: "Claim has been created successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
         '400':
           description: "incorrect data"
   /api/organization/{id}:
@@ -120,8 +128,12 @@ paths:
             schema:
               $ref: '#/components/schemas/Endpoint'
       responses:
-        '204':
+        '201':
           description: "Endpoint has been created successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
         '400':
           description: "incorrect data"
   /api/organizations:
@@ -209,6 +221,19 @@ paths:
                 type: string
 components:
   schemas:
+    Event:
+      properties:
+        type:
+          type: string
+          description: type of the event
+          example: RegisterVendorEvent
+        issuedAt:
+          type: string
+          format: date-time
+          description: timestamp at which the event happened
+        payload:
+          type: object
+          description: payload of the event
     Vendor:
       required:
         - name

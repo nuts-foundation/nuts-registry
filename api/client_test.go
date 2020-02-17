@@ -22,6 +22,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -44,7 +45,7 @@ var genericError = []byte("error reason")
 
 func TestHttpClient_OrganizationById(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
-		s := httptest.NewServer(handler{statusCode: 404, responseData: genericError})
+		s := httptest.NewServer(handler{statusCode: http.StatusNotFound, responseData: genericError})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		_, err := c.OrganizationById("id")
@@ -57,7 +58,7 @@ func TestHttpClient_OrganizationById(t *testing.T) {
 
 	t.Run("200", func(t *testing.T) {
 		org, _ := json.Marshal(organizations[0])
-		s := httptest.NewServer(handler{statusCode: 200, responseData: org})
+		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: org})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		res, err := c.OrganizationById("id")
@@ -75,7 +76,7 @@ func TestHttpClient_OrganizationById(t *testing.T) {
 func TestHttpClient_SearchOrganizations(t *testing.T) {
 	t.Run("200", func(t *testing.T) {
 		org, _ := json.Marshal(organizations)
-		s := httptest.NewServer(handler{statusCode: 200, responseData: org})
+		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: org})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		res, err := c.SearchOrganizations("query")
@@ -89,7 +90,7 @@ func TestHttpClient_SearchOrganizations(t *testing.T) {
 func TestHttpClient_ReverseLookup(t *testing.T) {
 	t.Run("200", func(t *testing.T) {
 		org, _ := json.Marshal(organizations[0:1])
-		s := httptest.NewServer(handler{statusCode: 200, responseData: org})
+		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: org})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		res, err := c.ReverseLookup("name")
@@ -100,7 +101,7 @@ func TestHttpClient_ReverseLookup(t *testing.T) {
 	})
 
 	t.Run("404", func(t *testing.T) {
-		s := httptest.NewServer(handler{statusCode: 404})
+		s := httptest.NewServer(handler{statusCode: http.StatusNotFound})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		_, err := c.ReverseLookup("name")
@@ -112,7 +113,7 @@ func TestHttpClient_ReverseLookup(t *testing.T) {
 
 	t.Run("too many results", func(t *testing.T) {
 		org, _ := json.Marshal(organizations)
-		s := httptest.NewServer(handler{statusCode: 200, responseData: org})
+		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: org})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		_, err := c.ReverseLookup("name")
@@ -125,68 +126,77 @@ func TestHttpClient_ReverseLookup(t *testing.T) {
 
 func TestHttpClient_VendorClaim(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		s := httptest.NewServer(handler{statusCode: 204, responseData: []byte{}})
+		event := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{})
+		s := httptest.NewServer(handler{statusCode: http.StatusCreated, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		key := map[string]interface{}{
 			"e": 12345,
 		}
-		err := c.VendorClaim("id", "orgID", "name", []interface{}{key})
+		event, err := c.VendorClaim("id", "orgID", "name", []interface{}{key})
 		if !assert.NoError(t, err) {
 			return
 		}
+		assert.NotNil(t, event)
 	})
 	t.Run("error 500", func(t *testing.T) {
-		s := httptest.NewServer(handler{statusCode: 500, responseData: []byte{}})
+		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		err := c.VendorClaim("id", "orgID", "name", []interface{}{})
-		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 204), response: ", "error")
+		event, err := c.VendorClaim("id", "orgID", "name", []interface{}{})
+		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 201), response: ", "error")
+		assert.Nil(t, event)
 	})
 }
 
 func TestHttpClient_RegisterVendor(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		s := httptest.NewServer(handler{statusCode: 204, responseData: []byte{}})
+		event := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{})
+		s := httptest.NewServer(handler{statusCode: http.StatusCreated, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		err := c.RegisterVendor("id", "name")
+		vendor, err := c.RegisterVendor("id", "name")
 		if !assert.NoError(t, err) {
 			return
 		}
+		assert.NotNil(t, vendor)
 	})
 	t.Run("error 500", func(t *testing.T) {
-		s := httptest.NewServer(handler{statusCode: 500, responseData: []byte{}})
+		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		err := c.RegisterVendor("id", "name")
-		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 204), response: ", "error")
+		event, err := c.RegisterVendor("id", "name")
+		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 201), response: ", "error")
+		assert.Nil(t, event)
 	})
 }
 
 func TestHttpClient_RegisterEndpoint(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		s := httptest.NewServer(handler{statusCode: 204, responseData: []byte{}})
+		event := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{})
+		s := httptest.NewServer(handler{statusCode: http.StatusCreated, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		err := c.RegisterEndpoint("orgId", "id", "url", "type", "status", "version")
+		event, err := c.RegisterEndpoint("orgId", "id", "url", "type", "status", "version")
 		if !assert.NoError(t, err) {
 			return
 		}
+		assert.NotNil(t, event)
 	})
 	t.Run("error 500", func(t *testing.T) {
-		s := httptest.NewServer(handler{statusCode: 500, responseData: []byte{}})
+		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		err := c.RegisterEndpoint("orgId", "id", "url", "type", "status", "version")
-		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 204), response: ", "error")
+		event, err := c.RegisterEndpoint("orgId", "id", "url", "type", "status", "version")
+		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 201), response: ", "error")
+		assert.Nil(t, event)
 	})
 }
 
 func TestHttpClient_EndpointsByOrganizationAndType(t *testing.T) {
 	t.Run("200", func(t *testing.T) {
 		eps, _ := json.Marshal(endpoints)
-		s := httptest.NewServer(handler{statusCode: 200, responseData: eps})
+		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: eps})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		res, err := c.EndpointsByOrganizationAndType("entity", nil)

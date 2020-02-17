@@ -580,8 +580,8 @@ func TestApiResource_RegisterVendor(t *testing.T) {
 				t.Errorf("Got err during call: %s", err.Error())
 			}
 
-			if rec.Code != http.StatusNoContent {
-				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusNoContent)
+			if rec.Code != http.StatusCreated {
+				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusCreated)
 			}
 		})
 
@@ -658,8 +658,8 @@ func TestApiResource_VendorClaim(t *testing.T) {
 				t.Errorf("Got err during call: %s", err.Error())
 			}
 
-			if rec.Code != http.StatusNoContent {
-				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusNoContent)
+			if rec.Code != http.StatusCreated {
+				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusCreated)
 			}
 		})
 
@@ -716,7 +716,7 @@ func TestApiResource_RegisterEndpoint(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	t.Run("register endpoint", func(t *testing.T) {
-		t.Run("201", func(t *testing.T) {
+		t.Run("204", func(t *testing.T) {
 			var registryClient = mock.NewMockRegistryClient(mockCtrl)
 			e, wrapper := initMockEcho(registryClient)
 			registryClient.EXPECT().RegisterEndpoint("1", "abc", "foo:bar", "fhir", "", "")
@@ -740,8 +740,8 @@ func TestApiResource_RegisterEndpoint(t *testing.T) {
 				t.Errorf("Got err during call: %s", err.Error())
 			}
 
-			if rec.Code != http.StatusNoContent {
-				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusNoContent)
+			if rec.Code != http.StatusCreated {
+				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusCreated)
 			}
 		})
 

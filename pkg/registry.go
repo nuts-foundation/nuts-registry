@@ -24,6 +24,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
+	"github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
@@ -78,13 +79,13 @@ type RegistryClient interface {
 	ReverseLookup(name string) (*db.Organization, error)
 
 	// RegisterEndpoint registers an endpoint for an organization
-	RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string) error
+	RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string) (events.Event, error)
 
 	// VendorClaim registers an organization under a vendor. orgKeys are the organization's keys in JWK format
-	VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) error
+	VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) (events.Event, error)
 
 	// RegisterVendor registers a vendor
-	RegisterVendor(id string, name string) error
+	RegisterVendor(id string, name string) (events.Event, error)
 }
 
 // RegistryConfig holds the config
@@ -102,6 +103,7 @@ type Registry struct {
 	Config      RegistryConfig
 	Db          db.Db
 	EventSystem events.EventSystem
+	crypto      pkg.Client
 	configOnce  sync.Once
 	_logger     *logrus.Entry
 	closers     []chan struct{}
@@ -120,6 +122,7 @@ func RegistryInstance() *Registry {
 	oneRegistry.Do(func() {
 		instance = &Registry{
 			EventSystem: events.NewEventSystem(),
+			crypto:      pkg.NewCryptoClient(),
 			_logger:     logrus.StandardLogger().WithField("module", ModuleName),
 		}
 	})
@@ -138,8 +141,11 @@ func (r *Registry) Configure() error {
 			// Apply stored events
 			r.Db = db.New()
 			r.Db.RegisterEventHandlers(r.EventSystem)
-			if err := r.EventSystem.LoadAndApplyEvents(r.getEventsDir()); err != nil {
-				r.logger().WithError(err).Warn("unable to load registry files")
+			if err = r.EventSystem.Configure(r.getEventsDir()); err != nil {
+				r.logger().WithError(err).Warn("Unable to configure event system")
+			}
+			if err = r.EventSystem.LoadAndApplyEvents(); err != nil {
+				r.logger().WithError(err).Warn("Unable to load registry files")
 			}
 		}
 	})
@@ -194,7 +200,7 @@ func (r *Registry) Shutdown() error {
 
 // Load signals the Db to (re)load sources. On success the OnChange func is called
 func (r *Registry) Load() error {
-	if err := r.EventSystem.LoadAndApplyEvents(r.getEventsDir()); err != nil {
+	if err := r.EventSystem.LoadAndApplyEvents(); err != nil {
 		return err
 	}
 

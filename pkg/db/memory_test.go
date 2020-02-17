@@ -21,9 +21,8 @@ package db
 
 import (
 	"errors"
-	//"errors"
-	//"github.com/labstack/gommon/random"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -106,9 +105,10 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func initDb() (events.EventSystem, *MemoryDb) {
+func initDb(repo test.TestRepo) (events.EventSystem, *MemoryDb) {
 	db := New()
 	eventSystem := events.NewEventSystem()
+	eventSystem.Configure(repo.Directory + "/events")
 	db.RegisterEventHandlers(eventSystem)
 	return eventSystem, db
 }
@@ -124,9 +124,12 @@ func pub(t *testing.T, eventSystem events.EventSystem, events ...events.Event) b
 }
 
 func TestMemoryDb_RegisterVendor(t *testing.T) {
-	var err error
 	t.Run("valid example", func(t *testing.T) {
-		eventSystem, db := initDb()
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, db := initDb(*repo)
 		err = eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
@@ -139,7 +142,11 @@ func TestMemoryDb_RegisterVendor(t *testing.T) {
 	})
 
 	t.Run("duplicate entry", func(t *testing.T) {
-		eventSystem, _ := initDb()
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, _ := initDb(*repo)
 		err = eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
@@ -150,10 +157,12 @@ func TestMemoryDb_RegisterVendor(t *testing.T) {
 }
 
 func TestMemoryDb_VendorClaim(t *testing.T) {
-	var err error
-
 	t.Run("valid example", func(t *testing.T) {
-		eventSystem, db := initDb()
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, db := initDb(*repo)
 		err = eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
@@ -172,7 +181,11 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 	})
 
 	t.Run("organization with invalid key set", func(t *testing.T) {
-		eventSystem, db := initDb()
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, db := initDb(*repo)
 		err = eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
@@ -192,13 +205,21 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 	})
 
 	t.Run("unknown vendor", func(t *testing.T) {
-		eventSystem, _ := initDb()
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, _ := initDb(*repo)
 		err = eventSystem.PublishEvent(vendorClaim1)
 		assert.Error(t, err)
 	})
 
 	t.Run("duplicate organization", func(t *testing.T) {
-		eventSystem, _ := initDb()
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, _ := initDb(*repo)
 		err = eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
@@ -214,7 +235,11 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 
 func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 	t.Run("Valid example", func(t *testing.T) {
-		eventSystem, db := initDb()
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
 			return
 		}
@@ -227,7 +252,11 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 	})
 
 	t.Run("Valid example with type", func(t *testing.T) {
-		eventSystem, db := initDb()
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
 			return
 		}
@@ -241,7 +270,11 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 	})
 
 	t.Run("incorrect type", func(t *testing.T) {
-		eventSystem, db := initDb()
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
 			return
 		}
@@ -255,7 +288,11 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 	})
 
 	t.Run("Inactive mappings are not returned", func(t *testing.T) {
-		eventSystem, db := initDb()
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1, registerEndpoint2) {
 			return
 		}
@@ -268,7 +305,11 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 	})
 
 	t.Run("no mapping", func(t *testing.T) {
-		eventSystem, db := initDb()
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
 			return
 		}
@@ -281,8 +322,12 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 	})
 
 	t.Run("Organization unknown", func(t *testing.T) {
-		eventSystem, db := initDb()
-		err := eventSystem.PublishEvent(registerVendor1)
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, db := initDb(*repo)
+		err = eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -297,14 +342,22 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 
 func TestMemoryDb_RegisterEndpoint(t *testing.T) {
 	t.Run("unknown organization", func(t *testing.T) {
-		eventSystem, _ := initDb()
-		err := eventSystem.PublishEvent(registerEndpoint1)
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, _ := initDb(*repo)
+		err = eventSystem.PublishEvent(registerEndpoint1)
 		assert.Error(t, err)
 	})
 }
 
 func TestMemoryDb_SearchOrganizations(t *testing.T) {
-	eventSystem, db := initDb()
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	eventSystem, db := initDb(*repo)
 	if !pub(t, eventSystem, registerVendor1, vendorClaim1, vendorClaim2) {
 		return
 	}
@@ -331,7 +384,11 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 }
 
 func TestMemoryDb_ReverseLookup(t *testing.T) {
-	eventSystem, db := initDb()
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	eventSystem, db := initDb(*repo)
 	if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
 		return
 	}
@@ -357,7 +414,11 @@ func TestMemoryDb_ReverseLookup(t *testing.T) {
 
 func TestMemoryDb_OrganizationById(t *testing.T) {
 	t.Run("organization is found", func(t *testing.T) {
-		eventSystem, db := initDb()
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
 			return
 		}
@@ -370,12 +431,16 @@ func TestMemoryDb_OrganizationById(t *testing.T) {
 	})
 
 	t.Run("organization is not found", func(t *testing.T) {
-		eventSystem, db := initDb()
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
 			return
 		}
 
-		_, err := db.OrganizationById("unknown")
+		_, err = db.OrganizationById("unknown")
 		assert.True(t, errors.Is(err, ErrOrganizationNotFound))
 	})
 }

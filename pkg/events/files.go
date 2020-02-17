@@ -22,6 +22,7 @@ package events
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 // Validate location of data files. Creates the directory if it doesn't exist.
@@ -42,12 +43,12 @@ func validateLocation(location string) error {
 }
 
 func normalizeLocation(location string, file string) string {
-	return fmt.Sprintf("%s/%s", sanitizeLocation(location), file)
+	return filepath.Join(sanitizeLocation(location), file)
 }
 
 func sanitizeLocation(dirty string) string {
 	iLast := len(dirty) - 1
-	if dirty[iLast:] == "/" {
+	if dirty[iLast:] == string(os.PathSeparator) {
 		return dirty[:iLast]
 	}
 	return dirty

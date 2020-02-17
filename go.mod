@@ -11,8 +11,8 @@ require (
 	github.com/lestrrat-go/jwx v0.9.0
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
-	github.com/nuts-foundation/nuts-crypto v0.0.0-20200212103614-2acc644ddfed // indirect
-	github.com/nuts-foundation/nuts-go-core v0.0.0-20200220093939-3a4292f30472
+	github.com/nuts-foundation/nuts-crypto v0.0.0-20200220100700-279fd5def20c
+	github.com/nuts-foundation/nuts-go-core v0.0.0-20200221103113-05e1c6b6c5fc
 	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.4.2

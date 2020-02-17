@@ -51,7 +51,6 @@ func TestOrganization_validate(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "ok", fields: fields{Identifier: "id", Name: "hello", Keys: keys}, wantErr: false},
-		{name: "missing keys", fields: fields{Identifier: "id", Name: "hello"}, wantErr: true},
 		{name: "missing name", fields: fields{Identifier: "id"}, wantErr: true},
 		{name: "missing id", fields: fields{}, wantErr: true},
 	}

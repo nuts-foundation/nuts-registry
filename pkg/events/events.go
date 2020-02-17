@@ -103,6 +103,11 @@ type VendorClaimEvent struct {
 	End     *time.Time    `json:"end,omitempty"`
 }
 
+type jsonEventHeaders struct {
+	EventType     string    `json:"type"`
+	EventIssuedAt time.Time `json:"issuedAt"`
+}
+
 type jsonEvent struct {
 	EventType     string      `json:"type"`
 	EventIssuedAt time.Time   `json:"issuedAt"`

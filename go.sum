@@ -102,6 +102,8 @@ github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/nuts-foundation/nuts-crypto v0.0.0-20200212103614-2acc644ddfed h1:xE3xIC7pNfbFo2hE2Ed/Y65XgGHYlmUKNZ1SYO/q2xg=
 github.com/nuts-foundation/nuts-crypto v0.0.0-20200212103614-2acc644ddfed/go.mod h1:txNGo50DqgKh6PLgBHaaen4BUyi/aEohxOWnOvLIndU=
+github.com/nuts-foundation/nuts-crypto v0.0.0-20200220100700-279fd5def20c h1:U/L57L2B8njO9ASmL/gWvp5dUOafEhqlVnxSYWkQ4T4=
+github.com/nuts-foundation/nuts-crypto v0.0.0-20200220100700-279fd5def20c/go.mod h1:txNGo50DqgKh6PLgBHaaen4BUyi/aEohxOWnOvLIndU=
 github.com/nuts-foundation/nuts-go-core v0.0.0-20191028170600-66675906a53a h1:0r1YHKAMSiP6yFy322lNclOU53LVfdkuRFsdQBJ/NU0=
 github.com/nuts-foundation/nuts-go-core v0.0.0-20191028170600-66675906a53a/go.mod h1:+IeGzu5J8qlF4Jcol+mY+MRcLDIfJ8OQnQV4wDp887o=
 github.com/nuts-foundation/nuts-go-core v0.0.0-20191218133145-27ebcf628fab h1:Dxjdaw+HToUVmh2H1/pg+BFNzNWm72bqVlA3LqcCiGs=
@@ -110,6 +112,8 @@ github.com/nuts-foundation/nuts-go-core v0.0.0-20200130105519-4620adf455e9 h1:TN
 github.com/nuts-foundation/nuts-go-core v0.0.0-20200130105519-4620adf455e9/go.mod h1:xltL3S+vqhSMYkTRIWyaVgtDk7y8KIENZmTbVIPIMcw=
 github.com/nuts-foundation/nuts-go-core v0.0.0-20200220093939-3a4292f30472 h1:VxcYvZY14fYJOPEJ3YorptibMU9NLw9UNQfBxEYEJaw=
 github.com/nuts-foundation/nuts-go-core v0.0.0-20200220093939-3a4292f30472/go.mod h1:xltL3S+vqhSMYkTRIWyaVgtDk7y8KIENZmTbVIPIMcw=
+github.com/nuts-foundation/nuts-go-core v0.0.0-20200221103113-05e1c6b6c5fc h1:3ze3s0e0ZC38Q+TUVZ0BAV8m4wz+AN06HW3WKIYa+Ig=
+github.com/nuts-foundation/nuts-go-core v0.0.0-20200221103113-05e1c6b6c5fc/go.mod h1:xltL3S+vqhSMYkTRIWyaVgtDk7y8KIENZmTbVIPIMcw=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/pelletier/go-toml v1.2.0 h1:T5zMGML61Wp+FlcbWjRDT7yAxhJNAiPPLOFECq181zc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=

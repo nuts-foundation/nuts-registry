@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // Endpoint defines model for Endpoint.
@@ -24,6 +25,13 @@ type Endpoint struct {
 	Identifier   Identifier `json:"identifier"`
 	Status       string     `json:"status"`
 	Version      string     `json:"version"`
+}
+
+// Event defines model for Event.
+type Event struct {
+	IssuedAt *time.Time              `json:"issuedAt,omitempty"`
+	Payload  *map[string]interface{} `json:"payload,omitempty"`
+	Type     *string                 `json:"type,omitempty"`
 }
 
 // Identifier defines model for Identifier.
@@ -587,6 +595,7 @@ func (r organizationByIdResponse) StatusCode() int {
 type registerEndpointResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON201      *Event
 }
 
 // Status returns HTTPResponse.Status
@@ -629,6 +638,7 @@ func (r searchOrganizationsResponse) StatusCode() int {
 type vendorClaimResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON201      *Event
 }
 
 // Status returns HTTPResponse.Status
@@ -650,6 +660,7 @@ func (r vendorClaimResponse) StatusCode() int {
 type registerVendorResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON201      *Event
 }
 
 // Status returns HTTPResponse.Status
@@ -806,8 +817,11 @@ func ParseregisterEndpointResponse(rsp *http.Response) (*registerEndpointRespons
 	}
 
 	switch {
-	case rsp.StatusCode == 204:
-		break // No content-type
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		response.JSON201 = &Event{}
+		if err := json.Unmarshal(bodyBytes, response.JSON201); err != nil {
+			return nil, err
+		}
 	case rsp.StatusCode == 400:
 		break // No content-type
 	}
@@ -852,8 +866,11 @@ func ParsevendorClaimResponse(rsp *http.Response) (*vendorClaimResponse, error) 
 	}
 
 	switch {
-	case rsp.StatusCode == 204:
-		break // No content-type
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		response.JSON201 = &Event{}
+		if err := json.Unmarshal(bodyBytes, response.JSON201); err != nil {
+			return nil, err
+		}
 	case rsp.StatusCode == 400:
 		break // No content-type
 	}
@@ -875,8 +892,11 @@ func ParseregisterVendorResponse(rsp *http.Response) (*registerVendorResponse, e
 	}
 
 	switch {
-	case rsp.StatusCode == 204:
-		break // No content-type
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		response.JSON201 = &Event{}
+		if err := json.Unmarshal(bodyBytes, response.JSON201); err != nil {
+			return nil, err
+		}
 	case rsp.StatusCode == 400:
 		break // No content-type
 	}

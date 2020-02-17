@@ -7,6 +7,7 @@ package mock
 import (
 	gomock "github.com/golang/mock/gomock"
 	db "github.com/nuts-foundation/nuts-registry/pkg/db"
+	events "github.com/nuts-foundation/nuts-registry/pkg/events"
 	reflect "reflect"
 )
 
@@ -94,11 +95,12 @@ func (mr *MockRegistryClientMockRecorder) ReverseLookup(name interface{}) *gomoc
 }
 
 // RegisterEndpoint mocks base method
-func (m *MockRegistryClient) RegisterEndpoint(organizationID, id, url, endpointType, status, version string) error {
+func (m *MockRegistryClient) RegisterEndpoint(organizationID, id, url, endpointType, status, version string) (events.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RegisterEndpoint", organizationID, id, url, endpointType, status, version)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(events.Event)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // RegisterEndpoint indicates an expected call of RegisterEndpoint
@@ -108,11 +110,12 @@ func (mr *MockRegistryClientMockRecorder) RegisterEndpoint(organizationID, id, u
 }
 
 // VendorClaim mocks base method
-func (m *MockRegistryClient) VendorClaim(vendorID, orgID, orgName string, orgKeys []interface{}) error {
+func (m *MockRegistryClient) VendorClaim(vendorID, orgID, orgName string, orgKeys []interface{}) (events.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VendorClaim", vendorID, orgID, orgName, orgKeys)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(events.Event)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // VendorClaim indicates an expected call of VendorClaim
@@ -122,11 +125,12 @@ func (mr *MockRegistryClientMockRecorder) VendorClaim(vendorID, orgID, orgName, 
 }
 
 // RegisterVendor mocks base method
-func (m *MockRegistryClient) RegisterVendor(id, name string) error {
+func (m *MockRegistryClient) RegisterVendor(id, name string) (events.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RegisterVendor", id, name)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(events.Event)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // RegisterVendor indicates an expected call of RegisterVendor
