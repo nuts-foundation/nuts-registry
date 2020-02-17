@@ -3,7 +3,9 @@ package pkg
 import (
 	"fmt"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 )
 
@@ -96,4 +98,11 @@ func createRegistry() Registry {
 		EventSystem: events.NewEventSystem(),
 	}
 	return registry
+}
+
+func cleanup() {
+	err := os.RemoveAll("../tmp")
+	if err != nil {
+		logrus.Warnf("unable to clean tmp dir: %v", err)
+	}
 }
