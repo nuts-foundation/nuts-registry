@@ -161,10 +161,11 @@ func (hb HttpClient) searchOrganization(params SearchOrganizationsParams) ([]db.
 	return organizationsToFromDb(organizations), nil
 }
 
-func (hb HttpClient) RegisterEndpoint(organizationId string, id string, url string, endpointType string, status string, version string) error {
+// RegisterEndpoint is the client Api implementation for registering an endpoint for an organisation.
+func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
-	res, err := hb.client().RegisterEndpoint(ctx, organizationId, RegisterEndpointJSONRequestBody{
+	res, err := hb.client().RegisterEndpoint(ctx, organizationID, RegisterEndpointJSONRequestBody{
 		URL:          url,
 		EndpointType: endpointType,
 		Identifier:   Identifier(id),
@@ -177,7 +178,8 @@ func (hb HttpClient) RegisterEndpoint(organizationId string, id string, url stri
 	return testResponseCode(http.StatusNoContent, res)
 }
 
-func (hb HttpClient) VendorClaim(vendorId string, orgId string, orgName string, orgKeys []interface{}) error {
+// VendorClaim is the client Api implementation for registering an organisation.
+func (hb HttpClient) VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 	var keys = make([]JWK, 0)
@@ -186,8 +188,8 @@ func (hb HttpClient) VendorClaim(vendorId string, orgId string, orgName string, 
 			keys = append(keys, JWK{AdditionalProperties: key.(map[string]interface{})})
 		}
 	}
-	res, err := hb.client().VendorClaim(ctx, vendorId, VendorClaimJSONRequestBody{
-		Identifier: Identifier(orgId),
+	res, err := hb.client().VendorClaim(ctx, vendorID, VendorClaimJSONRequestBody{
+		Identifier: Identifier(orgID),
 		Keys:       &keys,
 		Name:       orgName,
 	})
@@ -197,6 +199,7 @@ func (hb HttpClient) VendorClaim(vendorId string, orgId string, orgName string, 
 	return testResponseCode(http.StatusNoContent, res)
 }
 
+// RegisterVendor is the client Api implementation for registering a vendor.
 func (hb HttpClient) RegisterVendor(id string, name string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()

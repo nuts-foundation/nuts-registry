@@ -94,9 +94,9 @@ func (mr *MockRegistryClientMockRecorder) ReverseLookup(name interface{}) *gomoc
 }
 
 // RegisterEndpoint mocks base method
-func (m *MockRegistryClient) RegisterEndpoint(organizationId, id, url, endpointType, status, version string) error {
+func (m *MockRegistryClient) RegisterEndpoint(organizationID, id, url, endpointType, status, version string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RegisterEndpoint", organizationId, id, url, endpointType, status, version)
+	ret := m.ctrl.Call(m, "RegisterEndpoint", organizationID, id, url, endpointType, status, version)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
@@ -108,17 +108,17 @@ func (mr *MockRegistryClientMockRecorder) RegisterEndpoint(organizationId, id, u
 }
 
 // VendorClaim mocks base method
-func (m *MockRegistryClient) VendorClaim(vendorId, orgId, orgName string, orgKeys []interface{}) error {
+func (m *MockRegistryClient) VendorClaim(vendorID, orgID, orgName string, orgKeys []interface{}) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VendorClaim", vendorId, orgId, orgName, orgKeys)
+	ret := m.ctrl.Call(m, "VendorClaim", vendorID, orgID, orgName, orgKeys)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // VendorClaim indicates an expected call of VendorClaim
-func (mr *MockRegistryClientMockRecorder) VendorClaim(vendorId, orgId, orgName, orgKeys interface{}) *gomock.Call {
+func (mr *MockRegistryClientMockRecorder) VendorClaim(vendorID, orgId, orgName, orgKeys interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VendorClaim", reflect.TypeOf((*MockRegistryClient)(nil).VendorClaim), vendorId, orgId, orgName, orgKeys)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VendorClaim", reflect.TypeOf((*MockRegistryClient)(nil).VendorClaim), vendorID, orgId, orgName, orgKeys)
 }
 
 // RegisterVendor mocks base method

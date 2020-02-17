@@ -18,12 +18,12 @@ func (r *Registry) RegisterVendor(id string, name string) error {
 	return r.EventSystem.PublishEvent(event)
 }
 
-func (r *Registry) VendorClaim(vendorId string, orgId string, orgName string, orgKeys []interface{}) error {
+func (r *Registry) VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) error {
 	logrus.Infof("Vendor claiming organization, vendor=%s, organization=%s, name=%s, keys=%d",
-		vendorId, orgId, orgName, len(orgKeys))
+		vendorID, orgID, orgName, len(orgKeys))
 	event, err := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
-		VendorIdentifier: events.Identifier(vendorId),
-		OrgIdentifier:    events.Identifier(orgId),
+		VendorIdentifier: events.Identifier(vendorID),
+		OrgIdentifier:    events.Identifier(orgID),
 		OrgName:          orgName,
 		OrgKeys:          orgKeys,
 		Start:            time.Now(),
@@ -34,11 +34,11 @@ func (r *Registry) VendorClaim(vendorId string, orgId string, orgName string, or
 	return r.EventSystem.PublishEvent(event)
 }
 
-func (r *Registry) RegisterEndpoint(organizationId string, id string, url string, endpointType string, status string, version string) error {
+func (r *Registry) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string) error {
 	logrus.Infof("Registering endpoint, organization=%s, id=%s, type=%s, url=%s, status=%s, version=%s",
-		organizationId, id, endpointType, url, status, version)
+		organizationID, id, endpointType, url, status, version)
 	event, err := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
-		Organization: events.Identifier(organizationId),
+		Organization: events.Identifier(organizationID),
 		URL:          url,
 		EndpointType: endpointType,
 		Identifier:   events.Identifier(id),
