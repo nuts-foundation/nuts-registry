@@ -24,10 +24,8 @@ func TestMarshalEvent(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	event := jsonEvent{
-		data: data,
-	}
-	assert.Equal(t, data, event.Marshal())
+	event, err := EventFromJSON(data)
+	assert.JSONEq(t, string(data), string(event.Marshal()))
 }
 
 func TestUnmarshalJSONPayload(t *testing.T) {
@@ -35,10 +33,7 @@ func TestUnmarshalJSONPayload(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	event := jsonEvent{
-		data: data,
-	}
-
+	event, _ := EventFromJSON(data)
 	r := VendorClaimEvent{}
 	err = event.Unmarshal(&r)
 	if !assert.NoError(t, err) {
@@ -63,10 +58,7 @@ func TestMissingEventType(t *testing.T) {
 }
 
 func TestCreateEvent(t *testing.T) {
-	event, err := CreateEvent(RegisterVendor, RegisterVendorEvent{Name: "bla"})
-	if !assert.NoError(t, err) {
-		return
-	}
+	event := CreateEvent(RegisterVendor, RegisterVendorEvent{Name: "bla"})
 	assert.Equal(t, RegisterVendor, event.Type())
 	assert.Equal(t, int64(0), time.Now().Unix()-event.IssuedAt().Unix())
 }

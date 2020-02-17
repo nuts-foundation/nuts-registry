@@ -36,30 +36,30 @@ import (
 //   o2 Organization Dos
 // v2 Vendor Dos
 
-var registerVendor1, _ = events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
+var registerVendor1 = events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
 	Identifier: "v1",
 	Name:       "Vendor Uno",
 })
-var registerVendor2, _ = events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
+var registerVendor2 = events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
 	Identifier: "v2",
 	Name:       "Vendor Dos",
 })
 
-var vendorClaim1, _ = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+var vendorClaim1 = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
 	VendorIdentifier: "v1",
 	OrgIdentifier:    "o1",
 	OrgName:          "Organization Uno",
 	OrgKeys:          nil,
 })
 
-var vendorClaim2, _ = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+var vendorClaim2 = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
 	VendorIdentifier: "v1",
 	OrgIdentifier:    "o2",
 	OrgName:          "Organization Dos",
 	OrgKeys:          nil,
 })
 
-var registerEndpoint1, _ = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
+var registerEndpoint1 = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
 	Organization: "o1",
 	URL:          "foo:bar",
 	EndpointType: "simple",
@@ -67,7 +67,7 @@ var registerEndpoint1, _ = events.CreateEvent(events.RegisterEndpoint, events.Re
 	Status:       StatusActive,
 	Version:      "1.0",
 })
-var registerEndpoint2, _ = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
+var registerEndpoint2 = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
 	Organization: "o1",
 	URL:          "foo:bar",
 	EndpointType: "simple",
@@ -178,7 +178,7 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 			return
 		}
 
-		e, _ := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+		e := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
 			VendorIdentifier: "v1",
 			OrgKeys: []interface{}{
 				map[string]interface{}{

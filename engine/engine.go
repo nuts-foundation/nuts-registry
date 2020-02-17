@@ -126,7 +126,7 @@ func cmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
 			identifier := events.Identifier(args[1])
-			event, _ := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{Name: name, Identifier: identifier})
+			event := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{Name: name, Identifier: identifier})
 			logrus.Info(events.SuggestEventFileName(event))
 			logrus.Info(string(event.Marshal()))
 		},
@@ -141,7 +141,7 @@ func cmd() *cobra.Command {
 			vendorID := events.Identifier(args[0])
 			orgID := events.Identifier(args[1])
 			orgName := args[2]
-			event, _ := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+			event := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
 				VendorIdentifier: vendorID,
 				OrgIdentifier:    orgID,
 				OrgName:          orgName,
@@ -163,7 +163,7 @@ func cmd() *cobra.Command {
 			id := events.Identifier(args[1])
 			t := args[2]
 			url := args[3]
-			event, _ := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
+			event := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
 				Organization: orgID,
 				URL:          url,
 				EndpointType: t,

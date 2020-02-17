@@ -91,23 +91,22 @@ type RegisterVendorEvent struct {
 
 // VendorClaimEvent event
 type VendorClaimEvent struct {
-	VendorIdentifier Identifier    `json:"vendorIdentifier"`
-	OrgIdentifier    Identifier    `json:"orgIdentifier"`
-	OrgName          string        `json:"orgName"`
+	VendorIdentifier Identifier `json:"vendorIdentifier"`
+	OrgIdentifier    Identifier `json:"orgIdentifier"`
+	OrgName          string     `json:"orgName"`
 	// OrgKeys is a list of JWKs which are used to
 	// 1. encrypt data to be decrypted by the organization,
 	// 2. sign consent JWTs,
 	// 3. sign organization related events (e.g. endpoint registration).
-	OrgKeys          []interface{} `json:"orgKeys,omitempty"`
-	Start            time.Time     `json:"start"`
-	End              *time.Time    `json:"end,omitempty"`
+	OrgKeys []interface{} `json:"orgKeys,omitempty"`
+	Start   time.Time     `json:"start"`
+	End     *time.Time    `json:"end,omitempty"`
 }
 
 type jsonEvent struct {
-	EventType     string                 `json:"type"`
-	EventIssuedAt time.Time              `json:"issuedAt"`
-	EventPayload  map[string]interface{} `json:"payload"`
-	data          []byte
+	EventType     string      `json:"type"`
+	EventIssuedAt *time.Time  `json:"issuedAt,omitempty"`
+	EventPayload  interface{} `json:"payload,omitempty"`
 }
 
 // EventFromJSON unmarshals an event. If the event can't be unmarshalled, an error is returned.
@@ -120,34 +119,25 @@ func EventFromJSON(data []byte) (Event, error) {
 	if e.EventType == "" {
 		return nil, ErrMissingEventType
 	}
-	e.data = data
 	return e, nil
 }
 
 // CreateEvent creates an event of the given type and the provided payload. If the event can't be created, an error is
 // returned.
-func CreateEvent(eventType EventType, payload interface{}) (Event, error) {
-	type e struct {
-		jsonEvent
-		P interface{} `json:"payload"`
+func CreateEvent(eventType EventType, payload interface{}) Event {
+	start := time.Now()
+	return jsonEvent{
+		EventType:     string(eventType),
+		EventIssuedAt: &start,
+		EventPayload:  payload,
 	}
-	event := e{
-		jsonEvent: jsonEvent{
-			EventType:     string(eventType),
-			EventIssuedAt: time.Now(),
-		},
-		P: payload,
-	}
-	data, err := json.Marshal(event)
-	if err != nil {
-		return nil, err
-	}
-	event.data = data
-	return event, nil
 }
 
 func (j jsonEvent) IssuedAt() time.Time {
-	return j.EventIssuedAt
+	if j.EventIssuedAt == nil {
+		return time.Time{}
+	}
+	return *j.EventIssuedAt
 }
 
 func (j jsonEvent) Type() EventType {
@@ -155,7 +145,8 @@ func (j jsonEvent) Type() EventType {
 }
 
 func (j jsonEvent) Unmarshal(out interface{}) error {
-	decoder := json.NewDecoder(bytes.NewReader(j.data))
+	data := j.Marshal()
+	decoder := json.NewDecoder(bytes.NewReader(data))
 	// Look for "payload" field
 	for ; ; {
 		token, err := decoder.Token()
@@ -174,5 +165,6 @@ func (j jsonEvent) Unmarshal(out interface{}) error {
 }
 
 func (j jsonEvent) Marshal() []byte {
-	return j.data
+	data, _ := json.Marshal(j)
+	return data
 }
