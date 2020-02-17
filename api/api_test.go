@@ -22,7 +22,9 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
+	"github.com/nuts-foundation/nuts-registry/mock"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
@@ -118,12 +120,18 @@ var organizations = []db.Organization{
 }
 
 func initEcho(db *MockDb) (*echo.Echo, *ServerInterfaceWrapper) {
-	return initEchoWithEventSystem(db, events.NewEventSystem())
+	e := echo.New()
+	stub := ApiWrapper{R: &pkg.Registry{Db: db, EventSystem: events.NewEventSystem()}}
+	wrapper := &ServerInterfaceWrapper{
+		Handler: stub,
+	}
+
+	return e, wrapper
 }
 
-func initEchoWithEventSystem(db *MockDb, eventSystem events.EventSystem) (*echo.Echo, *ServerInterfaceWrapper) {
+func initMockEcho(registryClient *mock.MockRegistryClient) (*echo.Echo, *ServerInterfaceWrapper) {
 	e := echo.New()
-	stub := ApiWrapper{R: &pkg.Registry{Db: db, EventSystem: eventSystem}}
+	stub := ApiWrapper{R: registryClient}
 	wrapper := &ServerInterfaceWrapper{
 		Handler: stub,
 	}
@@ -547,15 +555,14 @@ func TestApiResource_OrganizationById(t *testing.T) {
 }
 
 func TestApiResource_RegisterVendor(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
 	t.Run("register vendor", func(t *testing.T) {
 		t.Run("201", func(t *testing.T) {
-			eventHandled := false
-			eventSystem := events.NewEventSystem()
-			eventSystem.RegisterEventHandler(events.RegisterVendor, func(event events.Event) error {
-				eventHandled = true
-				return nil
-			})
-			e, wrapper := initEchoWithEventSystem(&MockDb{}, eventSystem)
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
+			registryClient.EXPECT().RegisterVendor("abc", "def")
 
 			b, _ := json.Marshal(Vendor{
 				Identifier: "abc",
@@ -576,12 +583,11 @@ func TestApiResource_RegisterVendor(t *testing.T) {
 			if rec.Code != http.StatusNoContent {
 				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusNoContent)
 			}
-
-			assert.True(t, eventHandled, "expected event to be fired and handled")
 		})
 
 		t.Run("400 - Invalid JSON", func(t *testing.T) {
-			e, wrapper := initEcho(&MockDb{organizations: organizations})
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
 
 			req := httptest.NewRequest(echo.POST, "/", strings.NewReader("{{[[][}{"))
 			rec := httptest.NewRecorder()
@@ -600,7 +606,8 @@ func TestApiResource_RegisterVendor(t *testing.T) {
 		})
 
 		t.Run("400 - validation failed", func(t *testing.T) {
-			e, wrapper := initEcho(&MockDb{organizations: organizations})
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
 
 			b, _ := json.Marshal(Vendor{})
 
@@ -623,15 +630,14 @@ func TestApiResource_RegisterVendor(t *testing.T) {
 }
 
 func TestApiResource_VendorClaim(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
 	t.Run("vendor claim", func(t *testing.T) {
 		t.Run("204", func(t *testing.T) {
-			eventHandled := false
-			eventSystem := events.NewEventSystem()
-			eventSystem.RegisterEventHandler(events.VendorClaim, func(event events.Event) error {
-				eventHandled = true
-				return nil
-			})
-			e, wrapper := initEchoWithEventSystem(&MockDb{}, eventSystem)
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
+			registryClient.EXPECT().VendorClaim("1", "abc", "def", gomock.Any())
 
 			b, _ := json.Marshal(Organization{
 				Identifier: "abc",
@@ -655,12 +661,11 @@ func TestApiResource_VendorClaim(t *testing.T) {
 			if rec.Code != http.StatusNoContent {
 				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusNoContent)
 			}
-
-			assert.True(t, eventHandled, "expected event to be fired and handled")
 		})
 
 		t.Run("400 - Invalid JSON", func(t *testing.T) {
-			e, wrapper := initEcho(&MockDb{organizations: organizations})
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
 
 			req := httptest.NewRequest(echo.POST, "/", strings.NewReader("{{[[][}{"))
 			rec := httptest.NewRecorder()
@@ -681,7 +686,8 @@ func TestApiResource_VendorClaim(t *testing.T) {
 		})
 
 		t.Run("400 - validation failed", func(t *testing.T) {
-			e, wrapper := initEcho(&MockDb{organizations: organizations})
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
 
 			b, _ := json.Marshal(Organization{})
 
@@ -706,15 +712,14 @@ func TestApiResource_VendorClaim(t *testing.T) {
 }
 
 func TestApiResource_RegisterEndpoint(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
 	t.Run("register endpoint", func(t *testing.T) {
 		t.Run("201", func(t *testing.T) {
-			eventHandled := false
-			eventSystem := events.NewEventSystem()
-			eventSystem.RegisterEventHandler(events.RegisterEndpoint, func(event events.Event) error {
-				eventHandled = true
-				return nil
-			})
-			e, wrapper := initEchoWithEventSystem(&MockDb{}, eventSystem)
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
+			registryClient.EXPECT().RegisterEndpoint("1", "abc", "foo:bar", "fhir", "", "")
 
 			b, _ := json.Marshal(Endpoint{
 				Identifier:   "abc",
@@ -738,12 +743,11 @@ func TestApiResource_RegisterEndpoint(t *testing.T) {
 			if rec.Code != http.StatusNoContent {
 				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusNoContent)
 			}
-
-			assert.True(t, eventHandled, "expected event to be fired and handled")
 		})
 
 		t.Run("400 - Invalid JSON", func(t *testing.T) {
-			e, wrapper := initEcho(&MockDb{organizations: organizations})
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
 
 			req := httptest.NewRequest(echo.POST, "/", strings.NewReader("{{[[][}{"))
 			rec := httptest.NewRecorder()
@@ -764,7 +768,8 @@ func TestApiResource_RegisterEndpoint(t *testing.T) {
 		})
 
 		t.Run("400 - validation failed", func(t *testing.T) {
-			e, wrapper := initEcho(&MockDb{organizations: organizations})
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
 
 			b, _ := json.Marshal(Endpoint{})
 

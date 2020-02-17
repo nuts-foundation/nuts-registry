@@ -6,12 +6,12 @@ require (
 	github.com/deepmap/oapi-codegen v1.3.0
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/golang/mock v1.3.1
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/labstack/echo/v4 v4.1.11
 	github.com/labstack/gommon v0.3.0
 	github.com/lestrrat-go/jwx v0.9.0
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
+	github.com/nuts-foundation/nuts-crypto v0.0.0-20200212103614-2acc644ddfed // indirect
 	github.com/nuts-foundation/nuts-go-core v0.0.0-20200130105519-4620adf455e9
 	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/pkg/errors v0.8.1

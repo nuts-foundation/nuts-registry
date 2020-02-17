@@ -303,9 +303,3 @@ func copyFile(src string, dst string) error {
 	return err
 }
 
-func cleanup() {
-	err := os.RemoveAll("../tmp")
-	if err != nil {
-		logrus.Warnf("unable to clean tmp dir: %v", err)
-	}
-}

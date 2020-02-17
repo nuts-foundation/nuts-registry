@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"go/types"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -160,6 +161,58 @@ func (hb HttpClient) searchOrganization(params SearchOrganizationsParams) ([]db.
 	return organizationsToFromDb(organizations), nil
 }
 
+// RegisterEndpoint is the client Api implementation for registering an endpoint for an organisation.
+func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
+	defer cancel()
+	res, err := hb.client().RegisterEndpoint(ctx, organizationID, RegisterEndpointJSONRequestBody{
+		URL:          url,
+		EndpointType: endpointType,
+		Identifier:   Identifier(id),
+		Status:       status,
+		Version:      version,
+	})
+	if err != nil {
+		return err
+	}
+	return testResponseCode(http.StatusNoContent, res)
+}
+
+// VendorClaim is the client Api implementation for registering an organisation.
+func (hb HttpClient) VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
+	defer cancel()
+	var keys = make([]JWK, 0)
+	if orgKeys != nil {
+		for _, key := range orgKeys {
+			keys = append(keys, JWK{AdditionalProperties: key.(map[string]interface{})})
+		}
+	}
+	res, err := hb.client().VendorClaim(ctx, vendorID, VendorClaimJSONRequestBody{
+		Identifier: Identifier(orgID),
+		Keys:       &keys,
+		Name:       orgName,
+	})
+	if err != nil {
+		return err
+	}
+	return testResponseCode(http.StatusNoContent, res)
+}
+
+// RegisterVendor is the client Api implementation for registering a vendor.
+func (hb HttpClient) RegisterVendor(id string, name string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
+	defer cancel()
+	res, err := hb.client().RegisterVendor(ctx, RegisterVendorJSONRequestBody{
+		Identifier: Identifier(id),
+		Name:       name,
+	})
+	if err != nil {
+		return err
+	}
+	return testResponseCode(http.StatusNoContent, res)
+}
+
 // OrganizationById is the client Api implementation for getting an organization based on its Id.
 func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
@@ -196,4 +249,13 @@ func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, err
 
 	o := organization.toDb()
 	return &o, nil
+}
+
+func testResponseCode(expectedStatusCode int, response *http.Response) error {
+	if response.StatusCode != expectedStatusCode {
+		responseData, _ := ioutil.ReadAll(response.Body)
+		return fmt.Errorf("registry returned HTTP %d (expected: %d), response: %s",
+			response.StatusCode, expectedStatusCode, string(responseData))
+	}
+	return nil
 }

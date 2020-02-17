@@ -73,6 +73,15 @@ type RegistryClient interface {
 
 	// ReverseLookup finds an exact match on name or returns an error if not found
 	ReverseLookup(name string) (*db.Organization, error)
+
+	// RegisterEndpoint registers an endpoint for an organization
+	RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string) error
+
+	// VendorClaim registers an organization under a vendor. orgKeys are the organization's keys in JWK format
+	VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) error
+
+	// RegisterVendor registers a vendor
+	RegisterVendor(id string, name string) error
 }
 
 // RegistryConfig holds the config
@@ -146,8 +155,6 @@ func (r *Registry) SearchOrganizations(query string) ([]db.Organization, error) 
 func (r *Registry) OrganizationById(id string) (*db.Organization, error) {
 	return r.Db.OrganizationById(id)
 }
-
-
 
 func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
 	return r.Db.ReverseLookup(name)
