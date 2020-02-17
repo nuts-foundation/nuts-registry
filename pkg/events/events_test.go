@@ -1,6 +1,7 @@
 package events
 
 import (
+	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"testing"
@@ -20,12 +21,14 @@ func TestEventFromJSON(t *testing.T) {
 }
 
 func TestMarshalEvent(t *testing.T) {
-	data, err := readTestEvent()
-	if !assert.NoError(t, err) {
-		return
-	}
-	event, err := EventFromJSON(data)
-	assert.JSONEq(t, string(data), string(event.Marshal()))
+	expected, _ := readTestEvent()
+	event, _ := EventFromJSON(expected)
+	// IssuedAt is not in the source JSON, so remove it before comparison
+	m := map[string]interface{}{}
+	json.Unmarshal(event.Marshal(), &m)
+	delete(m, "issuedAt")
+	actual, _ := json.Marshal(m)
+	assert.JSONEq(t, string(expected), string(actual))
 }
 
 func TestUnmarshalJSONPayload(t *testing.T) {

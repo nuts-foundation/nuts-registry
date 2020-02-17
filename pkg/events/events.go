@@ -105,7 +105,7 @@ type VendorClaimEvent struct {
 
 type jsonEvent struct {
 	EventType     string      `json:"type"`
-	EventIssuedAt *time.Time  `json:"issuedAt,omitempty"`
+	EventIssuedAt time.Time   `json:"issuedAt"`
 	EventPayload  interface{} `json:"payload,omitempty"`
 }
 
@@ -125,19 +125,15 @@ func EventFromJSON(data []byte) (Event, error) {
 // CreateEvent creates an event of the given type and the provided payload. If the event can't be created, an error is
 // returned.
 func CreateEvent(eventType EventType, payload interface{}) Event {
-	start := time.Now()
 	return jsonEvent{
 		EventType:     string(eventType),
-		EventIssuedAt: &start,
+		EventIssuedAt: time.Now(),
 		EventPayload:  payload,
 	}
 }
 
 func (j jsonEvent) IssuedAt() time.Time {
-	if j.EventIssuedAt == nil {
-		return time.Time{}
-	}
-	return *j.EventIssuedAt
+	return j.EventIssuedAt
 }
 
 func (j jsonEvent) Type() EventType {

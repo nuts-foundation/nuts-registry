@@ -195,6 +195,6 @@ func readEvent(file string, timestamp string) (Event, error) {
 		return nil, err
 	}
 	je := event.(jsonEvent)
-	je.EventIssuedAt = &t
+	je.EventIssuedAt = t
 	return je, nil
 }
