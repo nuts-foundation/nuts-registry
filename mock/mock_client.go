@@ -116,9 +116,9 @@ func (m *MockRegistryClient) VendorClaim(vendorID, orgID, orgName string, orgKey
 }
 
 // VendorClaim indicates an expected call of VendorClaim
-func (mr *MockRegistryClientMockRecorder) VendorClaim(vendorID, orgId, orgName, orgKeys interface{}) *gomock.Call {
+func (mr *MockRegistryClientMockRecorder) VendorClaim(vendorID, orgID, orgName, orgKeys interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VendorClaim", reflect.TypeOf((*MockRegistryClient)(nil).VendorClaim), vendorID, orgId, orgName, orgKeys)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VendorClaim", reflect.TypeOf((*MockRegistryClient)(nil).VendorClaim), vendorID, orgID, orgName, orgKeys)
 }
 
 // RegisterVendor mocks base method

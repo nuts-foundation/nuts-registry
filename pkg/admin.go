@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// RegisterVendor registers a vendor
 func (r *Registry) RegisterVendor(id string, name string) error {
 	logrus.Infof("Registering vendor, id=%s, name=%s", id, name)
 	event, err := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
@@ -18,6 +19,7 @@ func (r *Registry) RegisterVendor(id string, name string) error {
 	return r.EventSystem.PublishEvent(event)
 }
 
+// VendorClaim registers an organization under a vendor. orgKeys are the organization's keys in JWK format
 func (r *Registry) VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) error {
 	logrus.Infof("Vendor claiming organization, vendor=%s, organization=%s, name=%s, keys=%d",
 		vendorID, orgID, orgName, len(orgKeys))
@@ -34,6 +36,7 @@ func (r *Registry) VendorClaim(vendorID string, orgID string, orgName string, or
 	return r.EventSystem.PublishEvent(event)
 }
 
+// RegisterEndpoint registers an endpoint for an organization
 func (r *Registry) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string) error {
 	logrus.Infof("Registering endpoint, organization=%s, id=%s, type=%s, url=%s, status=%s, version=%s",
 		organizationID, id, endpointType, url, status, version)
