@@ -30,6 +30,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -379,31 +381,27 @@ func (r *Registry) unzip() error {
 			return err
 		}
 
-		name := header.Name
-		nameParts := strings.Split(name, "/")
-		name = nameParts[len(nameParts)-1]
-
-		switch header.Typeflag {
-		case tar.TypeDir:
+		// Top-level directory in tarball is skipped
+		parts := strings.Split(filepath.Clean(header.Name), string(os.PathSeparator))
+		if len(parts) == 1 {
+			// Skip top-level entries
 			continue
-		case tar.TypeReg:
-			if strings.Index(name, ".json") > 0 {
-				targetPath := fmt.Sprintf("%s/%s", r.getEventsDir(), name)
+		}
 
+		if header.Typeflag == tar.TypeReg {
+			// Only extract JSON files
+			if path.Ext(header.Name) == ".json" {
+				targetPath := path.Join(r.Config.Datadir, filepath.Join(parts[1:]...))
 				dst, err := os.Create(targetPath)
 				if err != nil {
 					return err
 				}
-
 				if _, err := io.Copy(dst, tarReader); err != nil {
 					return err
 				}
-
 			}
 		}
 	}
-
-	// remove file
 	return os.Remove(tarGzFile)
 }
 
