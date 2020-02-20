@@ -20,6 +20,7 @@
 package client
 
 import (
+	core "github.com/nuts-foundation/nuts-go-core"
 	"time"
 
 	"github.com/nuts-foundation/nuts-registry/api"
@@ -31,7 +32,7 @@ import (
 func NewRegistryClient() pkg.RegistryClient {
 	registry := pkg.RegistryInstance()
 
-	if registry.Config.Mode == "server" {
+	if registry.Config.Mode == core.ServerEngineMode {
 		if err := registry.Configure(); err != nil {
 			logrus.Panic(err)
 		}

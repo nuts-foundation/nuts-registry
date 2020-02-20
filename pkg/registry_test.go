@@ -24,6 +24,7 @@ package pkg
 import (
 	"fmt"
 	"github.com/labstack/gommon/random"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -64,7 +65,7 @@ func TestRegistry_Start(t *testing.T) {
 	t.Run("Start with an incorrect configuration returns error", func(t *testing.T) {
 		registry := Registry{
 			Config: RegistryConfig{
-				Mode:     "server",
+				Mode:     core.ServerEngineMode,
 				SyncMode: "unknown",
 				Datadir:  ".",
 			},
@@ -85,7 +86,7 @@ func TestRegistry_Start(t *testing.T) {
 	t.Run("Starting sets the file watcher", func(t *testing.T) {
 		registry := Registry{
 			Config: RegistryConfig{
-				Mode:     "server",
+				Mode:     core.ServerEngineMode,
 				SyncMode: "fs",
 				Datadir:  ".",
 			},
@@ -103,7 +104,7 @@ func TestRegistry_Start(t *testing.T) {
 	t.Run("Invalid datadir gives error on Start", func(t *testing.T) {
 		registry := Registry{
 			Config: RegistryConfig{
-				Mode:     "server",
+				Mode:     core.ServerEngineMode,
 				SyncMode: "fs",
 				Datadir:  ":",
 			},
@@ -119,7 +120,7 @@ func TestRegistry_Start(t *testing.T) {
 	t.Run("Shutdown stops the file watcher", func(t *testing.T) {
 		registry := Registry{
 			Config: RegistryConfig{
-				Mode:     "server",
+				Mode:     core.ServerEngineMode,
 				SyncMode: "fs",
 				Datadir:  ".",
 			},
@@ -143,7 +144,7 @@ func TestRegistry_Configure(t *testing.T) {
 	t.Run("Configure loads the BD", func(t *testing.T) {
 		registry := Registry{
 			Config: RegistryConfig{
-				Mode:    "server",
+				Mode:    core.ServerEngineMode,
 				Datadir: "../test_data/valid_files",
 			},
 			EventSystem: events.NewEventSystem(),
@@ -172,7 +173,7 @@ func TestRegistry_FileUpdate(t *testing.T) {
 
 		registry := Registry{
 			Config: RegistryConfig{
-				Mode:     "server",
+				Mode:     core.ServerEngineMode,
 				Datadir:  "../tmp",
 				SyncMode: "fs",
 			},
@@ -225,7 +226,7 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 
 		registry := Registry{
 			Config: RegistryConfig{
-				Mode:         "server",
+				Mode:         core.ServerEngineMode,
 				Datadir:      "../tmp",
 				SyncMode:     "github",
 				SyncAddress:  server.URL,

@@ -24,6 +24,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/sirupsen/logrus"
@@ -131,7 +132,9 @@ func (r *Registry) Configure() error {
 	var err error
 
 	r.configOnce.Do(func() {
-		if r.Config.Mode == "server" {
+		cfg := core.NutsConfig()
+		r.Config.Mode = cfg.GetEngineMode(r.Config.Mode)
+		if r.Config.Mode == core.ServerEngineMode {
 			// Apply stored events
 			r.Db = db.New()
 			r.Db.RegisterEventHandlers(r.EventSystem)
@@ -164,7 +167,7 @@ func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
 
 // Start initiates the routines for auto-updating the data
 func (r *Registry) Start() error {
-	if r.Config.Mode == "server" {
+	if r.Config.Mode == core.ServerEngineMode {
 		switch cm := r.Config.SyncMode; cm {
 		case "fs":
 			return r.startFileSystemWatcher()
@@ -179,7 +182,7 @@ func (r *Registry) Start() error {
 
 // Shutdown cleans up any leftover go routines
 func (r *Registry) Shutdown() error {
-	if r.Config.Mode == "server" {
+	if r.Config.Mode == core.ServerEngineMode {
 		r.logger().Debug("Sending close signal to all routines")
 		for _, ch := range r.closers {
 			ch <- struct{}{}

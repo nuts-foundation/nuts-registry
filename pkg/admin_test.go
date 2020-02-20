@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"fmt"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -91,7 +92,7 @@ func TestRegistry_VendorClaim(t *testing.T) {
 func createRegistry() Registry {
 	registry := Registry{
 		Config: RegistryConfig{
-			Mode:     "server",
+			Mode:     core.ServerEngineMode,
 			Datadir:  "../tmp",
 			SyncMode: "fs",
 		},
