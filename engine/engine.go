@@ -59,7 +59,7 @@ func flagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("registry", pflag.ContinueOnError)
 
 	flagSet.String(pkg.ConfDataDir, "./data", "Location of data files")
-	flagSet.String(pkg.ConfMode, "server", "server or client, when client it uses the HttpClient")
+	flagSet.String(pkg.ConfMode, "", "server or client, when client it uses the HttpClient")
 	flagSet.String(pkg.ConfAddress, "localhost:1323", "Interface and port for http server to bind to")
 	flagSet.String(pkg.ConfSyncMode, "fs", "The method for updating the data, 'fs' for a filesystem watch or 'github' for a periodic download from github")
 	flagSet.String(pkg.ConfSyncAddress, "https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master", "The remote url to download the latest registry data from github")
