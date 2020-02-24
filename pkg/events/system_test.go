@@ -26,10 +26,17 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestUnknownEventType(t *testing.T) {
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
 	system := NewEventSystem()
+	system.Configure(repo.Directory + "/events")
 	input := `{
 		"type": "non-existing"
 	}`
@@ -38,20 +45,24 @@ func TestUnknownEventType(t *testing.T) {
 		return
 	}
 	err = system.ProcessEvent(event)
-	assert.Error(t, err, "unknown event type: non-existing")
+	assert.EqualError(t, err, "unknown event type: non-existing")
 }
 
 func TestNoEventHandler(t *testing.T) {
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
 	system := NewEventSystem()
-	input := `{
-		"type": "RegisterOrganizationEvent"
-	}`
+	system.Configure(repo.Directory + "/events")
+	input := "{\"type\":\"" + RegisterVendor + "\"}"
 	event, err := EventFromJSON([]byte(input))
 	if !assert.NoError(t, err) {
 		return
 	}
 	err = system.ProcessEvent(event)
-	assert.Error(t, err, "no handler registered for event (type = RegisterOrganizationEvent), handlers are: map[]")
+	assert.EqualError(t, err, "no handler registered for event (type = RegisterVendorEvent), handlers are: map[]")
 }
 
 func TestLoadEvents(t *testing.T) {
@@ -116,6 +127,37 @@ func TestLoadEvents(t *testing.T) {
 		}
 		assertEventsHandled(1, 2, 3)
 	})
+
+	t.Run("Added non-JSON file", func(t *testing.T) {
+		eventSystem := system.(*diskEventSystem)
+		eventSystem.lastLoadedEvent = time.Time{}
+		err := repo.ImportFileAs("system_test.go", "events/system_test.go")
+		if !assert.NoError(t, err) {
+			return
+		}
+		err = system.LoadAndApplyEvents()
+		if !assert.NoError(t, err) {
+			return
+		}
+	})
+}
+
+func TestSystemNotConfigured(t *testing.T) {
+	t.Run("publish", func(t *testing.T) {
+		system := NewEventSystem()
+		err := system.PublishEvent(CreateEvent(RegisterVendor, RegisterVendorEvent{}))
+		assert.EqualError(t, err, ErrEventSystemNotConfigured.Error())
+	})
+	t.Run("process", func(t *testing.T) {
+		system := NewEventSystem()
+		err := system.ProcessEvent(CreateEvent(RegisterVendor, RegisterVendorEvent{}))
+		assert.EqualError(t, err, ErrEventSystemNotConfigured.Error())
+	})
+	t.Run("LoadAndApply", func(t *testing.T) {
+		system := NewEventSystem()
+		err := system.LoadAndApplyEvents()
+		assert.EqualError(t, err, ErrEventSystemNotConfigured.Error())
+	})
 }
 
 func TestLoadEventsInvalidJson(t *testing.T) {
@@ -141,8 +183,6 @@ func TestLoadEventsEmptyFile(t *testing.T) {
 	err = system.LoadAndApplyEvents()
 	assert.EqualError(t, err, "unexpected end of JSON input")
 }
-
-
 
 func TestParseTimestamp(t *testing.T) {
 	t.Run("Timestamp OK", func(t *testing.T) {

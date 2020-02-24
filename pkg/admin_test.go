@@ -9,6 +9,9 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -119,6 +122,33 @@ func TestRegistry_VendorClaim(t *testing.T) {
 		// Assert key now exists in crypto
 		key, _ = registry.crypto.PublicKeyInJWK(entity)
 		assert.NotNil(t, key)
+	})
+
+	t.Run("error while generating key", func(t *testing.T) {
+		// Assert no keys in crypto
+		entity := types.LegalEntity{URI: "keyGenerationError"}
+		c := registry.crypto.(*pkg.Crypto)
+		var defaultKeySize = c.Config.Keysize
+		c.Config.Keysize = -1
+		defer func() {
+			c.Config.Keysize = defaultKeySize
+		}()
+		_, err := registry.VendorClaim("vendorId", entity.URI, "orgName", nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("unable to load existing key", func(t *testing.T) {
+		repo.Cleanup()
+		os.MkdirAll(repo.Directory, os.ModePerm)
+		entity := types.LegalEntity{URI: "org"}
+		err := registry.crypto.GenerateKeyPairFor(entity)
+		if !assert.NoError(t, err) {
+			return
+		}
+		dirEntries, _ := ioutil.ReadDir(repo.Directory)
+		ioutil.WriteFile(filepath.Join(repo.Directory, dirEntries[0].Name()), []byte("this is not a private key"), os.ModePerm)
+		_, err = registry.VendorClaim("vendorID", entity.URI, "orgName", nil)
+		assert.Error(t, err)
 	})
 }
 
