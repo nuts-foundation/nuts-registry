@@ -143,6 +143,7 @@ func (r *Registry) Configure() error {
 			r.Db.RegisterEventHandlers(r.EventSystem)
 			if err = r.EventSystem.Configure(r.getEventsDir()); err != nil {
 				r.logger().WithError(err).Warn("Unable to configure event system")
+				return
 			}
 			if err = r.EventSystem.LoadAndApplyEvents(); err != nil {
 				r.logger().WithError(err).Warn("Unable to load registry files")

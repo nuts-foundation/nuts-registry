@@ -31,6 +31,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -155,6 +157,39 @@ func TestRegistry_Configure(t *testing.T) {
 			t.Error("Expected loaded organizations, got 0")
 		}
 	})
+	t.Run("error while configuring event system", func(t *testing.T) {
+		registry := Registry{
+			Config: RegistryConfig{
+				Mode:    core.ServerEngineMode,
+				Datadir: "///",
+			},
+			EventSystem: events.NewEventSystem(),
+		}
+		err := registry.Configure()
+		assert.EqualError(t, err, "mkdir ////events: permission denied")
+	})
+
+	t.Run("error while loading events", func(t *testing.T) {
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		defer repo.Cleanup()
+		registry := Registry{
+			Config: RegistryConfig{
+				Mode:    core.ServerEngineMode,
+				Datadir: repo.Directory,
+			},
+			EventSystem: events.NewEventSystem(),
+		}
+		os.MkdirAll(filepath.Join(repo.Directory, "events"), os.ModePerm)
+		err = ioutil.WriteFile(filepath.Join(repo.Directory, "events/20200123091400001-RegisterOrganizationEvent.json"), []byte("this is a file"), os.ModePerm)
+		if !assert.NoError(t, err) {
+			return
+		}
+		err = registry.Configure()
+		assert.Error(t, err)
+	})
 }
 
 func TestRegistry_FileUpdate(t *testing.T) {
@@ -264,3 +299,8 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 func configureIdleTimeout() {
 	ReloadRegistryIdleTimeout = 100 * time.Millisecond
 }
+
+func TestRegistry_EndpointsByOrganizationAndType(t *testing.T) {
+
+}
+

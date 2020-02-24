@@ -75,28 +75,6 @@ var registerEndpoint2 = events.CreateEvent(events.RegisterEndpoint, events.Regis
 	Version:      "1.0",
 })
 
-//var endpoint = Endpoint{
-//	Identifier:   Identifier("urn:nuts:system:value"),
-//	EndpointType: "urn:nuts:endpoint:type",
-//	Status:       StatusActive,
-//}
-//
-//var organization = Organization{
-//	Identifier: Identifier("urn:nuts:system:value"),
-//	Name:       "test",
-//}
-//
-//var hiddenOrganization = Organization{
-//	Identifier: Identifier("urn:nuts:hidden"),
-//	Name:       "hidden",
-//}
-//
-//var mapping = EndpointOrganization{
-//	Endpoint:     Identifier("urn:nuts:system:value"),
-//	Organization: Identifier("urn:nuts:system:value"),
-//	Status:       StatusActive,
-//}
-
 func TestNew(t *testing.T) {
 	emptyDb := New()
 
@@ -129,6 +107,7 @@ func TestMemoryDb_RegisterVendor(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, db := initDb(*repo)
 		err = eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
@@ -146,6 +125,7 @@ func TestMemoryDb_RegisterVendor(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, _ := initDb(*repo)
 		err = eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
@@ -162,6 +142,7 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, db := initDb(*repo)
 		err = eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
@@ -185,6 +166,7 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, db := initDb(*repo)
 		err = eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
@@ -209,6 +191,7 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, _ := initDb(*repo)
 		err = eventSystem.PublishEvent(vendorClaim1)
 		assert.Error(t, err)
@@ -219,6 +202,7 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, _ := initDb(*repo)
 		err = eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
@@ -239,6 +223,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
 			return
@@ -256,6 +241,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
 			return
@@ -274,6 +260,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
 			return
@@ -292,6 +279,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1, registerEndpoint2) {
 			return
@@ -309,6 +297,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
 			return
@@ -326,6 +315,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, db := initDb(*repo)
 		err = eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
@@ -346,6 +336,7 @@ func TestMemoryDb_RegisterEndpoint(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, _ := initDb(*repo)
 		err = eventSystem.PublishEvent(registerEndpoint1)
 		assert.Error(t, err)
@@ -357,6 +348,7 @@ func TestMemoryDb_SearchOrganizations(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
+	defer repo.Cleanup()
 	eventSystem, db := initDb(*repo)
 	if !pub(t, eventSystem, registerVendor1, vendorClaim1, vendorClaim2) {
 		return
@@ -388,6 +380,7 @@ func TestMemoryDb_ReverseLookup(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
+	defer repo.Cleanup()
 	eventSystem, db := initDb(*repo)
 	if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
 		return
@@ -418,6 +411,7 @@ func TestMemoryDb_OrganizationById(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
 			return
@@ -435,6 +429,7 @@ func TestMemoryDb_OrganizationById(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		defer repo.Cleanup()
 		eventSystem, db := initDb(*repo)
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
 			return
