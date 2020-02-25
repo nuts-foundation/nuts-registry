@@ -1,9 +1,7 @@
 package pkg
 
 import (
-	"errors"
 	"github.com/nuts-foundation/nuts-crypto/pkg"
-	"github.com/nuts-foundation/nuts-crypto/pkg/storage"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/sirupsen/logrus"
@@ -25,6 +23,7 @@ func (r *Registry) VendorClaim(vendorID string, orgID string, orgName string, or
 		vendorID, orgID, orgName, len(orgKeys))
 
 	if orgKeys == nil || len(orgKeys) == 0 {
+		logrus.Infof("No keys specified for organisation (id = %s). Keys will be loaded from crypto module.", orgID)
 		orgKey, err := r.loadOrGenerateOrganisationKey(orgID)
 		if err != nil {
 			return nil, err
@@ -56,22 +55,16 @@ func (r *Registry) RegisterEndpoint(organizationID string, id string, url string
 }
 
 func (r *Registry) loadOrGenerateOrganisationKey(orgID string) (map[string]interface{}, error) {
-	logrus.Infof("No keys specified for organisation (id = %s). Keys will be loaded from crypto module.", orgID)
 	entity := types.LegalEntity{URI: orgID}
-	orgKeyAsJwk, err := r.crypto.PublicKeyInJWK(entity)
-	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			logrus.Infof("No keys found for organisation (id = %s), will generate a new key pair.", orgID)
-			if err := r.crypto.GenerateKeyPairFor(entity); err != nil {
-				return nil, err
-			}
-			orgKeyAsJwk, err = r.crypto.PublicKeyInJWK(entity)
-			if err != nil {
-				return nil, err
-			}
-		} else {
+	if !r.crypto.KeyExistsFor(entity) {
+		logrus.Infof("No keys found for organisation (id = %s), will generate a new key pair.", orgID)
+		if err := r.crypto.GenerateKeyPairFor(entity); err != nil {
 			return nil, err
 		}
+	}
+	orgKeyAsJwk, err := r.crypto.PublicKeyInJWK(entity)
+	if err != nil {
+		return nil, err
 	}
 	return pkg.JwkToMap(orgKeyAsJwk)
 }

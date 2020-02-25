@@ -125,15 +125,16 @@ func cmd() *cobra.Command {
 		Use:   "register-vendor [identifier] [name]",
 		Short: "Registers a vendor",
 		Args:  cobra.ExactArgs(2),
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			cl := registryClientCreator()
 			event, err := cl.RegisterVendor(args[0], args[1])
 			if err != nil {
 				logrus.Errorf("Unable to register vendor: %v", err)
-				return
+				return err
 			}
 			logrus.Info("Vendor registered.")
-			logEvent(event)
+			logEventToConsole(event)
+			return nil
 		},
 	})
 
@@ -142,15 +143,16 @@ func cmd() *cobra.Command {
 		Short: "Registers a vendor claim.",
 		Long:  "Registers a vendor claiming a care organization as its client.",
 		Args:  cobra.ExactArgs(3),
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			cl := registryClientCreator()
 			event, err := cl.VendorClaim(args[0], args[1], args[2], nil)
 			if err != nil {
 				logrus.Errorf("Unable to register vendor organisation claim: %v", err)
-				return
+				return err
 			}
 			logrus.Info("Vendor organisation claim registered.")
-			logEvent(event)
+			logEventToConsole(event)
+			return nil
 		},
 	})
 
@@ -159,22 +161,23 @@ func cmd() *cobra.Command {
 		Short: "Registers an endpoint",
 		Long:  "Registers an endpoint for an organization.",
 		Args:  cobra.ExactArgs(5),
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			cl := registryClientCreator()
 			event, err := cl.RegisterEndpoint(args[0], args[1], args[3], args[2], db.StatusActive, args[4])
 			if err != nil {
 				logrus.Errorf("Unable to register endpoint: %v", err)
-				return
+				return err
 			}
 			logrus.Info("Endpoint registered.")
-			logEvent(event)
+			logEventToConsole(event)
+			return nil
 		},
 	})
 
 	return cmd
 }
 
-func logEvent(event events.Event) {
+func logEventToConsole(event events.Event) {
 	println("Event:", events.SuggestEventFileName(event))
 	println(string(event.Marshal()))
 }

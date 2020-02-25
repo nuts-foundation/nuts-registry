@@ -19,7 +19,7 @@ paths:
             schema:
               $ref: '#/components/schemas/Vendor'
       responses:
-        '201':
+        '200':
           description: "Vendor has been created successfully"
           content:
             application/json:
@@ -72,7 +72,7 @@ paths:
             schema:
               $ref: '#/components/schemas/Organization'
       responses:
-        '201':
+        '200':
           description: "Claim has been created successfully"
           content:
             application/json:
@@ -128,7 +128,7 @@ paths:
             schema:
               $ref: '#/components/schemas/Endpoint'
       responses:
-        '201':
+        '200':
           description: "Endpoint has been created successfully"
           content:
             application/json:
@@ -232,7 +232,10 @@ components:
           format: date-time
           description: timestamp at which the event happened
         payload:
-          type: object
+          oneOf:
+            - type: "#/components/schemas/RegisterVendorEvent"
+            - type: "#/components/schemas/VendorClaimEvent"
+            - type: "#/components/schemas/RegisterEndpointEvent"
           description: payload of the event
     Vendor:
       required:
@@ -275,6 +278,63 @@ components:
         - version
         - URL
       properties:
+        endpointType:
+          type: string
+          description: URI of the type of endpoint
+          example: "urn:nuts:endpoint:consent"
+        identifier:
+          $ref: "#/components/schemas/Identifier"
+        status:
+          type: string
+          enum: ["active", "disabled"]
+          description: status of the endpoint
+        version:
+          type: string
+          description: version number of the endpoint, used to distinguish between upgrades of endpoint
+        URL:
+          type: string
+          description: location of the actual en endpoint on the internet
+          example: tcp://127.0.0.1:1234, https://nuts.nl/endpoint
+    RegisterVendorEvent:
+      required:
+        - identifier
+        - name
+      properties:
+        name:
+          type: string
+          description: the well-known name for the vendor
+          example: Medicare Software for People B.V.
+        identifier:
+          $ref: "#/components/schemas/Identifier"
+    VendorClaimEvent:
+      required:
+        - vendorIdentifier
+        - orgIdentifier
+        - orgName
+      properties:
+        vendorIdentifier:
+          $ref: "#/components/schemas/Identifier"
+        orgIdentifier:
+          $ref: "#/components/schemas/Identifier"
+        orgName:
+          type: string
+          description: the well-known name for the organisation
+          example: Kunstgebit Thuiszorg
+        orgKeys:
+          type: array
+          items:
+            $ref: "#/components/schemas/JWK"
+    RegisterEndpointEvent:
+      required:
+        - organization
+        - endpointType
+        - identifier
+        - status
+        - version
+        - URL
+      properties:
+        organization:
+          $ref: "#/components/schemas/Identifier"
         endpointType:
           type: string
           description: URI of the type of endpoint

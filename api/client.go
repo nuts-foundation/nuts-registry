@@ -49,7 +49,11 @@ func (hb HttpClient) client() ClientInterface {
 		url = fmt.Sprintf("http://%v", hb.ServerAddress)
 	}
 
-	return NewClientWithResponses(url)
+	response, err := NewClientWithResponses(url)
+	if err != nil {
+		panic(err)
+	}
+	return response
 }
 
 // EndpointsByOrganization is the client Api implementation for getting all or certain types of endpoints for an organization
@@ -67,7 +71,7 @@ func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpoint
 		return nil, core.Wrap(err)
 	}
 
-	parsed, err := ParseendpointsByOrganisationIdResponse(res)
+	parsed, err := ParseEndpointsByOrganisationIdResponse(res)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return nil, err
@@ -128,7 +132,7 @@ func (hb HttpClient) searchOrganization(params SearchOrganizationsParams) ([]db.
 		return nil, core.Wrap(err)
 	}
 
-	parsed, err := ParsesearchOrganizationsResponse(res)
+	parsed, err := ParseSearchOrganizationsResponse(res)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return nil, err
@@ -186,7 +190,7 @@ func (hb HttpClient) VendorClaim(vendorID string, orgID string, orgName string, 
 	var keys = make([]JWK, 0)
 	if orgKeys != nil {
 		for _, key := range orgKeys {
-			keys = append(keys, JWK{AdditionalProperties: key.(map[string]interface{})})
+			keys = append(keys, key.(map[string]interface{}))
 		}
 	}
 	res, err := hb.client().VendorClaim(ctx, vendorID, VendorClaimJSONRequestBody{
@@ -225,7 +229,7 @@ func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, err
 		return nil, core.Wrap(err)
 	}
 
-	parsed, err := ParseorganizationByIdResponse(res)
+	parsed, err := ParseOrganizationByIdResponse(res)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return nil, err
@@ -262,7 +266,7 @@ func testResponseCode(expectedStatusCode int, response *http.Response) error {
 }
 
 func testAndParseEventResponse(response *http.Response) (events.Event, error) {
-	if err := testResponseCode(http.StatusCreated, response); err != nil {
+	if err := testResponseCode(http.StatusOK, response); err != nil {
 		return nil, err
 	}
 	responseData, err := ioutil.ReadAll(response.Body)

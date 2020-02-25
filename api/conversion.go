@@ -44,7 +44,7 @@ func (o Organization) fromDb(db db.Organization) Organization {
 	keys := make([]JWK, len(db.Keys))
 
 	for i, k := range db.Keys {
-		keys[i] = JWK{AdditionalProperties: k.(map[string]interface{})}
+		keys[i] = k.(map[string]interface{})
 	}
 
 	o.Keys = &keys
@@ -83,7 +83,7 @@ func (a Endpoint) toDb() db.Endpoint {
 func jwkToMap(jwk []JWK) []interface{} {
 	em := make([]interface{}, len(jwk))
 	for i, k := range jwk {
-		em[i] = k.AdditionalProperties
+		em[i] = k
 	}
 	return em
 }

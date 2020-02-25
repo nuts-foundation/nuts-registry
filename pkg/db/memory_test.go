@@ -102,14 +102,8 @@ func pub(t *testing.T, eventSystem events.EventSystem, events ...events.Event) b
 }
 
 func TestMemoryDb_RegisterVendor(t *testing.T) {
-	t.Run("valid example", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, db := initDb(*repo)
-		err = eventSystem.PublishEvent(registerVendor1)
+	t.Run("valid example", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		err := eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -118,33 +112,21 @@ func TestMemoryDb_RegisterVendor(t *testing.T) {
 		if assert.NoError(t, err) {
 			assert.Len(t, db.vendors, 2)
 		}
-	})
+	}))
 
-	t.Run("duplicate entry", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, _ := initDb(*repo)
-		err = eventSystem.PublishEvent(registerVendor1)
+	t.Run("duplicate entry", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		err := eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
 		}
 		err = eventSystem.PublishEvent(registerVendor1)
 		assert.Error(t, err)
-	})
+	}))
 }
 
 func TestMemoryDb_VendorClaim(t *testing.T) {
-	t.Run("valid example", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, db := initDb(*repo)
-		err = eventSystem.PublishEvent(registerVendor1)
+	t.Run("valid example", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		err := eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -159,16 +141,10 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 			return
 		}
 		assert.Len(t, db.vendors["v1"].orgs, 2)
-	})
+	}))
 
-	t.Run("organization with invalid key set", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, db := initDb(*repo)
-		err = eventSystem.PublishEvent(registerVendor1)
+	t.Run("organization with invalid key set", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		err := eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -184,27 +160,15 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 		err = eventSystem.PublishEvent(e)
 		assert.Error(t, err)
 		assert.Len(t, db.vendors["v1"].orgs, 0)
-	})
+	}))
 
-	t.Run("unknown vendor", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, _ := initDb(*repo)
-		err = eventSystem.PublishEvent(vendorClaim1)
+	t.Run("unknown vendor", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		err := eventSystem.PublishEvent(vendorClaim1)
 		assert.Error(t, err)
-	})
+	}))
 
-	t.Run("duplicate organization", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, _ := initDb(*repo)
-		err = eventSystem.PublishEvent(registerVendor1)
+	t.Run("duplicate organization", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		err := eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -214,17 +178,11 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 		}
 		err = eventSystem.PublishEvent(vendorClaim1)
 		assert.Error(t, err)
-	})
+	}))
 }
 
 func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
-	t.Run("Valid example", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, db := initDb(*repo)
+	t.Run("Valid example", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
 			return
 		}
@@ -234,15 +192,9 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 			return
 		}
 		assert.Len(t, result, 1)
-	})
+	}))
 
-	t.Run("Valid example with type", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, db := initDb(*repo)
+	t.Run("Valid example with type", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
 			return
 		}
@@ -253,15 +205,9 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 			return
 		}
 		assert.Len(t, result, 1)
-	})
+	}))
 
-	t.Run("incorrect type", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, db := initDb(*repo)
+	t.Run("incorrect type", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
 			return
 		}
@@ -272,15 +218,9 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 			return
 		}
 		assert.Len(t, result, 0)
-	})
+	}))
 
-	t.Run("Inactive mappings are not returned", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, db := initDb(*repo)
+	t.Run("Inactive mappings are not returned", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1, registerEndpoint2) {
 			return
 		}
@@ -290,15 +230,9 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 			return
 		}
 		assert.Len(t, result, 1)
-	})
+	}))
 
-	t.Run("no mapping", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, db := initDb(*repo)
+	t.Run("no mapping", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
 			return
 		}
@@ -308,16 +242,10 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 			return
 		}
 		assert.Len(t, result, 0)
-	})
+	}))
 
-	t.Run("Organization unknown", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, db := initDb(*repo)
-		err = eventSystem.PublishEvent(registerVendor1)
+	t.Run("Organization unknown", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		err := eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -327,92 +255,71 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 			return
 		}
 		assert.Len(t, result, 0)
-	})
+	}))
 }
 
 func TestMemoryDb_RegisterEndpoint(t *testing.T) {
-	t.Run("unknown organization", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, _ := initDb(*repo)
-		err = eventSystem.PublishEvent(registerEndpoint1)
+	t.Run("unknown organization", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		err := eventSystem.PublishEvent(registerEndpoint1)
 		assert.Error(t, err)
-	})
+	}))
 }
 
 func TestMemoryDb_SearchOrganizations(t *testing.T) {
-	repo, err := test.NewTestRepo(t.Name())
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer repo.Cleanup()
-	eventSystem, db := initDb(*repo)
-	if !pub(t, eventSystem, registerVendor1, vendorClaim1, vendorClaim2) {
-		return
-	}
+	t.Run("tests", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		if !pub(t, eventSystem, registerVendor1, vendorClaim1, vendorClaim2) {
+			return
+		}
 
-	t.Run("complete valid example", func(t *testing.T) {
-		result := db.SearchOrganizations("organization uno")
-		assert.Len(t, result, 1)
-	})
+		t.Run("complete valid example", func(t *testing.T) {
+			result := db.SearchOrganizations("organization uno")
+			assert.Len(t, result, 1)
+		})
 
-	t.Run("partial match returns organization", func(t *testing.T) {
-		result := db.SearchOrganizations("uno")
-		assert.Len(t, result, 1)
-	})
+		t.Run("partial match returns organization", func(t *testing.T) {
+			result := db.SearchOrganizations("uno")
+			assert.Len(t, result, 1)
+		})
 
-	t.Run("wide match returns 2 organization", func(t *testing.T) {
-		result := db.SearchOrganizations("organization")
-		assert.Len(t, result, 2)
-	})
+		t.Run("wide match returns 2 organization", func(t *testing.T) {
+			result := db.SearchOrganizations("organization")
+			assert.Len(t, result, 2)
+		})
 
-	t.Run("searching for unknown organization returns empty list", func(t *testing.T) {
-		result := db.SearchOrganizations("organization tres")
-		assert.Len(t, result, 0)
-	})
+		t.Run("searching for unknown organization returns empty list", func(t *testing.T) {
+			result := db.SearchOrganizations("organization tres")
+			assert.Len(t, result, 0)
+		})
+	}))
 }
 
 func TestMemoryDb_ReverseLookup(t *testing.T) {
-	repo, err := test.NewTestRepo(t.Name())
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer repo.Cleanup()
-	eventSystem, db := initDb(*repo)
-	if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
-		return
-	}
+	t.Run("tests", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
+			return
+		}
+		t.Run("finds exact match", func(t *testing.T) {
+			result, err := db.ReverseLookup("organization uno")
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+		})
 
-	t.Run("finds exact match", func(t *testing.T) {
-		result, err := db.ReverseLookup("organization uno")
-		assert.NoError(t, err)
-		assert.NotNil(t, result)
-	})
+		t.Run("finds exact match, case insensitive", func(t *testing.T) {
+			result, err := db.ReverseLookup("ORGANIZATION UNO")
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+		})
 
-	t.Run("finds exact match, case insensitive", func(t *testing.T) {
-		result, err := db.ReverseLookup("ORGANIZATION UNO")
-		assert.NoError(t, err)
-		assert.NotNil(t, result)
-	})
-
-	t.Run("does not fn partial match", func(t *testing.T) {
-		result, err := db.ReverseLookup("uno")
-		assert.True(t, errors.Is(err, ErrOrganizationNotFound))
-		assert.Nil(t, result)
-	})
+		t.Run("does not fn partial match", func(t *testing.T) {
+			result, err := db.ReverseLookup("uno")
+			assert.True(t, errors.Is(err, ErrOrganizationNotFound))
+			assert.Nil(t, result)
+		})
+	}))
 }
 
 func TestMemoryDb_OrganizationById(t *testing.T) {
-	t.Run("organization is found", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
-		eventSystem, db := initDb(*repo)
+	t.Run("organization is found", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
 			return
 		}
@@ -422,20 +329,26 @@ func TestMemoryDb_OrganizationById(t *testing.T) {
 			return
 		}
 		assert.NotNil(t, result)
-	})
+	}))
 
-	t.Run("organization is not found", func(t *testing.T) {
+	t.Run("organization is not found", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
+			return
+		}
+
+		_, err := db.OrganizationById("unknown")
+		assert.True(t, errors.Is(err, ErrOrganizationNotFound))
+	}))
+}
+
+func withTestContext(fn func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb)) func(*testing.T) {
+	return func(t *testing.T) {
 		repo, err := test.NewTestRepo(t.Name())
 		if !assert.NoError(t, err) {
 			return
 		}
 		defer repo.Cleanup()
 		eventSystem, db := initDb(*repo)
-		if !pub(t, eventSystem, registerVendor1, vendorClaim1) {
-			return
-		}
-
-		_, err = db.OrganizationById("unknown")
-		assert.True(t, errors.Is(err, ErrOrganizationNotFound))
-	})
+		fn(t, eventSystem, db)
+	}
 }

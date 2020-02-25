@@ -127,7 +127,7 @@ func TestHttpClient_ReverseLookup(t *testing.T) {
 func TestHttpClient_VendorClaim(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		event := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{})
-		s := httptest.NewServer(handler{statusCode: http.StatusCreated, responseData: event.Marshal()})
+		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		key := map[string]interface{}{
@@ -144,7 +144,7 @@ func TestHttpClient_VendorClaim(t *testing.T) {
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		event, err := c.VendorClaim("id", "orgID", "name", []interface{}{})
-		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 201), response: ", "error")
+		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
 	})
 }
@@ -152,7 +152,7 @@ func TestHttpClient_VendorClaim(t *testing.T) {
 func TestHttpClient_RegisterVendor(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		event := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{})
-		s := httptest.NewServer(handler{statusCode: http.StatusCreated, responseData: event.Marshal()})
+		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		vendor, err := c.RegisterVendor("id", "name")
@@ -166,7 +166,7 @@ func TestHttpClient_RegisterVendor(t *testing.T) {
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		event, err := c.RegisterVendor("id", "name")
-		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 201), response: ", "error")
+		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
 	})
 }
@@ -174,7 +174,7 @@ func TestHttpClient_RegisterVendor(t *testing.T) {
 func TestHttpClient_RegisterEndpoint(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		event := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{})
-		s := httptest.NewServer(handler{statusCode: http.StatusCreated, responseData: event.Marshal()})
+		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		event, err := c.RegisterEndpoint("orgId", "id", "url", "type", "status", "version")
@@ -188,7 +188,7 @@ func TestHttpClient_RegisterEndpoint(t *testing.T) {
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
 		event, err := c.RegisterEndpoint("orgId", "id", "url", "type", "status", "version")
-		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 201), response: ", "error")
+		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
 	})
 }
