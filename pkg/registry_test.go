@@ -22,18 +22,17 @@
 package pkg
 
 import (
-	"fmt"
 	"github.com/labstack/gommon/random"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strings"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -158,11 +157,42 @@ func TestRegistry_Configure(t *testing.T) {
 			t.Error("Expected loaded organizations, got 0")
 		}
 	})
+	t.Run("error while configuring event system", func(t *testing.T) {
+		registry := Registry{
+			Config: RegistryConfig{
+				Mode:    core.ServerEngineMode,
+				Datadir: "///",
+			},
+			EventSystem: events.NewEventSystem(),
+		}
+		err := registry.Configure()
+		assert.EqualError(t, err, "mkdir ////events: permission denied")
+	})
+
+	t.Run("error while loading events", func(t *testing.T) {
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		defer repo.Cleanup()
+		registry := Registry{
+			Config: RegistryConfig{
+				Mode:    core.ServerEngineMode,
+				Datadir: repo.Directory,
+			},
+			EventSystem: events.NewEventSystem(),
+		}
+		os.MkdirAll(filepath.Join(repo.Directory, "events"), os.ModePerm)
+		err = ioutil.WriteFile(filepath.Join(repo.Directory, "events/20200123091400001-RegisterOrganizationEvent.json"), []byte("this is a file"), os.ModePerm)
+		if !assert.NoError(t, err) {
+			return
+		}
+		err = registry.Configure()
+		assert.Error(t, err)
+	})
 }
 
 func TestRegistry_FileUpdate(t *testing.T) {
-	cleanup()
-	defer cleanup()
 	configureIdleTimeout()
 
 	t.Run("New files are loaded", func(t *testing.T) {
@@ -171,10 +201,15 @@ func TestRegistry_FileUpdate(t *testing.T) {
 		wg := sync.WaitGroup{}
 		wg.Add(1)
 
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		defer repo.Cleanup()
 		registry := Registry{
 			Config: RegistryConfig{
 				Mode:     core.ServerEngineMode,
-				Datadir:  "../tmp",
+				Datadir:  repo.Directory,
 				SyncMode: "fs",
 			},
 			OnChange: func(registry *Registry) {
@@ -197,7 +232,10 @@ func TestRegistry_FileUpdate(t *testing.T) {
 		}
 
 		// copy valid files
-		copyDir("../test_data/valid_files/events", "../tmp/events")
+		err = repo.ImportDir("../test_data/valid_files")
+		if !assert.NoError(t, err) {
+			return
+		}
 
 		wg.Wait()
 
@@ -208,8 +246,6 @@ func TestRegistry_FileUpdate(t *testing.T) {
 }
 
 func TestRegistry_GithubUpdate(t *testing.T) {
-	cleanup()
-	defer cleanup()
 	logrus.StandardLogger().SetLevel(logrus.DebugLevel)
 	configureIdleTimeout()
 
@@ -221,13 +257,16 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 		wg := sync.WaitGroup{}
 		wg.Add(1)
 
-		os.Mkdir("../tmp", os.ModePerm)
-		copyDir("../test_data/all_empty_files", "../tmp")
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		defer repo.Cleanup()
 
 		registry := Registry{
 			Config: RegistryConfig{
 				Mode:         core.ServerEngineMode,
-				Datadir:      "../tmp",
+				Datadir:      repo.Directory,
 				SyncMode:     "github",
 				SyncAddress:  server.URL,
 				SyncInterval: 60,
@@ -261,46 +300,7 @@ func configureIdleTimeout() {
 	ReloadRegistryIdleTimeout = 100 * time.Millisecond
 }
 
-func copyDir(src string, dst string) {
-	for _, file := range findJSONFiles(src) {
-		if strings.HasSuffix(file, ".json") {
-			err := copyFile(fmt.Sprintf("%s/%s", src, file), fmt.Sprintf("%s/%s", dst, file))
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
-}
+func TestRegistry_EndpointsByOrganizationAndType(t *testing.T) {
 
-func findJSONFiles(src string) []string {
-	dir, err := ioutil.ReadDir(src)
-	if err != nil {
-		panic(err)
-	}
-	files := make([]string, 0)
-	for _, entry := range dir {
-		if strings.HasSuffix(entry.Name(), ".json") {
-			files = append(files, entry.Name())
-		}
-	}
-	return files
-}
-
-func copyFile(src string, dst string) error {
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer dstFile.Close()
-
-	_, err = io.Copy(dstFile, srcFile)
-
-	return err
 }
 

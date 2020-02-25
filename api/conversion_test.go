@@ -34,14 +34,14 @@ func TestOrganizationConversion(t *testing.T) {
 		o := Organization{}.fromDb(db.Organization{Keys: em})
 
 		assert.Len(t, *o.Keys, 1)
-		assert.Equal(t, "EC", (*o.Keys)[0].AdditionalProperties["kty"].(string))
+		assert.Equal(t, "EC", (*o.Keys)[0]["kty"].(string))
 	})
 
 	t.Run("JWK is converted correctly to DB", func(t *testing.T) {
-		em := []JWK{{AdditionalProperties: map[string]interface{}{"kty": "EC"}}}
+		em := []JWK{map[string]interface{}{"kty": "EC"}}
 		o := Organization{Keys: &em}.toDb()
 
 		assert.Len(t, o.Keys, 1)
-		assert.Equal(t, "EC", o.Keys[0].(map[string]interface{})["kty"].(string))
+		assert.Equal(t, "EC", o.Keys[0].(JWK)["kty"].(string))
 	})
 }

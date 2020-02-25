@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"go/types"
 	"io/ioutil"
 	"net/http"
@@ -48,7 +49,11 @@ func (hb HttpClient) client() ClientInterface {
 		url = fmt.Sprintf("http://%v", hb.ServerAddress)
 	}
 
-	return NewClientWithResponses(url)
+	response, err := NewClientWithResponses(url)
+	if err != nil {
+		panic(err)
+	}
+	return response
 }
 
 // EndpointsByOrganization is the client Api implementation for getting all or certain types of endpoints for an organization
@@ -66,7 +71,7 @@ func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpoint
 		return nil, core.Wrap(err)
 	}
 
-	parsed, err := ParseendpointsByOrganisationIdResponse(res)
+	parsed, err := ParseEndpointsByOrganisationIdResponse(res)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return nil, err
@@ -127,7 +132,7 @@ func (hb HttpClient) searchOrganization(params SearchOrganizationsParams) ([]db.
 		return nil, core.Wrap(err)
 	}
 
-	parsed, err := ParsesearchOrganizationsResponse(res)
+	parsed, err := ParseSearchOrganizationsResponse(res)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return nil, err
@@ -162,7 +167,7 @@ func (hb HttpClient) searchOrganization(params SearchOrganizationsParams) ([]db.
 }
 
 // RegisterEndpoint is the client Api implementation for registering an endpoint for an organisation.
-func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string) error {
+func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string) (events.Event, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 	res, err := hb.client().RegisterEndpoint(ctx, organizationID, RegisterEndpointJSONRequestBody{
@@ -173,19 +178,19 @@ func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url stri
 		Version:      version,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return testResponseCode(http.StatusNoContent, res)
+	return testAndParseEventResponse(res)
 }
 
 // VendorClaim is the client Api implementation for registering an organisation.
-func (hb HttpClient) VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) error {
+func (hb HttpClient) VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) (events.Event, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 	var keys = make([]JWK, 0)
 	if orgKeys != nil {
 		for _, key := range orgKeys {
-			keys = append(keys, JWK{AdditionalProperties: key.(map[string]interface{})})
+			keys = append(keys, key.(map[string]interface{}))
 		}
 	}
 	res, err := hb.client().VendorClaim(ctx, vendorID, VendorClaimJSONRequestBody{
@@ -194,13 +199,13 @@ func (hb HttpClient) VendorClaim(vendorID string, orgID string, orgName string, 
 		Name:       orgName,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return testResponseCode(http.StatusNoContent, res)
+	return testAndParseEventResponse(res)
 }
 
 // RegisterVendor is the client Api implementation for registering a vendor.
-func (hb HttpClient) RegisterVendor(id string, name string) error {
+func (hb HttpClient) RegisterVendor(id string, name string) (events.Event, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 	res, err := hb.client().RegisterVendor(ctx, RegisterVendorJSONRequestBody{
@@ -208,9 +213,9 @@ func (hb HttpClient) RegisterVendor(id string, name string) error {
 		Name:       name,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return testResponseCode(http.StatusNoContent, res)
+	return testAndParseEventResponse(res)
 }
 
 // OrganizationById is the client Api implementation for getting an organization based on its Id.
@@ -224,7 +229,7 @@ func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, err
 		return nil, core.Wrap(err)
 	}
 
-	parsed, err := ParseorganizationByIdResponse(res)
+	parsed, err := ParseOrganizationByIdResponse(res)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
 		return nil, err
@@ -258,4 +263,15 @@ func testResponseCode(expectedStatusCode int, response *http.Response) error {
 			response.StatusCode, expectedStatusCode, string(responseData))
 	}
 	return nil
+}
+
+func testAndParseEventResponse(response *http.Response) (events.Event, error) {
+	if err := testResponseCode(http.StatusOK, response); err != nil {
+		return nil, err
+	}
+	responseData, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	return events.EventFromJSON(responseData)
 }

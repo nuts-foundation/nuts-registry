@@ -60,11 +60,11 @@ func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) erro
 	if err = ep.validate(); err != nil {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-	err = apiResource.R.RegisterEndpoint(unescapedID, ep.Identifier.String(), ep.URL, ep.EndpointType, ep.Status, ep.Version)
+	event, err := apiResource.R.RegisterEndpoint(unescapedID, ep.Identifier.String(), ep.URL, ep.EndpointType, ep.Status, ep.Version)
 	if err != nil {
 		return ctx.String(http.StatusInternalServerError, err.Error())
 	}
-	return ctx.NoContent(http.StatusNoContent)
+	return ctx.JSON(http.StatusOK, event)
 }
 
 // VendorClaim is the Api implementation for registering a vendor claim.
@@ -89,11 +89,11 @@ func (apiResource ApiWrapper) VendorClaim(ctx echo.Context, id string) error {
 	if org.Keys != nil {
 		keys = jwkToMap(*org.Keys)
 	}
-	err = apiResource.R.VendorClaim(unescapedID, org.Identifier.String(), org.Name, keys)
+	event, err := apiResource.R.VendorClaim(unescapedID, org.Identifier.String(), org.Name, keys)
 	if err != nil {
 		return ctx.String(http.StatusInternalServerError, err.Error())
 	}
-	return ctx.NoContent(http.StatusNoContent)
+	return ctx.JSON(http.StatusOK, event)
 }
 
 // RegisterVendor is the Api implementation for registering a vendor.
@@ -109,10 +109,11 @@ func (apiResource ApiWrapper) RegisterVendor(ctx echo.Context) error {
 	if err := v.validate(); err != nil {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-	if err := apiResource.R.RegisterVendor(v.Identifier.String(), v.Name); err != nil {
-		return err
+	event, err := apiResource.R.RegisterVendor(v.Identifier.String(), v.Name)
+	if err != nil {
+		return ctx.String(http.StatusInternalServerError, err.Error())
 	}
-	return ctx.NoContent(http.StatusNoContent)
+	return ctx.JSON(http.StatusOK, event)
 }
 
 // OrganizationById is the Api implementation for getting an organization based on its Id.

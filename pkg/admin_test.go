@@ -2,19 +2,26 @@ package pkg
 
 import (
 	"fmt"
+	"github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-crypto/pkg/storage"
+	"github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"github.com/sirupsen/logrus"
+	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
 func TestRegistry_RegisterEndpoint(t *testing.T) {
-	cleanup()
-	defer cleanup()
-
-	registry := createRegistry()
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
+	registry := createRegistry(*repo)
 	defer registry.Shutdown()
 
 	var event = events.RegisterEndpointEvent{}
@@ -23,7 +30,7 @@ func TestRegistry_RegisterEndpoint(t *testing.T) {
 	})
 
 	t.Run("ok", func(t *testing.T) {
-		err := registry.RegisterEndpoint("orgId", "endpointId", "url", "type", "status", "version")
+		_, err := registry.RegisterEndpoint("orgId", "endpointId", "url", "type", "status", "version")
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -37,10 +44,12 @@ func TestRegistry_RegisterEndpoint(t *testing.T) {
 }
 
 func TestRegistry_RegisterVendor(t *testing.T) {
-	cleanup()
-	defer cleanup()
-
-	registry := createRegistry()
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
+	registry := createRegistry(*repo)
 	defer registry.Shutdown()
 
 	var event = events.RegisterVendorEvent{}
@@ -49,7 +58,7 @@ func TestRegistry_RegisterVendor(t *testing.T) {
 	})
 
 	t.Run("ok", func(t *testing.T) {
-		err := registry.RegisterVendor("id", "name")
+		_, err := registry.RegisterVendor("id", "name")
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -59,10 +68,12 @@ func TestRegistry_RegisterVendor(t *testing.T) {
 }
 
 func TestRegistry_VendorClaim(t *testing.T) {
-	cleanup()
-	defer cleanup()
-
-	registry := createRegistry()
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
+	registry := createRegistry(*repo)
 	defer registry.Shutdown()
 
 	var event = events.VendorClaimEvent{}
@@ -76,7 +87,7 @@ func TestRegistry_VendorClaim(t *testing.T) {
 				"e": 1234,
 			},
 		}
-		err := registry.VendorClaim("vendorId", "orgId", "orgName", keys)
+		_, err := registry.VendorClaim("vendorId", "orgId", "orgName", keys)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -87,23 +98,76 @@ func TestRegistry_VendorClaim(t *testing.T) {
 		assert.False(t, event.Start.IsZero())
 		assert.Nil(t, event.End)
 	})
+	t.Run("org keys loaded from crypto", func(t *testing.T) {
+		err := registry.crypto.GenerateKeyPairFor(types.LegalEntity{URI: "orgId"})
+		if !assert.NoError(t, err) {
+			return
+		}
+		_, err = registry.VendorClaim("vendorId", "orgId", "orgName", nil)
+		if !assert.NoError(t, err) {
+			return
+		}
+	})
+	t.Run("org keys loaded from crypto - keys generated", func(t *testing.T) {
+		// Assert no keys in crypto
+		entity := types.LegalEntity{URI: "noKeysOrgId"}
+		key, _ := registry.crypto.PublicKeyInJWK(entity)
+		if !assert.Nil(t, key) {
+			return
+		}
+		_, err := registry.VendorClaim("vendorId", entity.URI, "orgName", nil)
+		if !assert.NoError(t, err) {
+			return
+		}
+		// Assert key now exists in crypto
+		key, _ = registry.crypto.PublicKeyInJWK(entity)
+		assert.NotNil(t, key)
+	})
+
+	t.Run("error while generating key", func(t *testing.T) {
+		// Assert no keys in crypto
+		entity := types.LegalEntity{URI: "keyGenerationError"}
+		c := registry.crypto.(*pkg.Crypto)
+		var defaultKeySize = c.Config.Keysize
+		c.Config.Keysize = -1
+		defer func() {
+			c.Config.Keysize = defaultKeySize
+		}()
+		_, err := registry.VendorClaim("vendorId", entity.URI, "orgName", nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("unable to load existing key", func(t *testing.T) {
+		repo.Cleanup()
+		os.MkdirAll(repo.Directory, os.ModePerm)
+		entity := types.LegalEntity{URI: "org"}
+		err := registry.crypto.GenerateKeyPairFor(entity)
+		if !assert.NoError(t, err) {
+			return
+		}
+		dirEntries, _ := ioutil.ReadDir(repo.Directory)
+		ioutil.WriteFile(filepath.Join(repo.Directory, dirEntries[0].Name()), []byte("this is not a private key"), os.ModePerm)
+		_, err = registry.VendorClaim("vendorID", entity.URI, "orgName", nil)
+		assert.Error(t, err)
+	})
 }
 
-func createRegistry() Registry {
+func createRegistry(repo test.TestRepo) Registry {
+	crypto, _ := storage.NewFileSystemBackend(repo.Directory)
 	registry := Registry{
 		Config: RegistryConfig{
 			Mode:     core.ServerEngineMode,
-			Datadir:  "../tmp",
+			Datadir:  repo.Directory,
 			SyncMode: "fs",
 		},
 		EventSystem: events.NewEventSystem(),
+		crypto: &pkg.Crypto{
+			Storage: crypto,
+			Config: pkg.CryptoConfig{
+				Keysize: 2048,
+			},
+		},
 	}
+	registry.Configure()
 	return registry
-}
-
-func cleanup() {
-	err := os.RemoveAll("../tmp")
-	if err != nil {
-		logrus.Warnf("unable to clean tmp dir: %v", err)
-	}
 }

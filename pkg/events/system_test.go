@@ -20,14 +20,23 @@
 package events
 
 import (
+	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestUnknownEventType(t *testing.T) {
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
 	system := NewEventSystem()
+	system.Configure(repo.Directory + "/events")
 	input := `{
 		"type": "non-existing"
 	}`
@@ -36,20 +45,24 @@ func TestUnknownEventType(t *testing.T) {
 		return
 	}
 	err = system.ProcessEvent(event)
-	assert.Error(t, err, "unknown event type: non-existing")
+	assert.EqualError(t, err, "unknown event type: non-existing")
 }
 
 func TestNoEventHandler(t *testing.T) {
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
 	system := NewEventSystem()
-	input := `{
-		"type": "RegisterOrganizationEvent"
-	}`
+	system.Configure(repo.Directory + "/events")
+	input := "{\"type\":\"" + RegisterVendor + "\"}"
 	event, err := EventFromJSON([]byte(input))
 	if !assert.NoError(t, err) {
 		return
 	}
 	err = system.ProcessEvent(event)
-	assert.Error(t, err, "no handler registered for event (type = RegisterOrganizationEvent), handlers are: map[]")
+	assert.EqualError(t, err, "no handler registered for event (type = RegisterVendorEvent), handlers are: map[]")
 }
 
 func TestLoadEvents(t *testing.T) {
@@ -76,60 +89,99 @@ func TestLoadEvents(t *testing.T) {
 		assert.Equal(t, ec, endpointsCreated, "unexpected number of events for: RegisterEndpoint")
 	}
 
-	const dir = "../../test_data/valid_files/events"
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
+	system.Configure(repo.Directory + "/events")
+
+	const sourceDir = "../../test_data/valid_files"
 	t.Run("All fresh system state, all events should be loaded", func(t *testing.T) {
-		err := system.LoadAndApplyEvents(dir)
+		if !assert.NoError(t, repo.ImportDir(sourceDir)) {
+			return
+		}
+		err := system.LoadAndApplyEvents()
 		if !assert.NoError(t, err) {
 			return
 		}
 		assertEventsHandled(1, 2, 2)
 	})
 
-	const newFile = dir + "/20210123091400005-RegisterEndpointEvent.json"
 	t.Run("New event file, should trigger an incremental change", func(t *testing.T) {
-		err := cp(dir+"/20200123091400005-RegisterEndpointEvent.json", newFile)
+		err := repo.ImportFileAs(filepath.Join(sourceDir, "events/20200123091400005-RegisterEndpointEvent.json"), "events/20210123091400005-RegisterEndpointEvent.json")
 		if !assert.NoError(t, err) {
 			return
 		}
-		err = system.LoadAndApplyEvents(dir)
+		err = system.LoadAndApplyEvents()
 		if !assert.NoError(t, err) {
 			return
 		}
 		assertEventsHandled(1, 2, 3)
 	})
-	defer os.Remove(newFile)
 
 	t.Run("No incremental change", func(t *testing.T) {
-		err := system.LoadAndApplyEvents(dir)
+		err := system.LoadAndApplyEvents()
 		if !assert.NoError(t, err) {
 			return
 		}
 		assertEventsHandled(1, 2, 3)
+	})
+
+	t.Run("Added non-JSON file", func(t *testing.T) {
+		eventSystem := system.(*diskEventSystem)
+		eventSystem.lastLoadedEvent = time.Time{}
+		err := repo.ImportFileAs("system_test.go", "events/system_test.go")
+		if !assert.NoError(t, err) {
+			return
+		}
+		err = system.LoadAndApplyEvents()
+		if !assert.NoError(t, err) {
+			return
+		}
+	})
+}
+
+func TestSystemNotConfigured(t *testing.T) {
+	t.Run("publish", func(t *testing.T) {
+		system := NewEventSystem()
+		err := system.PublishEvent(CreateEvent(RegisterVendor, RegisterVendorEvent{}))
+		assert.EqualError(t, err, ErrEventSystemNotConfigured.Error())
+	})
+	t.Run("process", func(t *testing.T) {
+		system := NewEventSystem()
+		err := system.ProcessEvent(CreateEvent(RegisterVendor, RegisterVendorEvent{}))
+		assert.EqualError(t, err, ErrEventSystemNotConfigured.Error())
+	})
+	t.Run("LoadAndApply", func(t *testing.T) {
+		system := NewEventSystem()
+		err := system.LoadAndApplyEvents()
+		assert.EqualError(t, err, ErrEventSystemNotConfigured.Error())
 	})
 }
 
 func TestLoadEventsInvalidJson(t *testing.T) {
+	repo, err := test.NewTestRepoFrom(t.Name(), "../../test_data/invalid_files")
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
 	system := NewEventSystem()
-	err := system.LoadAndApplyEvents("../../test_data/invalid_files/events")
+	system.Configure(repo.Directory + "/events")
+	err = system.LoadAndApplyEvents()
 	assert.EqualError(t, err, "invalid character '{' looking for beginning of object key string")
 }
 
 func TestLoadEventsEmptyFile(t *testing.T) {
+	repo, err := test.NewTestRepoFrom(t.Name(), "../../test_data/empty_files")
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
 	system := NewEventSystem()
-	err := system.LoadAndApplyEvents("../../test_data/empty_files/events")
+	system.Configure(repo.Directory + "/events")
+	err = system.LoadAndApplyEvents()
 	assert.EqualError(t, err, "unexpected end of JSON input")
-}
-
-func cp(src string, dst string) error {
-	input, err := ioutil.ReadFile(src)
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(dst, input, 0644)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func TestParseTimestamp(t *testing.T) {
@@ -151,14 +203,51 @@ func TestParseTimestamp(t *testing.T) {
 
 }
 
-func TestPublishEventCallsEventHandlers(t *testing.T) {
+func TestPublishEvents(t *testing.T) {
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
 	system := NewEventSystem()
+	system.Configure(repo.Directory)
 	called := 0
 	system.RegisterEventHandler(RegisterVendor, func(event Event) error {
 		called++
 		return nil
 	})
-	err := system.PublishEvent(jsonEvent{EventType: string(RegisterVendor)})
-	assert.NoError(t, err)
-	assert.Equal(t, called, 1)
+	t.Run("assert event handler is called", func(t *testing.T) {
+		err = system.PublishEvent(jsonEvent{EventType: string(RegisterVendor)})
+		assert.NoError(t, err)
+		assert.Equal(t, called, 1)
+	})
+	t.Run("assert event file is written and valid JSON", func(t *testing.T) {
+		repo.Cleanup()
+		os.MkdirAll(repo.Directory, os.ModePerm)
+		dirEntriesBeforePublish, err := ioutil.ReadDir(repo.Directory)
+		if !assert.NoError(t, err) {
+			return
+		}
+		if !assert.Len(t, dirEntriesBeforePublish, 0, "directory empty") {
+			return
+		}
+		event := CreateEvent(RegisterVendor, RegisterVendorEvent{})
+		err = system.PublishEvent(event)
+		if !assert.NoError(t, err) {
+			return
+		}
+		dirEntriesAfterPublish, err := ioutil.ReadDir(repo.Directory)
+		if !assert.NoError(t, err) {
+			return
+		}
+		if !assert.Len(t, dirEntriesAfterPublish, 1, "directory not empty") {
+			return
+		}
+		data, err := ioutil.ReadFile(filepath.Join(repo.Directory, dirEntriesAfterPublish[0].Name()))
+		if !assert.NoError(t, err) {
+			return
+		}
+		_, err = EventFromJSON(data)
+		assert.NoError(t, err)
+	})
 }

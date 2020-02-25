@@ -28,9 +28,6 @@ func (o Organization) validate() error {
 	if err := nonEmptyString(o.Name, "name"); err != nil {
 		return err
 	}
-	if o.Keys == nil || len(*o.Keys) == 0 {
-		return errors.New("missing keys")
-	}
 	return nil
 }
 

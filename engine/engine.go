@@ -33,8 +33,10 @@ import (
 	"github.com/spf13/pflag"
 	"os"
 	"os/signal"
-	"time"
 )
+
+// registryClientCreator is a variable to aid testability
+var registryClientCreator = client.NewRegistryClient
 
 // NewRegistryEngine returns the core definition for the registry
 func NewRegistryEngine() *core.Engine {
@@ -87,7 +89,7 @@ func cmd() *cobra.Command {
 		Short: "Find organizations within the registry",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			cl := client.NewRegistryClient()
+			cl := registryClientCreator()
 			os, _ := cl.SearchOrganizations(args[0])
 
 			logrus.Errorf("Found %d organizations\n", len(os))
@@ -120,15 +122,19 @@ func cmd() *cobra.Command {
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "register-vendor [name] [identifier]",
+		Use:   "register-vendor [identifier] [name]",
 		Short: "Registers a vendor",
 		Args:  cobra.ExactArgs(2),
-		Run: func(cmd *cobra.Command, args []string) {
-			name := args[0]
-			identifier := events.Identifier(args[1])
-			event := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{Name: name, Identifier: identifier})
-			logrus.Info(events.SuggestEventFileName(event))
-			logrus.Info(string(event.Marshal()))
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cl := registryClientCreator()
+			event, err := cl.RegisterVendor(args[0], args[1])
+			if err != nil {
+				logrus.Errorf("Unable to register vendor: %v", err)
+				return err
+			}
+			logrus.Info("Vendor registered.")
+			logEventToConsole(event)
+			return nil
 		},
 	})
 
@@ -137,44 +143,41 @@ func cmd() *cobra.Command {
 		Short: "Registers a vendor claim.",
 		Long:  "Registers a vendor claiming a care organization as its client.",
 		Args:  cobra.ExactArgs(3),
-		Run: func(cmd *cobra.Command, args []string) {
-			vendorID := events.Identifier(args[0])
-			orgID := events.Identifier(args[1])
-			orgName := args[2]
-			event := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
-				VendorIdentifier: vendorID,
-				OrgIdentifier:    orgID,
-				OrgName:          orgName,
-				OrgKeys:          nil,
-				Start:            time.Now(),
-			})
-			logrus.Info(events.SuggestEventFileName(event))
-			logrus.Info(string(event.Marshal()))
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cl := registryClientCreator()
+			event, err := cl.VendorClaim(args[0], args[1], args[2], nil)
+			if err != nil {
+				logrus.Errorf("Unable to register vendor organisation claim: %v", err)
+				return err
+			}
+			logrus.Info("Vendor organisation claim registered.")
+			logEventToConsole(event)
+			return nil
 		},
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "register-endpoint [org-identifier] [identifier] [type] [url]",
+		Use:   "register-endpoint [org-identifier] [identifier] [type] [url] [version]",
 		Short: "Registers an endpoint",
 		Long:  "Registers an endpoint for an organization.",
-		Args:  cobra.ExactArgs(4),
-		Run: func(cmd *cobra.Command, args []string) {
-			orgID := events.Identifier(args[0])
-			id := events.Identifier(args[1])
-			t := args[2]
-			url := args[3]
-			event := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
-				Organization: orgID,
-				URL:          url,
-				EndpointType: t,
-				Identifier:   id,
-				Status:       db.StatusActive,
-				Version:      "1.0",
-			})
-			logrus.Info(events.SuggestEventFileName(event))
-			logrus.Info(string(event.Marshal()))
+		Args:  cobra.ExactArgs(5),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cl := registryClientCreator()
+			event, err := cl.RegisterEndpoint(args[0], args[1], args[3], args[2], db.StatusActive, args[4])
+			if err != nil {
+				logrus.Errorf("Unable to register endpoint: %v", err)
+				return err
+			}
+			logrus.Info("Endpoint registered.")
+			logEventToConsole(event)
+			return nil
 		},
 	})
 
 	return cmd
+}
+
+func logEventToConsole(event events.Event) {
+	println("Event:", events.SuggestEventFileName(event))
+	println(string(event.Marshal()))
 }
