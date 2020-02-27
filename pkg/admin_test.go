@@ -153,7 +153,6 @@ func TestRegistry_VendorClaim(t *testing.T) {
 }
 
 func createRegistry(repo test.TestRepo) Registry {
-	crypto, _ := storage.NewFileSystemBackend(repo.Directory)
 	registry := Registry{
 		Config: RegistryConfig{
 			Mode:     core.ServerEngineMode,
@@ -161,13 +160,18 @@ func createRegistry(repo test.TestRepo) Registry {
 			SyncMode: "fs",
 		},
 		EventSystem: events.NewEventSystem(),
-		crypto: &pkg.Crypto{
-			Storage: crypto,
-			Config: pkg.CryptoConfig{
-				Keysize: 2048,
-			},
+	}
+	err := registry.Configure()
+	cryptoBackend, _ := storage.NewFileSystemBackend(repo.Directory)
+	registry.crypto = &pkg.Crypto{
+		Storage: cryptoBackend,
+		Config: pkg.CryptoConfig{
+			Keysize: 2048,
+			Fspath:  repo.Directory,
 		},
 	}
-	registry.Configure()
+	if err != nil {
+		panic(err)
+	}
 	return registry
 }
