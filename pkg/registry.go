@@ -122,7 +122,6 @@ func RegistryInstance() *Registry {
 	oneRegistry.Do(func() {
 		instance = &Registry{
 			EventSystem: events.NewEventSystem(),
-			crypto:      pkg.NewCryptoClient(),
 			_logger:     logrus.StandardLogger().WithField("module", ModuleName),
 		}
 	})
@@ -136,6 +135,7 @@ func (r *Registry) Configure() error {
 
 	r.configOnce.Do(func() {
 		cfg := core.NutsConfig()
+		r.crypto = pkg.NewCryptoClient()
 		r.Config.Mode = cfg.GetEngineMode(r.Config.Mode)
 		if r.Config.Mode == core.ServerEngineMode {
 			// Apply stored events
