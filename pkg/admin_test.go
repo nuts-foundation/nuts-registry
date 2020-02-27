@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"errors"
 	"fmt"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/storage"
@@ -138,40 +139,50 @@ func TestRegistryAdministration_RegisterVendor(t *testing.T) {
 	defer repo.Cleanup()
 	registry := createRegistry(*repo)
 	defer registry.Shutdown()
-	var registerVendorEvent *events.RegisterVendorEvent
-	registry.EventSystem.RegisterEventHandler(events.RegisterVendor, func(event events.Event) error {
-		e := events.RegisterVendorEvent{}
-		if err := event.Unmarshal(&e); err != nil {
-			return err
-		}
-		registerVendorEvent = &e
-		return nil
-	})
 
-	event, err := registry.RegisterVendor("foobar", "Foobar Software", "healthcare")
-	if !assert.NoError(t, err) {
-		return
-	}
-	// Verify RegisterVendor event emitted
-	if !assert.NotNil(t, registerVendorEvent) {
-		return
-	}
-	assert.NotNil(t, event)
-	// Verify CA Certificate issued
-	key, err := crypto.MapToJwk(registerVendorEvent.Keys[0].(map[string]interface{}))
-	if err != nil {
-		panic(err)
-	}
-	certType, _ := key.Get("ct")
-	assert.Equal(t, string(cert.VendorCACertificate), certType)
-	chain := key.X509CertChain()
-	if !assert.NotNil(t, chain) {
-		return
-	}
-	if !assert.Len(t, chain, 1) {
-		return
-	}
-	assert.Equal(t, "Foobar Software CA", chain[0].Subject.CommonName)
+	t.Run("ok", func(t *testing.T) {
+		var registerVendorEvent *events.RegisterVendorEvent
+		registry.EventSystem.RegisterEventHandler(events.RegisterVendor, func(event events.Event) error {
+			e := events.RegisterVendorEvent{}
+			if err := event.Unmarshal(&e); err != nil {
+				return err
+			}
+			registerVendorEvent = &e
+			return nil
+		})
+
+		event, err := registry.RegisterVendor("foobar", "Foobar Software", "healthcare")
+		if !assert.NoError(t, err) {
+			return
+		}
+		// Verify RegisterVendor event emitted
+		if !assert.NotNil(t, registerVendorEvent) {
+			return
+		}
+		assert.NotNil(t, event)
+		// Verify CA Certificate issued
+		key, err := crypto.MapToJwk(registerVendorEvent.Keys[0].(map[string]interface{}))
+		if err != nil {
+			panic(err)
+		}
+		certType, _ := key.Get("ct")
+		assert.Equal(t, string(cert.VendorCACertificate), certType)
+		chain := key.X509CertChain()
+		if !assert.NotNil(t, chain) {
+			return
+		}
+		if !assert.Len(t, chain, 1) {
+			return
+		}
+		assert.Equal(t, "Foobar Software CA", chain[0].Subject.CommonName)
+	})
+	t.Run("error: unable to publish event", func(t *testing.T) {
+		registry.EventSystem.RegisterEventHandler(events.RegisterVendor, func(event events.Event) error {
+			return errors.New("unit test error")
+		})
+		_, err := registry.RegisterVendor("foobar", "Foobar Software", "healthcare")
+		assert.Contains(t, err.Error(), "unit test error")
+	})
 }
 
 
@@ -196,4 +207,11 @@ func createRegistry(repo test.TestRepo) Registry {
 		panic(err)
 	}
 	return registry
+}
+
+func Test_marshalJwk(t *testing.T) {
+	t.Run("invalid certificate", func(t *testing.T) {
+		_, err := marshalJwk([]byte{1, 2, 3}, cert.VendorCACertificate)
+		assert.Contains(t, err.Error(), "asn1: structure error")
+	})
 }
