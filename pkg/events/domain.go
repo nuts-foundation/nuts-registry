@@ -14,7 +14,7 @@ const (
 const (
 	// HealthcareDomain is a const for domain 'healthcare'
 	HealthcareDomain string = "healthcare"
-	// HealthcareDomain is a const for domain 'personal' (which are "PGO's")
+	// PersonalDomain is a const for domain 'personal' (which are "PGO's")
 	PersonalDomain = "personal"
 	// InsuranceDomain is a const for domain 'insurance'
 	InsuranceDomain = "insurance"
