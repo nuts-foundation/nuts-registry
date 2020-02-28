@@ -19,8 +19,8 @@ func TestRegisterVendor(t *testing.T) {
 		err := command.Execute()
 		assert.NoError(t, err)
 	}))
-	t.Run("ok - no domain", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		client.EXPECT().RegisterVendor("id", "name", "").Return(events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{}), nil)
+	t.Run("ok - no domain (default fallback to 'healthcare')", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		client.EXPECT().RegisterVendor("id", "name", "healthcare").Return(events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{}), nil)
 		command.SetArgs([]string{"register-vendor", "id", "name"})
 		err := command.Execute()
 		assert.NoError(t, err)

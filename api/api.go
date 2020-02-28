@@ -110,11 +110,7 @@ func (apiResource ApiWrapper) RegisterVendor(ctx echo.Context) error {
 	if err := v.validate(); err != nil {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-	var domain = ""
-	if v.Domain != nil {
-		domain = *v.Domain
-	}
-	event, err := apiResource.R.RegisterVendor(v.Identifier.String(), v.Name, domain)
+	event, err := apiResource.R.RegisterVendor(v.Identifier.String(), v.Name, string(v.Domain))
 	if err != nil {
 		return ctx.String(http.StatusInternalServerError, err.Error())
 	}

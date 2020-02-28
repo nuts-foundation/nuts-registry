@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+const vendorCACertificateDaysValid = 365
+
 // ErrJWKConstruction indicates that a JWK couldn't be constructed
 var ErrJWKConstruction = errors.New("unable to construct JWK")
 
@@ -31,7 +33,7 @@ func (r *Registry) RegisterVendor(id string, name string, domain string) (events
 		return cert.VendorCACertificateRequest(id, name, domain, "")
 	}, entity, entity, crypto.CertificateProfile{
 		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		NumDaysValid: r.Config.VendorCACertificateValidity,
+		NumDaysValid: vendorCACertificateDaysValid,
 	})
 	if err != nil {
 		return nil, err

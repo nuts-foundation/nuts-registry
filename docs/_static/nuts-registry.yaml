@@ -233,14 +233,15 @@ components:
           description: timestamp at which the event happened
         payload:
           oneOf:
-            - type: "#/components/schemas/RegisterVendorEvent"
-            - type: "#/components/schemas/VendorClaimEvent"
-            - type: "#/components/schemas/RegisterEndpointEvent"
+            - $ref: "#/components/schemas/RegisterVendorEvent"
+            - $ref: "#/components/schemas/VendorClaimEvent"
+            - $ref: "#/components/schemas/RegisterEndpointEvent"
           description: payload of the event
     Vendor:
       required:
         - name
         - identifier
+        - domain
       properties:
         name:
           type: string
@@ -249,9 +250,7 @@ components:
         identifier:
           $ref: "#/components/schemas/Identifier"
         domain:
-          type: string
-          description: domain the vendor (and its organisations) is active in
-          example: healthcare
+          $ref: "#/components/schemas/Domain"
     Organization:
       required:
         - name
@@ -303,6 +302,7 @@ components:
       required:
         - identifier
         - name
+        - domain
       properties:
         name:
           type: string
@@ -370,6 +370,7 @@ components:
       example: urn:oid:2.16.840.1.113883.2.4.6.3:999999990
     Domain:
       type: string
+      enum: [healthcare, personal, insurance]
       description: Domain the entity operates in.
       example: health
     JWK:

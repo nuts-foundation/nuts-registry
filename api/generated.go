@@ -18,6 +18,9 @@ import (
 	"time"
 )
 
+// Domain defines model for Domain.
+type Domain string
+
 // Endpoint defines model for Endpoint.
 type Endpoint struct {
 
@@ -96,18 +99,22 @@ type RegisterEndpointEvent struct {
 // RegisterVendorEvent defines model for RegisterVendorEvent.
 type RegisterVendorEvent struct {
 
+	// Domain the entity operates in.
+	Domain Domain `json:"domain"`
+
 	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
 	Identifier Identifier `json:"identifier"`
 
 	// the well-known name for the vendor
-	Name string `json:"name"`
+	Name    string `json:"name"`
+	OrgKeys *[]JWK `json:"orgKeys,omitempty"`
 }
 
 // Vendor defines model for Vendor.
 type Vendor struct {
 
-	// domain the vendor (and its organisations) is active in
-	Domain *string `json:"domain,omitempty"`
+	// Domain the entity operates in.
+	Domain Domain `json:"domain"`
 
 	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
 	Identifier Identifier `json:"identifier"`

@@ -205,7 +205,7 @@ func (hb HttpClient) RegisterVendor(id string, name string, domain string) (even
 	res, err := hb.client().RegisterVendor(ctx, RegisterVendorJSONRequestBody{
 		Identifier: Identifier(id),
 		Name:       name,
-		Domain:     &domain,
+		Domain:     Domain(domain),
 	})
 	if err != nil {
 		logrus.Error("error while registering vendor", err)

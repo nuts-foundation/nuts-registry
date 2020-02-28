@@ -57,9 +57,6 @@ const ConfSyncAddress = "syncAddress"
 // ConfSyncInterval is the config name for the interval in minutes to look for new registry files online
 const ConfSyncInterval = "syncInterval"
 
-// ConfVendorCACertificateValidity is the config name for the number of days vendor CA certificates are valid
-const ConfVendorCACertificateValidity = "vendorCACertificateValidity"
-
 // ModuleName == Registry
 const ModuleName = "Registry"
 

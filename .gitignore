@@ -11,10 +11,6 @@ docs/_build
 # the data dir
 data
 
-# used in test
-tmp
-temp
-
 # Test binary, build with `go test -c`
 *.test
 

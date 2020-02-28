@@ -67,8 +67,6 @@ func flagSet() *pflag.FlagSet {
 	flagSet.String(pkg.ConfSyncMode, "fs", "The method for updating the data, 'fs' for a filesystem watch or 'github' for a periodic download from github")
 	flagSet.String(pkg.ConfSyncAddress, "https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master", "The remote url to download the latest registry data from github")
 	flagSet.Int(pkg.ConfSyncInterval, 30, "The interval in minutes between looking for updated registry files on github")
-	flagSet.Int(pkg.ConfVendorCACertificateValidity, 365, "Number of days vendor CA certificates are valid, defaults to 1 year.")
-
 	return flagSet
 }
 
@@ -126,12 +124,12 @@ func cmd() *cobra.Command {
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "register-vendor [identifier] [name] [(optional) domain]",
+		Use:   "register-vendor [identifier] [name] [(optional, default=healthcare) domain]",
 		Short: "Registers a vendor",
 		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl := registryClientCreator()
-			var domain = ""
+			var domain = string(events.DefaultDomain)
 			if len(args) == 3 {
 				domain = args[2]
 			}
