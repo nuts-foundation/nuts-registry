@@ -122,6 +122,21 @@ func TestMemoryDb_RegisterVendor(t *testing.T) {
 		err = eventSystem.PublishEvent(registerVendor1)
 		assert.Error(t, err)
 	}))
+
+	t.Run("vendor with invalid key set", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		e := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
+			Identifier: "v2",
+			Name:       "Foobar",
+			Keys: []interface{}{
+				map[string]interface{}{
+					"kty": "EC",
+				},
+			},
+		})
+		err := eventSystem.PublishEvent(e)
+		assert.Error(t, err)
+		assert.Nil(t, db.vendors["v2"])
+	}))
 }
 
 func TestMemoryDb_VendorClaim(t *testing.T) {

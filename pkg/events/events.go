@@ -35,30 +35,18 @@ type Event interface {
 	Marshal() []byte
 }
 
+// unmarshalPostProcessor allows to define custom logic that should be executed after unmarshalling
+type unmarshalPostProcessor interface {
+	unmarshalPostProcess()
+}
+
 // EventType defines a supported type of event, which is used for executing the right handler.
 type EventType string
-
-const (
-	// RegisterEndpoint event type
-	RegisterEndpoint EventType = "RegisterEndpointEvent"
-	// RegisterVendor event type
-	RegisterVendor EventType = "RegisterVendorEvent"
-	// VendorClaim event type
-	VendorClaim EventType = "VendorClaimEvent"
-)
 
 // ErrMissingEventType is given when the event being unmarshalled has no type attribute.
 var ErrMissingEventType = errors.New("unmarshalling error: missing event type")
 
 var eventTypes []EventType
-
-func init() {
-	eventTypes = []EventType{
-		RegisterEndpoint,
-		RegisterVendor,
-		VendorClaim,
-	}
-}
 
 // IsEventType checks whether the given type is supported.
 func IsEventType(eventType EventType) bool {
@@ -68,39 +56,6 @@ func IsEventType(eventType EventType) bool {
 		}
 	}
 	return false
-}
-
-// Identifier defines component schema for Identifier.
-type Identifier string
-
-// RegisterEndpointEvent event
-type RegisterEndpointEvent struct {
-	Organization Identifier `json:"organization"`
-	URL          string     `json:"URL"`
-	EndpointType string     `json:"endpointType"`
-	Identifier   Identifier `json:"identifier"`
-	Status       string     `json:"status"`
-	Version      string     `json:"version"`
-}
-
-// RegisterVendorEvent event
-type RegisterVendorEvent struct {
-	Identifier Identifier `json:"identifier"`
-	Name       string     `json:"name"`
-}
-
-// VendorClaimEvent event
-type VendorClaimEvent struct {
-	VendorIdentifier Identifier `json:"vendorIdentifier"`
-	OrgIdentifier    Identifier `json:"orgIdentifier"`
-	OrgName          string     `json:"orgName"`
-	// OrgKeys is a list of JWKs which are used to
-	// 1. encrypt data to be decrypted by the organization,
-	// 2. sign consent JWTs,
-	// 3. sign organization related events (e.g. endpoint registration).
-	OrgKeys []interface{} `json:"orgKeys,omitempty"`
-	Start   time.Time     `json:"start"`
-	End     *time.Time    `json:"end,omitempty"`
 }
 
 type jsonEvent struct {
@@ -157,7 +112,15 @@ func (j jsonEvent) Unmarshal(out interface{}) error {
 			break
 		}
 	}
-	return decoder.Decode(&out)
+	err := decoder.Decode(&out)
+	if err != nil {
+		return err
+	}
+	postProc, ok := out.(unmarshalPostProcessor)
+	if ok {
+		postProc.unmarshalPostProcess()
+	}
+	return nil
 }
 
 func (j jsonEvent) Marshal() []byte {

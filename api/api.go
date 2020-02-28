@@ -23,13 +23,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
-	"net/http"
-	"net/url"
 )
 
 // String converts an identifier to string
@@ -109,7 +110,7 @@ func (apiResource ApiWrapper) RegisterVendor(ctx echo.Context) error {
 	if err := v.validate(); err != nil {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-	event, err := apiResource.R.RegisterVendor(v.Identifier.String(), v.Name)
+	event, err := apiResource.R.RegisterVendor(v.Identifier.String(), v.Name, string(v.Domain))
 	if err != nil {
 		return ctx.String(http.StatusInternalServerError, err.Error())
 	}

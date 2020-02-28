@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"go/types"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -78,10 +77,7 @@ func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpoint
 	}
 
 	var endpoints []Endpoint
-
-	if parsed.StatusCode() != http.StatusOK {
-		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", res.StatusCode, parsed.Body)}
-		logrus.Error(err.Error())
+	if err := testResponseCode(http.StatusOK, res); err != nil {
 		return nil, err
 	}
 
@@ -141,10 +137,7 @@ func (hb HttpClient) searchOrganization(params SearchOrganizationsParams) ([]db.
 	if parsed.StatusCode() == http.StatusNotFound {
 		return nil, ErrOrganizationNotFound
 	}
-
-	if parsed.StatusCode() != http.StatusOK {
-		err = types.Error{Msg: fmt.Sprintf("Registry returned %d, reason: %s", res.StatusCode, parsed.Body)}
-		logrus.Error(err.Error())
+	if err := testResponseCode(http.StatusOK, res); err != nil {
 		return nil, err
 	}
 
@@ -205,15 +198,18 @@ func (hb HttpClient) VendorClaim(vendorID string, orgID string, orgName string, 
 }
 
 // RegisterVendor is the client Api implementation for registering a vendor.
-func (hb HttpClient) RegisterVendor(id string, name string) (events.Event, error) {
+func (hb HttpClient) RegisterVendor(id string, name string, domain string) (events.Event, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
+
 	res, err := hb.client().RegisterVendor(ctx, RegisterVendorJSONRequestBody{
 		Identifier: Identifier(id),
 		Name:       name,
+		Domain:     Domain(domain),
 	})
 	if err != nil {
-		return nil, err
+		logrus.Error("error while registering vendor", err)
+		return nil, core.Wrap(err)
 	}
 	return testAndParseEventResponse(res)
 }
@@ -228,16 +224,13 @@ func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, err
 		logrus.Error("error while getting endpoints by organization", err)
 		return nil, core.Wrap(err)
 	}
+	if err := testResponseCode(http.StatusOK, res); err != nil {
+		return nil, err
+	}
 
 	parsed, err := ParseOrganizationByIdResponse(res)
 	if err != nil {
 		logrus.Error("error while reading response body", err)
-		return nil, err
-	}
-
-	if res.StatusCode != http.StatusOK {
-		err = fmt.Errorf("registry returned %d, reason: %s", res.StatusCode, parsed.Body)
-		logrus.Error(err)
 		return nil, err
 	}
 

@@ -233,14 +233,15 @@ components:
           description: timestamp at which the event happened
         payload:
           oneOf:
-            - type: "#/components/schemas/RegisterVendorEvent"
-            - type: "#/components/schemas/VendorClaimEvent"
-            - type: "#/components/schemas/RegisterEndpointEvent"
+            - $ref: "#/components/schemas/RegisterVendorEvent"
+            - $ref: "#/components/schemas/VendorClaimEvent"
+            - $ref: "#/components/schemas/RegisterEndpointEvent"
           description: payload of the event
     Vendor:
       required:
         - name
         - identifier
+        - domain
       properties:
         name:
           type: string
@@ -248,6 +249,8 @@ components:
           example: Medicare Software for People B.V.
         identifier:
           $ref: "#/components/schemas/Identifier"
+        domain:
+          $ref: "#/components/schemas/Domain"
     Organization:
       required:
         - name
@@ -299,6 +302,7 @@ components:
       required:
         - identifier
         - name
+        - domain
       properties:
         name:
           type: string
@@ -306,6 +310,12 @@ components:
           example: Medicare Software for People B.V.
         identifier:
           $ref: "#/components/schemas/Identifier"
+        domain:
+          $ref: "#/components/schemas/Domain"
+        orgKeys:
+          type: array
+          items:
+            $ref: "#/components/schemas/JWK"
     VendorClaimEvent:
       required:
         - vendorIdentifier
@@ -358,6 +368,11 @@ components:
         Generic identifier used for representing BSN, agbcode, etc.
         It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
       example: urn:oid:2.16.840.1.113883.2.4.6.3:999999990
+    Domain:
+      type: string
+      enum: [healthcare, personal, insurance]
+      description: Domain the entity operates in.
+      example: health
     JWK:
       description: as described by https://tools.ietf.org/html/rfc7517. Modelled as object so libraries can parse the tokens themselves.
       additionalProperties: {}

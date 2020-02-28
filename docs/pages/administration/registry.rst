@@ -54,11 +54,11 @@ e.g. care organisation certificates.
 To register a vendor, you need its name (as registered at the Chamber of Commerce) and its identifier, which is the company's
 URN-encoded Chamber of Commerce registration number.
 
-The syntax of this command is as follows:
+The syntax of this command is as follows (parameter 'domain' defaults to 'healthcare'):
 
 .. code-block:: shell
 
-    ./nuts registry register-vendor <identifier> <name>
+    ./nuts registry register-vendor <identifier> <name> <domain>
 
 To register vendor "BecauseWeCare B.V." identified by Chamber of Commerce registration number "00000001", run the following command:
 

@@ -1,11 +1,13 @@
 package pkg
 
 import (
+	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-crypto/pkg"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/storage"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +17,7 @@ import (
 	"testing"
 )
 
-func TestRegistry_RegisterEndpoint(t *testing.T) {
+func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 	repo, err := test.NewTestRepo(t.Name())
 	if !assert.NoError(t, err) {
 		return
@@ -43,31 +45,7 @@ func TestRegistry_RegisterEndpoint(t *testing.T) {
 	})
 }
 
-func TestRegistry_RegisterVendor(t *testing.T) {
-	repo, err := test.NewTestRepo(t.Name())
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer repo.Cleanup()
-	registry := createRegistry(*repo)
-	defer registry.Shutdown()
-
-	var event = events.RegisterVendorEvent{}
-	registry.EventSystem.RegisterEventHandler(events.RegisterVendor, func(e events.Event) error {
-		return e.Unmarshal(&event)
-	})
-
-	t.Run("ok", func(t *testing.T) {
-		_, err := registry.RegisterVendor("id", "name")
-		if !assert.NoError(t, err) {
-			return
-		}
-		assert.Equal(t, "id", string(event.Identifier))
-		assert.Equal(t, "name", event.Name)
-	})
-}
-
-func TestRegistry_VendorClaim(t *testing.T) {
+func TestRegistryAdministration_VendorClaim(t *testing.T) {
 	repo, err := test.NewTestRepo(t.Name())
 	if !assert.NoError(t, err) {
 		return
@@ -127,7 +105,7 @@ func TestRegistry_VendorClaim(t *testing.T) {
 	t.Run("error while generating key", func(t *testing.T) {
 		// Assert no keys in crypto
 		entity := types.LegalEntity{URI: "keyGenerationError"}
-		c := registry.crypto.(*pkg.Crypto)
+		c := registry.crypto.(*crypto.Crypto)
 		var defaultKeySize = c.Config.Keysize
 		c.Config.Keysize = -1
 		defer func() {
@@ -152,6 +130,62 @@ func TestRegistry_VendorClaim(t *testing.T) {
 	})
 }
 
+
+func TestRegistryAdministration_RegisterVendor(t *testing.T) {
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
+	registry := createRegistry(*repo)
+	defer registry.Shutdown()
+
+	t.Run("ok", func(t *testing.T) {
+		var registerVendorEvent *events.RegisterVendorEvent
+		registry.EventSystem.RegisterEventHandler(events.RegisterVendor, func(event events.Event) error {
+			e := events.RegisterVendorEvent{}
+			if err := event.Unmarshal(&e); err != nil {
+				return err
+			}
+			registerVendorEvent = &e
+			return nil
+		})
+
+		event, err := registry.RegisterVendor("foobar", "Foobar Software", "healthcare")
+		if !assert.NoError(t, err) {
+			return
+		}
+		// Verify RegisterVendor event emitted
+		if !assert.NotNil(t, registerVendorEvent) {
+			return
+		}
+		assert.NotNil(t, event)
+		// Verify CA Certificate issued
+		key, err := crypto.MapToJwk(registerVendorEvent.Keys[0].(map[string]interface{}))
+		if err != nil {
+			panic(err)
+		}
+		certType, _ := key.Get("ct")
+		assert.Equal(t, string(cert.VendorCACertificate), certType)
+		chain := key.X509CertChain()
+		if !assert.NotNil(t, chain) {
+			return
+		}
+		if !assert.Len(t, chain, 1) {
+			return
+		}
+		assert.Equal(t, "Foobar Software CA", chain[0].Subject.CommonName)
+	})
+	t.Run("error: unable to publish event", func(t *testing.T) {
+		registry.EventSystem.RegisterEventHandler(events.RegisterVendor, func(event events.Event) error {
+			return errors.New("unit test error")
+		})
+		_, err := registry.RegisterVendor("foobar", "Foobar Software", "healthcare")
+		assert.Contains(t, err.Error(), "unit test error")
+	})
+}
+
+
 func createRegistry(repo test.TestRepo) Registry {
 	registry := Registry{
 		Config: RegistryConfig{
@@ -163,15 +197,21 @@ func createRegistry(repo test.TestRepo) Registry {
 	}
 	err := registry.Configure()
 	cryptoBackend, _ := storage.NewFileSystemBackend(repo.Directory)
-	registry.crypto = &pkg.Crypto{
+	registry.crypto = &crypto.Crypto{
 		Storage: cryptoBackend,
-		Config: pkg.CryptoConfig{
+		Config: crypto.CryptoConfig{
 			Keysize: 2048,
-			Fspath:  repo.Directory,
 		},
 	}
 	if err != nil {
 		panic(err)
 	}
 	return registry
+}
+
+func Test_marshalJwk(t *testing.T) {
+	t.Run("invalid certificate", func(t *testing.T) {
+		_, err := marshalJwk([]byte{1, 2, 3}, cert.VendorCACertificate)
+		assert.Contains(t, err.Error(), "asn1: structure error")
+	})
 }

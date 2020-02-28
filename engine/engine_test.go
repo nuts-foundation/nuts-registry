@@ -14,14 +14,20 @@ import (
 func TestRegisterVendor(t *testing.T) {
 	command := cmd()
 	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		client.EXPECT().RegisterVendor("id", "name").Return(events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{}), nil)
+		client.EXPECT().RegisterVendor("id", "name", "domain").Return(events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{}), nil)
+		command.SetArgs([]string{"register-vendor", "id", "name", "domain"})
+		err := command.Execute()
+		assert.NoError(t, err)
+	}))
+	t.Run("ok - no domain (default fallback to 'healthcare')", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		client.EXPECT().RegisterVendor("id", "name", "healthcare").Return(events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{}), nil)
 		command.SetArgs([]string{"register-vendor", "id", "name"})
 		err := command.Execute()
 		assert.NoError(t, err)
 	}))
 	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		client.EXPECT().RegisterVendor(gomock.Any(),gomock.Any()).Return(nil, errors.New("failed"))
-		command.SetArgs([]string{"register-vendor", "id", "name"})
+		client.EXPECT().RegisterVendor(gomock.Any(),gomock.Any(), gomock.Any()).Return(nil, errors.New("failed"))
+		command.SetArgs([]string{"register-vendor", "id", "name", "domain"})
 		command.Execute()
 	}))
 }

@@ -24,7 +24,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
-	"github.com/nuts-foundation/nuts-crypto/pkg"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
@@ -69,7 +69,7 @@ type RegistryClient interface {
 	// EndpointsByOrganization returns all registered endpoints for an organization
 	EndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error)
 
-	// SearchOrganizations searches the registry for any Organization mathing the given query
+	// SearchOrganizations searches the registry for any Organization matching the given query
 	SearchOrganizations(query string) ([]db.Organization, error)
 
 	// OrganizationById returns an Organization given the Id or an error if it doesn't exist
@@ -84,18 +84,20 @@ type RegistryClient interface {
 	// VendorClaim registers an organization under a vendor. orgKeys are the organization's keys in JWK format
 	VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) (events.Event, error)
 
-	// RegisterVendor registers a vendor
-	RegisterVendor(id string, name string) (events.Event, error)
+	// RegisterVendor registers a vendor with the given id, name for the specified domain. If the vendor with this ID
+	// already exists, it functions as an update.
+	RegisterVendor(id string, name string, domain string) (events.Event, error)
 }
 
 // RegistryConfig holds the config
 type RegistryConfig struct {
-	Mode         string
-	SyncMode     string
-	SyncAddress  string
-	SyncInterval int
-	Datadir      string
-	Address      string
+	Mode                        string
+	SyncMode                    string
+	SyncAddress                 string
+	SyncInterval                int
+	Datadir                     string
+	Address                     string
+	VendorCACertificateValidity int
 }
 
 // Registry holds the config and Db reference
@@ -103,7 +105,7 @@ type Registry struct {
 	Config      RegistryConfig
 	Db          db.Db
 	EventSystem events.EventSystem
-	crypto      pkg.Client
+	crypto      crypto.Client
 	configOnce  sync.Once
 	_logger     *logrus.Entry
 	closers     []chan struct{}
@@ -135,7 +137,7 @@ func (r *Registry) Configure() error {
 
 	r.configOnce.Do(func() {
 		cfg := core.NutsConfig()
-		r.crypto = pkg.NewCryptoClient()
+		r.crypto = crypto.NewCryptoClient()
 		r.Config.Mode = cfg.GetEngineMode(r.Config.Mode)
 		if r.Config.Mode == core.ServerEngineMode {
 			// Apply stored events

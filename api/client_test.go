@@ -50,10 +50,7 @@ func TestHttpClient_OrganizationById(t *testing.T) {
 
 		_, err := c.OrganizationById("id")
 
-		expected := "registry returned 404, reason: error reason"
-		if err.Error() != expected {
-			t.Errorf("Expected error [%s], got [%v]", expected, err)
-		}
+		assert.EqualError(t, err, "registry returned HTTP 404 (expected: 200), response: error reason", "error")
 	})
 
 	t.Run("200", func(t *testing.T) {
@@ -155,7 +152,7 @@ func TestHttpClient_RegisterVendor(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		vendor, err := c.RegisterVendor("id", "name")
+		vendor, err := c.RegisterVendor("id", "name", "")
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -165,7 +162,7 @@ func TestHttpClient_RegisterVendor(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		event, err := c.RegisterVendor("id", "name")
+		event, err := c.RegisterVendor("id", "name", "")
 		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
 	})

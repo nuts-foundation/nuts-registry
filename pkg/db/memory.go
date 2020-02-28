@@ -101,7 +101,7 @@ func (o org) toDbEndpoints() []Endpoint {
 	return r
 }
 
-// RegisterEventHandlers registers event handlers on this database`
+// RegisterEventHandlers registers event handlers on this database
 func (db *MemoryDb) RegisterEventHandlers(system events.EventSystem) {
 	system.RegisterEventHandler(events.RegisterVendor, func(e events.Event) error {
 		// Unmarshal
@@ -113,6 +113,10 @@ func (db *MemoryDb) RegisterEventHandlers(system events.EventSystem) {
 		id := string(event.Identifier)
 		if db.vendors[id] != nil {
 			return fmt.Errorf("vendor already registered (id = %s)", event.Identifier)
+		}
+		_, err := keysAsSet(event.Keys)
+		if err != nil {
+			return errors2.Wrap(err, "invalid JWK")
 		}
 		// Process
 		db.vendors[id] = &vendor{
@@ -166,7 +170,6 @@ func (db *MemoryDb) RegisterEventHandlers(system events.EventSystem) {
 		}
 		return nil
 	})
-
 }
 
 func (db *MemoryDb) lookupOrg(orgID string) *org {
