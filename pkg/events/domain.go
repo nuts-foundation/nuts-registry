@@ -12,12 +12,15 @@ const (
 )
 
 const (
+	// HealthcareDomain is a const for domain 'healthcare'
 	HealthcareDomain string = "healthcare"
-	PersonalDomain          = "personal"
-	InsuranceDomain         = "insurance"
-	DefaultDomain           = HealthcareDomain
+	// HealthcareDomain is a const for domain 'personal' (which are "PGO's")
+	PersonalDomain = "personal"
+	// InsuranceDomain is a const for domain 'insurance'
+	InsuranceDomain = "insurance"
+	// FallbackDomain is a const for the fallback domain in case there's no domain set, which can be the case for legacy data.
+	FallbackDomain = HealthcareDomain
 )
-
 
 func init() {
 	eventTypes = []EventType{
@@ -26,7 +29,6 @@ func init() {
 		VendorClaim,
 	}
 }
-
 
 // Identifier defines component schema for Identifier.
 type Identifier string
@@ -52,7 +54,7 @@ type RegisterVendorEvent struct {
 func (r *RegisterVendorEvent) unmarshalPostProcess() {
 	// Default fallback to 'healthcare' domain when none is set, for handling legacy data when 'domain' didn't exist.
 	if r.Domain == "" {
-		r.Domain = DefaultDomain
+		r.Domain = FallbackDomain
 	}
 }
 

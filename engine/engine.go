@@ -129,7 +129,7 @@ func cmd() *cobra.Command {
 		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl := registryClientCreator()
-			var domain = string(events.DefaultDomain)
+			var domain = string(events.FallbackDomain)
 			if len(args) == 3 {
 				domain = args[2]
 			}
