@@ -33,11 +33,12 @@ const StatusActive = "active"
 
 // Endpoint defines component schema for Endpoint.
 type Endpoint struct {
-	URL          string     `json:"URL"`
-	EndpointType string     `json:"endpointType"`
-	Identifier   Identifier `json:"identifier"`
-	Status       string     `json:"status"`
-	Version      string     `json:"version"`
+	URL          string            `json:"URL"`
+	EndpointType string            `json:"endpointType"`
+	Identifier   Identifier        `json:"identifier"`
+	Status       string            `json:"status"`
+	Version      string            `json:"version"`
+	Properties   map[string]string `json:"properties,omitempty"`
 }
 
 // Identifier defines component schema for Identifier.

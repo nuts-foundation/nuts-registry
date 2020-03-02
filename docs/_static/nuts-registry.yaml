@@ -298,6 +298,8 @@ components:
           type: string
           description: location of the actual en endpoint on the internet
           example: tcp://127.0.0.1:1234, https://nuts.nl/endpoint
+        properties:
+          $ref: "#/components/schemas/EndpointProperties"
     RegisterVendorEvent:
       required:
         - identifier
@@ -362,6 +364,8 @@ components:
           type: string
           description: location of the actual en endpoint on the internet
           example: tcp://127.0.0.1:1234, https://nuts.nl/endpoint
+        properties:
+          $ref: "#/components/schemas/EndpointProperties"
     Identifier:
       type: string
       description: >
@@ -373,6 +377,11 @@ components:
       enum: [healthcare, personal, insurance]
       description: Domain the entity operates in.
       example: health
+    EndpointProperties:
+      type: object
+      additionalProperties:
+        type: string
+      description: A property bag, containing extra properties for endpoints
     JWK:
       description: as described by https://tools.ietf.org/html/rfc7517. Modelled as object so libraries can parse the tokens themselves.
       additionalProperties: {}

@@ -86,7 +86,7 @@ func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpoint
 		return nil, err
 	}
 
-	return endpointsArrayToDb(endpoints), nil
+	return endpointsToDb(endpoints), nil
 }
 
 // SearchOrganizations is the client Api implementation for finding organizations by (partial) query
@@ -156,19 +156,24 @@ func (hb HttpClient) searchOrganization(params SearchOrganizationsParams) ([]db.
 		}
 	}
 
-	return organizationsToFromDb(organizations), nil
+	return organizationsToDb(organizations), nil
 }
 
 // RegisterEndpoint is the client Api implementation for registering an endpoint for an organisation.
-func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string) (events.Event, error) {
+func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string, properties map[string]string) (events.Event, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
+	props := EndpointProperties{}
+	for key, value := range properties {
+		props[key] = value
+	}
 	res, err := hb.client().RegisterEndpoint(ctx, organizationID, RegisterEndpointJSONRequestBody{
 		URL:          url,
 		EndpointType: endpointType,
 		Identifier:   Identifier(id),
 		Status:       status,
 		Version:      version,
+		Properties:   &props,
 	})
 	if err != nil {
 		return nil, err

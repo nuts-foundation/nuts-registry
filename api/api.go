@@ -61,7 +61,7 @@ func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) erro
 	if err = ep.validate(); err != nil {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-	event, err := apiResource.R.RegisterEndpoint(unescapedID, ep.Identifier.String(), ep.URL, ep.EndpointType, ep.Status, ep.Version)
+	event, err := apiResource.R.RegisterEndpoint(unescapedID, ep.Identifier.String(), ep.URL, ep.EndpointType, ep.Status, ep.Version, fromEndpointProperties(ep.Properties))
 	if err != nil {
 		return ctx.String(http.StatusInternalServerError, err.Error())
 	}
@@ -145,7 +145,7 @@ func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params
 		if err != nil {
 			logrus.Warning(err.Error())
 		} else {
-			dupEndpoints = append(endpointsArrayFromDb(dbEndpoints), dupEndpoints...)
+			dupEndpoints = append(endpointsFromDb(dbEndpoints), dupEndpoints...)
 		}
 
 		if strict != nil && *strict && len(dbEndpoints) == 0 {

@@ -79,7 +79,7 @@ type RegistryClient interface {
 	ReverseLookup(name string) (*db.Organization, error)
 
 	// RegisterEndpoint registers an endpoint for an organization
-	RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string) (events.Event, error)
+	RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string, properties map[string]string) (events.Event, error)
 
 	// VendorClaim registers an organization under a vendor. orgKeys are the organization's keys in JWK format
 	VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) (events.Event, error)

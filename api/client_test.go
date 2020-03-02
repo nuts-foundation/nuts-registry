@@ -174,7 +174,7 @@ func TestHttpClient_RegisterEndpoint(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		event, err := c.RegisterEndpoint("orgId", "id", "url", "type", "status", "version")
+		event, err := c.RegisterEndpoint("orgId", "id", "url", "type", "status", "version", map[string]string{"foo": "bar"})
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -184,7 +184,7 @@ func TestHttpClient_RegisterEndpoint(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		event, err := c.RegisterEndpoint("orgId", "id", "url", "type", "status", "version")
+		event, err := c.RegisterEndpoint("orgId", "id", "url", "type", "status", "version", nil)
 		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
 	})
