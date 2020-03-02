@@ -160,7 +160,7 @@ func (hb HttpClient) searchOrganization(params SearchOrganizationsParams) ([]db.
 }
 
 // RegisterEndpoint is the client Api implementation for registering an endpoint for an organisation.
-func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string, properties map[string]string) (events.Event, error) {
+func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, properties map[string]string) (events.Event, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 	res, err := hb.client().RegisterEndpoint(ctx, organizationID, RegisterEndpointJSONRequestBody{
@@ -168,7 +168,6 @@ func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url stri
 		EndpointType: endpointType,
 		Identifier:   Identifier(id),
 		Status:       status,
-		Version:      version,
 		Properties:   toEndpointProperties(properties),
 	})
 	if err != nil {

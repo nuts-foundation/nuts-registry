@@ -8,7 +8,6 @@ func TestEndpoint_validate(t *testing.T) {
 		EndpointType string
 		Identifier   Identifier
 		Status       string
-		Version      string
 	}
 	tests := []struct {
 		name    string
@@ -27,7 +26,6 @@ func TestEndpoint_validate(t *testing.T) {
 				EndpointType: tt.fields.EndpointType,
 				Identifier:   tt.fields.Identifier,
 				Status:       tt.fields.Status,
-				Version:      tt.fields.Version,
 			}
 			if err := e.validate(); (err != nil) != tt.wantErr {
 				t.Errorf("validate() error = %v, wantErr %v", err, tt.wantErr)

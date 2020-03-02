@@ -38,9 +38,6 @@ type Endpoint struct {
 
 	// status of the endpoint
 	Status string `json:"status"`
-
-	// version number of the endpoint, used to distinguish between upgrades of endpoint
-	Version string `json:"version"`
 }
 
 // EndpointProperties defines model for EndpointProperties.
@@ -100,9 +97,6 @@ type RegisterEndpointEvent struct {
 
 	// status of the endpoint
 	Status string `json:"status"`
-
-	// version number of the endpoint, used to distinguish between upgrades of endpoint
-	Version string `json:"version"`
 }
 
 // RegisterVendorEvent defines model for RegisterVendorEvent.

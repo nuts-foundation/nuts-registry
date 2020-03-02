@@ -26,7 +26,7 @@ func TestRegisterVendor(t *testing.T) {
 		assert.NoError(t, err)
 	}))
 	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		client.EXPECT().RegisterVendor(gomock.Any(),gomock.Any(), gomock.Any()).Return(nil, errors.New("failed"))
+		client.EXPECT().RegisterVendor(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("failed"))
 		command.SetArgs([]string{"register-vendor", "id", "name", "domain"})
 		command.Execute()
 	}))
@@ -52,14 +52,14 @@ func TestRegisterEndpoint(t *testing.T) {
 	command := cmd()
 	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		event := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{})
-		client.EXPECT().RegisterEndpoint("orgId", "id", "url", "type", db.StatusActive, "version", map[string]string{"k1": "v1", "k2": "v2"}).Return(event, nil)
-		command.SetArgs([]string{"register-endpoint", "orgId", "id", "type", "url", "version", "-p", "k1=v1", "-p", "k2=v2"})
+		client.EXPECT().RegisterEndpoint("orgId", "id", "url", "type", db.StatusActive, map[string]string{"k1": "v1", "k2": "v2"}).Return(event, nil)
+		command.SetArgs([]string{"register-endpoint", "orgId", "id", "type", "url", "-p", "k1=v1", "-p", "k2=v2"})
 		err := command.Execute()
 		assert.NoError(t, err)
 	}))
 	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		client.EXPECT().RegisterEndpoint(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("failed"))
-		command.SetArgs([]string{"register-endpoint", "orgId", "id", "type", "url", "version"})
+		client.EXPECT().RegisterEndpoint(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("failed"))
+		command.SetArgs([]string{"register-endpoint", "orgId", "id", "type", "url"})
 		command.Execute()
 	}))
 }

@@ -278,7 +278,6 @@ components:
         - endpointType
         - identifier
         - status
-        - version
         - URL
       properties:
         endpointType:
@@ -291,9 +290,6 @@ components:
           type: string
           enum: ["active", "disabled"]
           description: status of the endpoint
-        version:
-          type: string
-          description: version number of the endpoint, used to distinguish between upgrades of endpoint
         URL:
           type: string
           description: location of the actual en endpoint on the internet
@@ -342,7 +338,6 @@ components:
         - endpointType
         - identifier
         - status
-        - version
         - URL
       properties:
         organization:
@@ -357,9 +352,6 @@ components:
           type: string
           enum: ["active", "disabled"]
           description: status of the endpoint
-        version:
-          type: string
-          description: version number of the endpoint, used to distinguish between upgrades of endpoint
         URL:
           type: string
           description: location of the actual en endpoint on the internet

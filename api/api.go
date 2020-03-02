@@ -61,7 +61,7 @@ func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) erro
 	if err = ep.validate(); err != nil {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-	event, err := apiResource.R.RegisterEndpoint(unescapedID, ep.Identifier.String(), ep.URL, ep.EndpointType, ep.Status, ep.Version, fromEndpointProperties(ep.Properties))
+	event, err := apiResource.R.RegisterEndpoint(unescapedID, ep.Identifier.String(), ep.URL, ep.EndpointType, ep.Status, fromEndpointProperties(ep.Properties))
 	if err != nil {
 		return ctx.String(http.StatusInternalServerError, err.Error())
 	}
