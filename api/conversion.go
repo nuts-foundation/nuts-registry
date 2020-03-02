@@ -30,11 +30,7 @@ func (e Endpoint) fromDb(db db.Endpoint) Endpoint {
 	e.Identifier = Identifier(db.Identifier)
 	e.Status = db.Status
 	e.Version = db.Version
-	props := EndpointProperties{}
-	for key, value := range db.Properties {
-		props[key] = value
-	}
-	e.Properties = &props
+	e.Properties = toEndpointProperties(db.Properties)
 	return e
 }
 
@@ -97,6 +93,14 @@ func fromEndpointProperties(endpointProperties *EndpointProperties) map[string]s
 		}
 	}
 	return props
+}
+
+func toEndpointProperties(properties map[string]string) *EndpointProperties {
+	props := EndpointProperties{}
+	for key, value := range properties {
+		props[key] = value
+	}
+	return &props
 }
 
 func jwkToMap(jwk []JWK) []interface{} {

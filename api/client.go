@@ -163,17 +163,13 @@ func (hb HttpClient) searchOrganization(params SearchOrganizationsParams) ([]db.
 func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string, properties map[string]string) (events.Event, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
-	props := EndpointProperties{}
-	for key, value := range properties {
-		props[key] = value
-	}
 	res, err := hb.client().RegisterEndpoint(ctx, organizationID, RegisterEndpointJSONRequestBody{
 		URL:          url,
 		EndpointType: endpointType,
 		Identifier:   Identifier(id),
 		Status:       status,
 		Version:      version,
-		Properties:   &props,
+		Properties:   toEndpointProperties(properties),
 	})
 	if err != nil {
 		return nil, err
