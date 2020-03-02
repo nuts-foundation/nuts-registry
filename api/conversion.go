@@ -19,7 +19,10 @@
 
 package api
 
-import "github.com/nuts-foundation/nuts-registry/pkg/db"
+import (
+	"fmt"
+	"github.com/nuts-foundation/nuts-registry/pkg/db"
+)
 
 func (e Endpoint) fromDb(db db.Endpoint) Endpoint {
 	e.URL = db.URL
@@ -27,11 +30,12 @@ func (e Endpoint) fromDb(db db.Endpoint) Endpoint {
 	e.Identifier = Identifier(db.Identifier)
 	e.Status = db.Status
 	e.Version = db.Version
+	e.Properties = toEndpointProperties(db.Properties)
 	return e
 }
 
 func (o Organization) fromDb(db db.Organization) Organization {
-	e := endpointsArrayFromDb(db.Endpoints)
+	e := endpointsFromDb(db.Endpoints)
 	o.Identifier = Identifier(db.Identifier)
 	o.Name = db.Name
 	o.PublicKey = db.PublicKey
@@ -64,20 +68,39 @@ func (o Organization) toDb() db.Organization {
 	}
 
 	if o.Endpoints != nil {
-		org.Endpoints = endpointsArrayToDb(*o.Endpoints)
+		org.Endpoints = endpointsToDb(*o.Endpoints)
 	}
 
 	return org
 }
 
-func (a Endpoint) toDb() db.Endpoint {
+func (e Endpoint) toDb() db.Endpoint {
 	return db.Endpoint{
-		URL:          a.URL,
-		EndpointType: a.EndpointType,
-		Identifier:   db.Identifier(a.Identifier),
-		Status:       a.Status,
-		Version:      a.Version,
+		URL:          e.URL,
+		EndpointType: e.EndpointType,
+		Identifier:   db.Identifier(e.Identifier),
+		Status:       e.Status,
+		Version:      e.Version,
+		Properties:   fromEndpointProperties(e.Properties),
 	}
+}
+
+func fromEndpointProperties(endpointProperties *EndpointProperties) map[string]string {
+	props := make(map[string]string, 0)
+	if endpointProperties != nil {
+		for key, value := range *endpointProperties {
+			props[key] = fmt.Sprintf("%s", value)
+		}
+	}
+	return props
+}
+
+func toEndpointProperties(properties map[string]string) *EndpointProperties {
+	props := EndpointProperties{}
+	for key, value := range properties {
+		props[key] = value
+	}
+	return &props
 }
 
 func jwkToMap(jwk []JWK) []interface{} {
@@ -88,7 +111,7 @@ func jwkToMap(jwk []JWK) []interface{} {
 	return em
 }
 
-func endpointsArrayFromDb(endpointsIn []db.Endpoint) []Endpoint {
+func endpointsFromDb(endpointsIn []db.Endpoint) []Endpoint {
 	es := make([]Endpoint, len(endpointsIn))
 	for i, a := range endpointsIn {
 		es[i] = Endpoint{}.fromDb(a)
@@ -96,7 +119,7 @@ func endpointsArrayFromDb(endpointsIn []db.Endpoint) []Endpoint {
 	return es
 }
 
-func organizationsToFromDb(organizationsIn []Organization) []db.Organization {
+func organizationsToDb(organizationsIn []Organization) []db.Organization {
 	os := make([]db.Organization, len(organizationsIn))
 	for i, a := range organizationsIn {
 		os[i] = a.toDb()
@@ -104,7 +127,7 @@ func organizationsToFromDb(organizationsIn []Organization) []db.Organization {
 	return os
 }
 
-func endpointsArrayToDb(endpointsIn []Endpoint) []db.Endpoint {
+func endpointsToDb(endpointsIn []Endpoint) []db.Endpoint {
 	es := make([]db.Endpoint, len(endpointsIn))
 	for i, a := range endpointsIn {
 		es[i] = a.toDb()

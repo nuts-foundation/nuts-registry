@@ -32,7 +32,7 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 	})
 
 	t.Run("ok", func(t *testing.T) {
-		_, err := registry.RegisterEndpoint("orgId", "endpointId", "url", "type", "status", "version")
+		_, err := registry.RegisterEndpoint("orgId", "endpointId", "url", "type", "status", "version", map[string]string{"foo": "bar"})
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -42,6 +42,7 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 		assert.Equal(t, "type", event.EndpointType)
 		assert.Equal(t, "version", event.Version)
 		assert.Equal(t, "status", event.Status)
+		assert.Len(t, event.Properties, 1)
 	})
 }
 
@@ -130,7 +131,6 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 	})
 }
 
-
 func TestRegistryAdministration_RegisterVendor(t *testing.T) {
 	repo, err := test.NewTestRepo(t.Name())
 	if !assert.NoError(t, err) {
@@ -184,7 +184,6 @@ func TestRegistryAdministration_RegisterVendor(t *testing.T) {
 		assert.Contains(t, err.Error(), "unit test error")
 	})
 }
-
 
 func createRegistry(repo test.TestRepo) Registry {
 	registry := Registry{

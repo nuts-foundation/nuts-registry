@@ -35,12 +35,13 @@ type Identifier string
 
 // RegisterEndpointEvent event
 type RegisterEndpointEvent struct {
-	Organization Identifier `json:"organization"`
-	URL          string     `json:"URL"`
-	EndpointType string     `json:"endpointType"`
-	Identifier   Identifier `json:"identifier"`
-	Status       string     `json:"status"`
-	Version      string     `json:"version"`
+	Organization Identifier        `json:"organization"`
+	URL          string            `json:"URL"`
+	EndpointType string            `json:"endpointType"`
+	Identifier   Identifier        `json:"identifier"`
+	Status       string            `json:"status"`
+	Version      string            `json:"version"`
+	Properties   map[string]string `json:"properties,omitempty"`
 }
 
 // RegisterVendorEvent event

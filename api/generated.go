@@ -33,12 +33,18 @@ type Endpoint struct {
 	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
 	Identifier Identifier `json:"identifier"`
 
+	// A property bag, containing extra properties for endpoints
+	Properties *EndpointProperties `json:"properties,omitempty"`
+
 	// status of the endpoint
 	Status string `json:"status"`
 
 	// version number of the endpoint, used to distinguish between upgrades of endpoint
 	Version string `json:"version"`
 }
+
+// EndpointProperties defines model for EndpointProperties.
+type EndpointProperties map[string]interface{}
 
 // Event defines model for Event.
 type Event struct {
@@ -88,6 +94,9 @@ type RegisterEndpointEvent struct {
 
 	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
 	Organization Identifier `json:"organization"`
+
+	// A property bag, containing extra properties for endpoints
+	Properties *EndpointProperties `json:"properties,omitempty"`
 
 	// status of the endpoint
 	Status string `json:"status"`

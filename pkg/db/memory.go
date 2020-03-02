@@ -90,6 +90,7 @@ func (e endpoint) toDb() Endpoint {
 		Identifier:   toDbIdentifier(e.Identifier),
 		Status:       e.Status,
 		Version:      e.Version,
+		Properties:   e.Properties,
 	}
 }
 

@@ -130,3 +130,9 @@ In the following example we register a Corda consent endpoint for the previously
         urn:nuts:endpoint:consent \
         "tcp://1.2.3.4:4321" \
         1.0.0
+
+Endpoints can have extra metadata in the form of string properties. Property are specified as **key=value** using the **-p** flag:
+
+.. code-block:: shell
+
+    NUTS_MODE=cli ./nuts ...(etc) -p key1=Hello -p key2=World

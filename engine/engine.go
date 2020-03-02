@@ -34,6 +34,7 @@ import (
 	"github.com/spf13/pflag"
 	"os"
 	"os/signal"
+	"strings"
 )
 
 // registryClientCreator is a variable to aid testability
@@ -162,25 +163,44 @@ func cmd() *cobra.Command {
 		},
 	})
 
-	cmd.AddCommand(&cobra.Command{
-		Use:   "register-endpoint [org-identifier] [identifier] [type] [url] [version]",
-		Short: "Registers an endpoint",
-		Long:  "Registers an endpoint for an organization.",
-		Args:  cobra.ExactArgs(5),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cl := registryClientCreator()
-			event, err := cl.RegisterEndpoint(args[0], args[1], args[3], args[2], db.StatusActive, args[4])
-			if err != nil {
-				logrus.Errorf("Unable to register endpoint: %v", err)
-				return err
-			}
-			logrus.Info("Endpoint registered.")
-			logEventToConsole(event)
-			return nil
-		},
-	})
+	{
+		var properties *[]string
+		command := &cobra.Command{
+			Use:   "register-endpoint [org-identifier] [identifier] [type] [url] [version]",
+			Short: "Registers an endpoint",
+			Long:  "Registers an endpoint for an organization.",
+			Args:  cobra.ExactArgs(5),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				cl := registryClientCreator()
+				event, err := cl.RegisterEndpoint(args[0], args[1], args[3], args[2], db.StatusActive, args[4], parseCLIProperties(*properties))
+				if err != nil {
+					logrus.Errorf("Unable to register endpoint: %v", err)
+					return err
+				}
+				logrus.Info("Endpoint registered.")
+				logEventToConsole(event)
+				return nil
+			},
+		}
+		flagSet := pflag.NewFlagSet("register-endpoint", pflag.ContinueOnError)
+		properties = flagSet.StringArrayP("properties", "p", nil, "extra properties for the endpoint, in the format: key=value")
+		command.Flags().AddFlagSet(flagSet)
+		cmd.AddCommand(command)
+	}
 
 	return cmd
+}
+
+// parseCLIProperties parses a slice of key-value entries (key=value) to a map.
+func parseCLIProperties(keysAndValues []string) map[string]string {
+	result := make(map[string]string, 0)
+	for _, keyAndValue := range keysAndValues {
+		parts := strings.SplitN(keyAndValue, "=", 2)
+		if len(parts) == 2 {
+			result[parts[0]] = parts[1]
+		}
+	}
+	return result
 }
 
 func logEventToConsole(event events.Event) {
