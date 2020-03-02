@@ -64,6 +64,23 @@ func TestRegisterEndpoint(t *testing.T) {
 	}))
 }
 
+func TestSearchOrg(t *testing.T) {
+	command := cmd()
+	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		client.EXPECT().SearchOrganizations("foo")
+		command.SetArgs([]string{"search", "foo"})
+		err := command.Execute()
+		assert.NoError(t, err)
+	}))
+}
+
+func TestPrintVersion(t *testing.T) {
+	command := cmd()
+	command.SetArgs([]string{"version"})
+	err := command.Execute()
+	assert.NoError(t, err)
+}
+
 func withMock(test func(t *testing.T, client *mock.MockRegistryClient)) func(t *testing.T) {
 	return func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
