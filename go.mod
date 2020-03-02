@@ -6,10 +6,11 @@ require (
 	github.com/deepmap/oapi-codegen v1.3.0
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/golang/mock v1.4.0
+	github.com/google/uuid v1.1.1
 	github.com/labstack/echo/v4 v4.1.11
 	github.com/labstack/gommon v0.3.0
 	github.com/lestrrat-go/jwx v0.9.0
-	github.com/nuts-foundation/nuts-crypto v0.0.0-20200220100700-279fd5def20c
+	github.com/nuts-foundation/nuts-crypto v0.0.0-20200302080751-2e08794e51fd
 	github.com/nuts-foundation/nuts-go-core v0.0.0-20200224092142-03e29f635429
 	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/pkg/errors v0.8.1

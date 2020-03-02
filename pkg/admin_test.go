@@ -43,6 +43,13 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 		assert.Equal(t, "status", event.Status)
 		assert.Len(t, event.Properties, 1)
 	})
+	t.Run("ok - auto generate id", func(t *testing.T) {
+		_, err := registry.RegisterEndpoint("orgId", "", "url", "type", "status", map[string]string{"foo": "bar"})
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Len(t, event.Identifier, 36) // 36 = length of UUIDv4 as string
+	})
 }
 
 func TestRegistryAdministration_VendorClaim(t *testing.T) {

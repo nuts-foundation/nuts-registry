@@ -165,14 +165,15 @@ func cmd() *cobra.Command {
 
 	{
 		var properties *[]string
+		var id *string
 		command := &cobra.Command{
-			Use:   "register-endpoint [org-identifier] [identifier] [type] [url]",
+			Use:   "register-endpoint [org-identifier] [type] [url]",
 			Short: "Registers an endpoint",
 			Long:  "Registers an endpoint for an organization.",
-			Args:  cobra.ExactArgs(4),
+			Args:  cobra.ExactArgs(3),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				cl := registryClientCreator()
-				event, err := cl.RegisterEndpoint(args[0], args[1], args[3], args[2], db.StatusActive, parseCLIProperties(*properties))
+				event, err := cl.RegisterEndpoint(args[0], *id, args[2], args[1], db.StatusActive, parseCLIProperties(*properties))
 				if err != nil {
 					logrus.Errorf("Unable to register endpoint: %v", err)
 					return err
@@ -183,7 +184,8 @@ func cmd() *cobra.Command {
 			},
 		}
 		flagSet := pflag.NewFlagSet("register-endpoint", pflag.ContinueOnError)
-		properties = flagSet.StringArrayP("properties", "p", nil, "extra properties for the endpoint, in the format: key=value")
+		properties = flagSet.StringArrayP("property", "p", nil, "extra properties for the endpoint, in the format: key=value")
+		id = flagSet.StringP("id", "i", "", "endpoint identifier, defaults to a random GUID when not set")
 		command.Flags().AddFlagSet(flagSet)
 		cmd.AddCommand(command)
 	}

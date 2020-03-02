@@ -126,12 +126,15 @@ In the following example we register a Corda consent endpoint for the previously
 .. code-block:: shell
 
     NUTS_MODE=cli ./nuts registry register-endpoint urn:oid:2.16.840.1.113883.2.4.6.1:123456 \
-        "urn:ietf:rfc:1779:O=BecauseWeCare B.V.,C=NL,L=Almere,CN=Kunstgebit Thuiszorg" \
         urn:nuts:endpoint:consent \
         "tcp://1.2.3.4:4321"
 
-Endpoints can have extra metadata in the form of string properties. Property are specified as **key=value** using the **-p** flag:
 
-.. code-block:: shell
+In addition the following flags can be supplied:
 
-    NUTS_MODE=cli ./nuts ...(etc) -p key1=Hello -p key2=World
+====  =================================================================================  ==========
+Flag  Description                                                                        Example
+====  =================================================================================  ==========
+-i    Identifier for the endpoint. If not supplied a type 4 UUID is randomly generated.  `-i abc`
+-p    Endpoint metadata in the form of string properties, specified as **key=value**     `-p foo=bar`
+====  =================================================================================  ==========

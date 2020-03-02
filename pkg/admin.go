@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
+	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/jwk"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
@@ -102,6 +103,9 @@ func (r *Registry) VendorClaim(vendorID string, orgID string, orgName string, or
 func (r *Registry) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, properties map[string]string) (events.Event, error) {
 	logrus.Infof("Registering endpoint, organization=%s, id=%s, type=%s, url=%s, status=%s",
 		organizationID, id, endpointType, url, status)
+	if id == "" {
+		id = uuid.New().String()
+	}
 	return r.publishEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
 		Organization: events.Identifier(organizationID),
 		URL:          url,
