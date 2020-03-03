@@ -10,10 +10,12 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/test"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 )
 
@@ -123,17 +125,15 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 	})
 
 	t.Run("unable to load existing key", func(t *testing.T) {
-		repo.Cleanup()
-		os.MkdirAll(repo.Directory, os.ModePerm)
-		entity := types.LegalEntity{URI: "org"}
+		entity := types.LegalEntity{URI: "orgInvalidKey"}
 		err := registry.crypto.GenerateKeyPairFor(entity)
 		if !assert.NoError(t, err) {
 			return
 		}
-		dirEntries, _ := ioutil.ReadDir(repo.Directory)
-		ioutil.WriteFile(filepath.Join(repo.Directory, dirEntries[0].Name()), []byte("this is not a private key"), os.ModePerm)
+		f := getLastUpdatedFile(filepath.Join(repo.Directory, "keys"))
+		ioutil.WriteFile(f, []byte("this is not a private key"), os.ModePerm)
 		_, err = registry.VendorClaim("vendorID", entity.URI, "orgName", nil)
-		assert.Error(t, err)
+		assert.EqualError(t, err, "malformed PEM block")
 	})
 }
 
@@ -191,7 +191,21 @@ func TestRegistryAdministration_RegisterVendor(t *testing.T) {
 	})
 }
 
+func getLastUpdatedFile(dir string) string {
+	entries, _ := ioutil.ReadDir(dir)
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].ModTime().After(entries[j].ModTime())
+	})
+	return filepath.Join(dir, entries[0].Name())
+}
+
 func createRegistry(repo test.TestRepo) Registry {
+	os.Setenv("NUTS_IDENTITY", "urn:oid:1.3.6.1.4.1.54851.4:4")
+	defer os.Unsetenv("NUTS_IDENTITY")
+	err := core.NutsConfig().Load(&cobra.Command{})
+	if err != nil {
+		panic(err)
+	}
 	registry := Registry{
 		Config: RegistryConfig{
 			Mode:     core.ServerEngineMode,
@@ -200,8 +214,8 @@ func createRegistry(repo test.TestRepo) Registry {
 		},
 		EventSystem: events.NewEventSystem(),
 	}
-	err := registry.Configure()
-	cryptoBackend, _ := storage.NewFileSystemBackend(repo.Directory)
+	err = registry.Configure()
+	cryptoBackend, _ := storage.NewFileSystemBackend(filepath.Join(repo.Directory, "keys"))
 	registry.crypto = &crypto.Crypto{
 		Storage: cryptoBackend,
 		Config: crypto.CryptoConfig{

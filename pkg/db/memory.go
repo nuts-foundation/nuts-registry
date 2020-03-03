@@ -83,6 +83,15 @@ func keysAsSet(keys []interface{}) (jwk.Set, error) {
 	return set, err
 }
 
+func (v vendor) toDb() Vendor {
+	return Vendor{
+		Identifier: toDbIdentifier(v.Identifier),
+		Name:       v.Name,
+		Domain:     v.Domain,
+		Keys:       v.Keys,
+	}
+}
+
 func (e endpoint) toDb() Endpoint {
 	return Endpoint{
 		URL:          e.URL,
@@ -190,6 +199,15 @@ func New() *MemoryDb {
 	return &MemoryDb{
 		make(map[string]*vendor),
 	}
+}
+
+// VendorByID looks up the vendor by the given ID.
+func (db *MemoryDb) VendorByID(id string) *Vendor {
+	if db.vendors[id] == nil {
+		return nil
+	}
+	result := db.vendors[id].toDb()
+	return &result
 }
 
 func (db *MemoryDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error) {

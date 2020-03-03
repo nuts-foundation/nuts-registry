@@ -25,7 +25,9 @@ import (
 	"encoding/pem"
 	"errors"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"time"
 )
 
 // StatusActive represents the "active" status
@@ -55,6 +57,20 @@ type Organization struct {
 	PublicKey  *string       `json:"publicKey,omitempty"`
 	Keys       []interface{} `json:"keys,omitempty"`
 	Endpoints  []Endpoint
+}
+
+// Vendor defines component schema for Vendor.
+type Vendor struct {
+	Identifier Identifier    `json:"identifier"`
+	Name       string        `json:"name"`
+	Domain     string        `json:"domain,omitempty"`
+	Keys       []interface{} `json:"keys,omitempty"`
+}
+
+// GetActiveCertificates looks up the vendor's certificates and returns them sorted, longest valid certificate first.
+// Expired certificates aren't returned.
+func (v Vendor) GetActiveCertificates() []*x509.Certificate {
+	return cert.GetActiveCertificates(v.Keys, time.Now())
 }
 
 // copyKeys is needed since the jwkSet.extractMap consumes the contents
@@ -135,5 +151,6 @@ type Db interface {
 	FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error)
 	SearchOrganizations(query string) []Organization
 	OrganizationById(id string) (*Organization, error)
+	VendorByID(id string) *Vendor
 	ReverseLookup(name string) (*Organization, error)
 }

@@ -177,6 +177,7 @@ func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
 // Start initiates the routines for auto-updating the data
 func (r *Registry) Start() error {
 	if r.Config.Mode == core.ServerEngineMode {
+		r.verifyAndMigrateRegistry(*core.NutsConfig())
 		switch cm := r.Config.SyncMode; cm {
 		case "fs":
 			return r.startFileSystemWatcher()
