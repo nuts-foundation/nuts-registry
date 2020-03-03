@@ -50,16 +50,23 @@ func TestVendorClaim(t *testing.T) {
 
 func TestRegisterEndpoint(t *testing.T) {
 	command := cmd()
-	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+	t.Run("ok - bare minimum parameters", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		event := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{})
+		client.EXPECT().RegisterEndpoint("orgId", "", "url", "type", db.StatusActive, map[string]string{}).Return(event, nil)
+		command.SetArgs([]string{"register-endpoint", "orgId", "type", "url"})
+		err := command.Execute()
+		assert.NoError(t, err)
+	}))
+	t.Run("ok - all parameters", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		event := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{})
 		client.EXPECT().RegisterEndpoint("orgId", "id", "url", "type", db.StatusActive, map[string]string{"k1": "v1", "k2": "v2"}).Return(event, nil)
-		command.SetArgs([]string{"register-endpoint", "orgId", "id", "type", "url", "-p", "k1=v1", "-p", "k2=v2"})
+		command.SetArgs([]string{"register-endpoint", "orgId", "type", "url", "-i", "id", "-p", "k1=v1", "-p", "k2=v2"})
 		err := command.Execute()
 		assert.NoError(t, err)
 	}))
 	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		client.EXPECT().RegisterEndpoint(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("failed"))
-		command.SetArgs([]string{"register-endpoint", "orgId", "id", "type", "url"})
+		command.SetArgs([]string{"register-endpoint", "orgId", "type", "url"})
 		command.Execute()
 	}))
 }

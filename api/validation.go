@@ -42,9 +42,6 @@ func (v Vendor) validate() error {
 }
 
 func (e Endpoint) validate() error {
-	if err := nonEmptyString(e.Identifier.String(), "identifier"); err != nil {
-		return err
-	}
 	if err := nonEmptyString(e.URL, "url"); err != nil {
 		return err
 	}
