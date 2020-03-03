@@ -28,6 +28,7 @@ import (
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	errors2 "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
@@ -177,6 +178,9 @@ func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
 // Start initiates the routines for auto-updating the data
 func (r *Registry) Start() error {
 	if r.Config.Mode == core.ServerEngineMode {
+		if err := r.verifyAndMigrateRegistry(*core.NutsConfig()); err != nil {
+			return errors2.Wrap(err, "registry integrity verification failed")
+		}
 		switch cm := r.Config.SyncMode; cm {
 		case "fs":
 			return r.startFileSystemWatcher()

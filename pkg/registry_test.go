@@ -24,6 +24,7 @@ package pkg
 import (
 	"github.com/labstack/gommon/random"
 	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/sirupsen/logrus"
@@ -68,6 +69,7 @@ func TestRegistry_Start(t *testing.T) {
 				SyncMode: "unknown",
 				Datadir:  ".",
 			},
+			Db: &db.MemoryDb{},
 		}
 
 		err := registry.Start()
@@ -89,6 +91,7 @@ func TestRegistry_Start(t *testing.T) {
 				SyncMode: "fs",
 				Datadir:  ".",
 			},
+			Db: &db.MemoryDb{},
 		}
 
 		if err := registry.Start(); err != nil {
@@ -107,6 +110,7 @@ func TestRegistry_Start(t *testing.T) {
 				SyncMode: "fs",
 				Datadir:  ":",
 			},
+			Db: &db.MemoryDb{},
 		}
 
 		err := registry.Start()
@@ -123,6 +127,7 @@ func TestRegistry_Start(t *testing.T) {
 				SyncMode: "fs",
 				Datadir:  ".",
 			},
+			Db: &db.MemoryDb{},
 		}
 
 		if err := registry.Start(); err != nil {
@@ -303,4 +308,3 @@ func configureIdleTimeout() {
 func TestRegistry_EndpointsByOrganizationAndType(t *testing.T) {
 
 }
-

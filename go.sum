@@ -126,6 +126,8 @@ github.com/nuts-foundation/nuts-go-core v0.0.0-20200221103113-05e1c6b6c5fc h1:3z
 github.com/nuts-foundation/nuts-go-core v0.0.0-20200221103113-05e1c6b6c5fc/go.mod h1:xltL3S+vqhSMYkTRIWyaVgtDk7y8KIENZmTbVIPIMcw=
 github.com/nuts-foundation/nuts-go-core v0.0.0-20200224092142-03e29f635429 h1:3C7Qf07phJj8CP1IgO+qoBLXe42TvNcGFx7+ToK/pzY=
 github.com/nuts-foundation/nuts-go-core v0.0.0-20200224092142-03e29f635429/go.mod h1:xltL3S+vqhSMYkTRIWyaVgtDk7y8KIENZmTbVIPIMcw=
+github.com/nuts-foundation/nuts-go-core v0.0.0-20200305093237-74ae80214e1c h1:hkeWuHpumFGLmwwOX7RkQX20VSBFMxGaxOCX/pEUOy0=
+github.com/nuts-foundation/nuts-go-core v0.0.0-20200305093237-74ae80214e1c/go.mod h1:xltL3S+vqhSMYkTRIWyaVgtDk7y8KIENZmTbVIPIMcw=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/pelletier/go-toml v1.2.0 h1:T5zMGML61Wp+FlcbWjRDT7yAxhJNAiPPLOFECq181zc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
