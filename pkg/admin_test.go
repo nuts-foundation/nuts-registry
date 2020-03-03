@@ -32,7 +32,7 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 	})
 
 	t.Run("ok", func(t *testing.T) {
-		_, err := registry.RegisterEndpoint("orgId", "endpointId", "url", "type", "status", "version", map[string]string{"foo": "bar"})
+		_, err := registry.RegisterEndpoint("orgId", "endpointId", "url", "type", "status", map[string]string{"foo": "bar"})
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -40,7 +40,6 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 		assert.Equal(t, "endpointId", string(event.Identifier))
 		assert.Equal(t, "url", event.URL)
 		assert.Equal(t, "type", event.EndpointType)
-		assert.Equal(t, "version", event.Version)
 		assert.Equal(t, "status", event.Status)
 		assert.Len(t, event.Properties, 1)
 	})

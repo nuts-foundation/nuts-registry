@@ -64,7 +64,6 @@ var registerEndpoint1 = events.CreateEvent(events.RegisterEndpoint, events.Regis
 	EndpointType: "simple",
 	Identifier:   "e1",
 	Status:       StatusActive,
-	Version:      "1.0",
 })
 var registerEndpoint2 = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
 	Organization: "o1",
@@ -72,7 +71,6 @@ var registerEndpoint2 = events.CreateEvent(events.RegisterEndpoint, events.Regis
 	EndpointType: "simple",
 	Identifier:   "e2",
 	Status:       "inactive",
-	Version:      "1.0",
 })
 
 func TestNew(t *testing.T) {

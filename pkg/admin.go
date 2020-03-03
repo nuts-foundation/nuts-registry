@@ -99,16 +99,15 @@ func (r *Registry) VendorClaim(vendorID string, orgID string, orgName string, or
 }
 
 // RegisterEndpoint registers an endpoint for an organization
-func (r *Registry) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, version string, properties map[string]string) (events.Event, error) {
-	logrus.Infof("Registering endpoint, organization=%s, id=%s, type=%s, url=%s, status=%s, version=%s",
-		organizationID, id, endpointType, url, status, version)
+func (r *Registry) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, properties map[string]string) (events.Event, error) {
+	logrus.Infof("Registering endpoint, organization=%s, id=%s, type=%s, url=%s, status=%s",
+		organizationID, id, endpointType, url, status)
 	return r.publishEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
 		Organization: events.Identifier(organizationID),
 		URL:          url,
 		EndpointType: endpointType,
 		Identifier:   events.Identifier(id),
 		Status:       status,
-		Version:      version,
 		Properties:   properties,
 	})
 }

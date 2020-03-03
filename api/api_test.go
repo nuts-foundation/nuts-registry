@@ -720,7 +720,7 @@ func TestApiResource_RegisterEndpoint(t *testing.T) {
 		t.Run("204", func(t *testing.T) {
 			var registryClient = mock.NewMockRegistryClient(mockCtrl)
 			e, wrapper := initMockEcho(registryClient)
-			registryClient.EXPECT().RegisterEndpoint("1", "abc", "foo:bar", "fhir", "", "", map[string]string{"key": "value"})
+			registryClient.EXPECT().RegisterEndpoint("1", "abc", "foo:bar", "fhir", "", map[string]string{"key": "value"})
 
 			props := EndpointProperties{}
 			props["key"] = "value"

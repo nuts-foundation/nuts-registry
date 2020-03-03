@@ -29,7 +29,6 @@ func (e Endpoint) fromDb(db db.Endpoint) Endpoint {
 	e.EndpointType = db.EndpointType
 	e.Identifier = Identifier(db.Identifier)
 	e.Status = db.Status
-	e.Version = db.Version
 	e.Properties = toEndpointProperties(db.Properties)
 	return e
 }
@@ -80,7 +79,6 @@ func (e Endpoint) toDb() db.Endpoint {
 		EndpointType: e.EndpointType,
 		Identifier:   db.Identifier(e.Identifier),
 		Status:       e.Status,
-		Version:      e.Version,
 		Properties:   fromEndpointProperties(e.Properties),
 	}
 }

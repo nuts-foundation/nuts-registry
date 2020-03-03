@@ -119,7 +119,7 @@ The syntax of this command is as follows:
 
 .. code-block:: shell
 
-    ./nuts registry register-endpoint <organisation-identifier> <endpoint-identifier> <type> <url> <version>
+    ./nuts registry register-endpoint <organisation-identifier> <endpoint-identifier> <type> <url>
 
 In the following example we register a Corda consent endpoint for the previously registered organisation:
 
@@ -128,8 +128,7 @@ In the following example we register a Corda consent endpoint for the previously
     NUTS_MODE=cli ./nuts registry register-endpoint urn:oid:2.16.840.1.113883.2.4.6.1:123456 \
         "urn:ietf:rfc:1779:O=BecauseWeCare B.V.,C=NL,L=Almere,CN=Kunstgebit Thuiszorg" \
         urn:nuts:endpoint:consent \
-        "tcp://1.2.3.4:4321" \
-        1.0.0
+        "tcp://1.2.3.4:4321"
 
 Endpoints can have extra metadata in the form of string properties. Property are specified as **key=value** using the **-p** flag:
 

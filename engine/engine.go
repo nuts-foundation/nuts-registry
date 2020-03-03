@@ -166,13 +166,13 @@ func cmd() *cobra.Command {
 	{
 		var properties *[]string
 		command := &cobra.Command{
-			Use:   "register-endpoint [org-identifier] [identifier] [type] [url] [version]",
+			Use:   "register-endpoint [org-identifier] [identifier] [type] [url]",
 			Short: "Registers an endpoint",
 			Long:  "Registers an endpoint for an organization.",
-			Args:  cobra.ExactArgs(5),
+			Args:  cobra.ExactArgs(4),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				cl := registryClientCreator()
-				event, err := cl.RegisterEndpoint(args[0], args[1], args[3], args[2], db.StatusActive, args[4], parseCLIProperties(*properties))
+				event, err := cl.RegisterEndpoint(args[0], args[1], args[3], args[2], db.StatusActive, parseCLIProperties(*properties))
 				if err != nil {
 					logrus.Errorf("Unable to register endpoint: %v", err)
 					return err
