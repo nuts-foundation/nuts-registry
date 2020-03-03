@@ -20,8 +20,15 @@
 package db
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-registry/test"
 	"testing"
+	"time"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/stretchr/testify/assert"
@@ -114,6 +121,42 @@ func TestOrganization_CurrentPublicKey(t *testing.T) {
 			"kty": "nil",
 		},
 	}
+
+	t.Run("using x5c cert chain", func(t *testing.T) {
+		rsaKey, _ := rsa.GenerateKey(rand.Reader, 1024)
+		asn1cert := test.GenerateCertificateEx(time.Now(), 1, rsaKey)
+		expectedCert, _ := x509.ParseCertificate(asn1cert)
+		key, _ := pkg.CertificateToJWK(expectedCert)
+		jwkAsMap, _ := pkg.JwkToMap(key)
+		keyAsBytes, _ := json.Marshal(jwkAsMap)
+		err2 := json.Unmarshal(keyAsBytes, &jwkAsMap)
+		if !assert.NoError(t, err2) {
+			return
+		}
+		o := Organization{Keys: []interface{}{jwkAsMap}}
+		key, err := o.CurrentPublicKey()
+		if !assert.NoError(t, err) {
+			return
+		}
+		actualPublicKey, _ := (key.(*jwk.RSAPublicKey)).Materialize()
+		assert.Equal(t, expectedCert.PublicKey, actualPublicKey)
+	})
+
+	t.Run("using x5c cert chain - no active certs", func(t *testing.T) {
+		rsaKey, _ := rsa.GenerateKey(rand.Reader, 1024)
+		asn1cert := test.GenerateCertificateEx(time.Now().AddDate(0, 0, -5), 1, rsaKey)
+		expectedCert, _ := x509.ParseCertificate(asn1cert)
+		key, _ := pkg.CertificateToJWK(expectedCert)
+		jwkAsMap, _ := pkg.JwkToMap(key)
+		keyAsBytes, _ := json.Marshal(jwkAsMap)
+		err2 := json.Unmarshal(keyAsBytes, &jwkAsMap)
+		if !assert.NoError(t, err2) {
+			return
+		}
+		o := Organization{Keys: []interface{}{jwkAsMap}}
+		key, err := o.CurrentPublicKey()
+		assert.Equal(t, err.Error(), "organization has no active certificates")
+	})
 
 	t.Run("using old public key", func(t *testing.T) {
 		o := Organization{PublicKey: &oldKey}

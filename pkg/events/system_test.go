@@ -20,6 +20,10 @@
 package events
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jws"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -54,31 +58,31 @@ func TestNoEventHandler(t *testing.T) {
 		return
 	}
 	defer repo.Cleanup()
-	system := NewEventSystem()
+	system := NewEventSystem("some-type")
 	system.Configure(repo.Directory + "/events")
-	input := "{\"type\":\"" + RegisterVendor + "\"}"
+	input := "{\"type\":\"some-type\"}"
 	event, err := EventFromJSON([]byte(input))
 	if !assert.NoError(t, err) {
 		return
 	}
 	err = system.ProcessEvent(event)
-	assert.EqualError(t, err, "no handler registered for event (type = RegisterVendorEvent), handlers are: map[]")
+	assert.EqualError(t, err, "no handlers registered for event (type = some-type), handlers are: map[]")
 }
 
 func TestLoadEvents(t *testing.T) {
-	system := NewEventSystem()
+	system := NewEventSystem("RegisterVendorEvent", "VendorClaimEvent", "RegisterEndpointEvent")
 	vendorsCreated := 0
-	system.RegisterEventHandler(RegisterVendor, func(e Event) error {
+	system.RegisterEventHandler("RegisterVendorEvent", func(e Event) error {
 		vendorsCreated++
 		return nil
 	})
 	organizationsCreated := 0
-	system.RegisterEventHandler(VendorClaim, func(e Event) error {
+	system.RegisterEventHandler("VendorClaimEvent", func(e Event) error {
 		organizationsCreated++
 		return nil
 	})
 	endpointsCreated := 0
-	system.RegisterEventHandler(RegisterEndpoint, func(e Event) error {
+	system.RegisterEventHandler("RegisterEndpointEvent", func(e Event) error {
 		endpointsCreated++
 		return nil
 	})
@@ -145,12 +149,12 @@ func TestLoadEvents(t *testing.T) {
 func TestSystemNotConfigured(t *testing.T) {
 	t.Run("publish", func(t *testing.T) {
 		system := NewEventSystem()
-		err := system.PublishEvent(CreateEvent(RegisterVendor, RegisterVendorEvent{}))
+		err := system.PublishEvent(CreateEvent("RegisterVendorEvent", struct{}{}))
 		assert.EqualError(t, err, ErrEventSystemNotConfigured.Error())
 	})
 	t.Run("process", func(t *testing.T) {
 		system := NewEventSystem()
-		err := system.ProcessEvent(CreateEvent(RegisterVendor, RegisterVendorEvent{}))
+		err := system.ProcessEvent(CreateEvent("RegisterVendorEvent", struct{}{}))
 		assert.EqualError(t, err, ErrEventSystemNotConfigured.Error())
 	})
 	t.Run("LoadAndApply", func(t *testing.T) {
@@ -209,15 +213,15 @@ func TestPublishEvents(t *testing.T) {
 		return
 	}
 	defer repo.Cleanup()
-	system := NewEventSystem()
+	system := NewEventSystem("evt")
 	system.Configure(repo.Directory)
 	called := 0
-	system.RegisterEventHandler(RegisterVendor, func(event Event) error {
+	system.RegisterEventHandler("evt", func(event Event) error {
 		called++
 		return nil
 	})
 	t.Run("assert event handler is called", func(t *testing.T) {
-		err = system.PublishEvent(jsonEvent{EventType: string(RegisterVendor)})
+		err = system.PublishEvent(&jsonEvent{EventType: "evt"})
 		assert.NoError(t, err)
 		assert.Equal(t, called, 1)
 	})
@@ -231,7 +235,7 @@ func TestPublishEvents(t *testing.T) {
 		if !assert.Len(t, dirEntriesBeforePublish, 0, "directory empty") {
 			return
 		}
-		event := CreateEvent(RegisterVendor, RegisterVendorEvent{})
+		event := CreateEvent("evt", struct{}{})
 		err = system.PublishEvent(event)
 		if !assert.NoError(t, err) {
 			return
@@ -250,4 +254,17 @@ func TestPublishEvents(t *testing.T) {
 		_, err = EventFromJSON(data)
 		assert.NoError(t, err)
 	})
+}
+
+func TestNoopJwsVerifier(t *testing.T) {
+	key, _ := rsa.GenerateKey(rand.Reader, 1024)
+	signature, err := jws.Sign([]byte{1, 2, 3}, jwa.RS256, key)
+	if !assert.NoError(t, err) {
+		return
+	}
+	payload, err := NoopJwsVerifier(signature, time.Time{}, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.NotNil(t, payload)
 }

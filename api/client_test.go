@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -123,7 +124,7 @@ func TestHttpClient_ReverseLookup(t *testing.T) {
 
 func TestHttpClient_VendorClaim(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		event := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{})
+		event := events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{})
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
@@ -148,7 +149,7 @@ func TestHttpClient_VendorClaim(t *testing.T) {
 
 func TestHttpClient_RegisterVendor(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		event := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{})
+		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{})
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
@@ -170,7 +171,7 @@ func TestHttpClient_RegisterVendor(t *testing.T) {
 
 func TestHttpClient_RegisterEndpoint(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		event := events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{})
+		event := events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{})
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 

@@ -29,6 +29,7 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -132,11 +133,11 @@ func cmd() *cobra.Command {
 		Args:  cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl := registryClientCreator()
-			var domain = events.FallbackDomain
+			var vendorDomain = domain.FallbackDomain
 			if len(args) == 3 {
-				domain = args[2]
+				vendorDomain = args[2]
 			}
-			event, err := cl.RegisterVendor(args[0], args[1], domain)
+			event, err := cl.RegisterVendor(args[0], args[1], vendorDomain)
 			if err != nil {
 				logrus.Errorf("Unable to register vendor: %v", err)
 				return err

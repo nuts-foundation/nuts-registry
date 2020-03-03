@@ -230,6 +230,9 @@ components:
           type: string
           format: date-time
           description: timestamp at which the event happened
+        signature:
+          type: string
+          description: JWS (JSON Web Signature) securing the payload's authenticity and integrity.
         payload:
           oneOf:
             - $ref: "#/components/schemas/RegisterVendorEvent"
@@ -377,4 +380,3 @@ components:
       description: as described by https://tools.ietf.org/html/rfc7517. Modelled as object so libraries can parse the tokens themselves.
       additionalProperties: {}
       type: object
-

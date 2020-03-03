@@ -21,6 +21,7 @@ package db
 
 import (
 	"crypto/x509"
+	"errors"
 	"github.com/lestrrat-go/jwx/jwk"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
@@ -84,32 +85,47 @@ func (o Organization) KeysAsSet() (*jwk.Set, error) {
 	return crypto.MapsToJwkSet(maps)
 }
 
-// CurrentPublicKey returns the first current active public key. If a JWK set is registered, it'll search in the keys there.
-// If none are valid it'll return an error.
-// If no JWK Set is set, it'll always return the (deprecated) PublicKey
-// TODO: In a later stage the certificate capabilities of the JWK will be used. For now the first JWK is returned
+// CurrentPublicKey returns the public key associated with the organization certificate which has the longest validity.
+// For backwards compatibility:
+//  1. If the organization has no certificates, it will return the first JWK.
+//  2. If the organization has no JWKs, it will return the (deprecated) PublicKey.
+// If none of the above conditions are matched, an error is returned.
 func (o Organization) CurrentPublicKey() (jwk.Key, error) {
-	if len(o.Keys) > 0 {
-		set, err := o.KeysAsSet()
+	var hasCerts = false
+	for _, jwkAsMap := range o.Keys {
+		if (jwkAsMap.(map[string]interface{}))[jwk.X509CertChainKey] != nil {
+			hasCerts = true
+			break
+		}
+	}
+	if hasCerts {
+		// Organization has certificates, use those and ignore the rest
+		certs := o.GetActiveCertificates()
+		if len(certs) > 0 {
+			return crypto.CertificateToJWK(certs[0])
+		}
+		return nil, errors.New("organization has no active certificates")
+	} else {
+		// Organization has no certificates, fallback to plain JWKs
+		if len(o.Keys) > 0 {
+			set, err := o.KeysAsSet()
+			if err != nil {
+				return nil, err
+			}
+			key := set.Keys[0]
+			return key, nil
+		}
+		// Organization has no JWKs, fallback to PublicKey
+		key, err := crypto.PemToPublicKey([]byte(*o.PublicKey))
 		if err != nil {
 			return nil, err
 		}
-		key := set.Keys[0]
-
-		// check for certificate validity at a later stage.
-		return key, nil
+		return jwk.New(key)
 	}
-
-	key, err := crypto.PemToPublicKey([]byte(*o.PublicKey))
-	if err != nil {
-		return nil, err
-	}
-
-	return jwk.New(key)
 }
 
 type Db interface {
-	RegisterEventHandlers(system events.EventSystem)
+	RegisterEventHandlers(fn events.EventRegistrar)
 	FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error)
 	SearchOrganizations(query string) []Organization
 	OrganizationById(id string) (*Organization, error)

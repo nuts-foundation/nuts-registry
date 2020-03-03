@@ -55,6 +55,9 @@ type Event struct {
 	// payload of the event
 	Payload *interface{} `json:"payload,omitempty"`
 
+	// JWS (JSON Web Signature) securing the payload's authenticity and integrity.
+	Signature *string `json:"signature,omitempty"`
+
 	// type of the event
 	Type *string `json:"type,omitempty"`
 }

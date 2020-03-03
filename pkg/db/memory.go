@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"strings"
 )
 
@@ -31,17 +32,17 @@ type MemoryDb struct {
 }
 
 type vendor struct {
-	events.RegisterVendorEvent
+	domain.RegisterVendorEvent
 	orgs map[string]*org
 }
 
 type org struct {
-	events.VendorClaimEvent
+	domain.VendorClaimEvent
 	endpoints map[string]*endpoint
 }
 
 type endpoint struct {
-	events.RegisterEndpointEvent
+	domain.RegisterEndpointEvent
 }
 
 func (o org) toDb() Organization {
@@ -81,10 +82,10 @@ func (o org) toDbEndpoints() []Endpoint {
 }
 
 // RegisterEventHandlers registers event handlers on this database
-func (db *MemoryDb) RegisterEventHandlers(system events.EventSystem) {
-	system.RegisterEventHandler(events.RegisterVendor, func(e events.Event) error {
+func (db *MemoryDb) RegisterEventHandlers(fn events.EventRegistrar) {
+	fn(domain.RegisterVendor, func(e events.Event) error {
 		// Unmarshal
-		event := events.RegisterVendorEvent{}
+		event := domain.RegisterVendorEvent{}
 		if err := e.Unmarshal(&event); err != nil {
 			return err
 		}
@@ -100,9 +101,9 @@ func (db *MemoryDb) RegisterEventHandlers(system events.EventSystem) {
 		}
 		return nil
 	})
-	system.RegisterEventHandler(events.VendorClaim, func(e events.Event) error {
+	fn(domain.VendorClaim, func(e events.Event) error {
 		// Unmarshal
-		event := events.VendorClaimEvent{}
+		event := domain.VendorClaimEvent{}
 		if err := e.Unmarshal(&event); err != nil {
 			return err
 		}
@@ -123,9 +124,9 @@ func (db *MemoryDb) RegisterEventHandlers(system events.EventSystem) {
 		}
 		return nil
 	})
-	system.RegisterEventHandler(events.RegisterEndpoint, func(e events.Event) error {
+	fn(domain.RegisterEndpoint, func(e events.Event) error {
 		// Unmarshal
-		event := events.RegisterEndpointEvent{}
+		event := domain.RegisterEndpointEvent{}
 		if err := e.Unmarshal(&event); err != nil {
 			return err
 		}
@@ -153,7 +154,7 @@ func (db *MemoryDb) lookupOrg(orgID string) *org {
 	return nil
 }
 
-func toDbIdentifier(identifier events.Identifier) Identifier {
+func toDbIdentifier(identifier domain.Identifier) Identifier {
 	return Identifier(string(identifier))
 }
 

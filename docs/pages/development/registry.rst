@@ -1,6 +1,6 @@
 .. _nuts-registry-development:
 
-Nuts regiustry development
+Nuts registry development
 ##########################
 
 .. marker-for-readme

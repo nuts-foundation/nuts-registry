@@ -28,6 +28,7 @@ import (
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
@@ -109,11 +110,12 @@ type Registry struct {
 	Config      RegistryConfig
 	Db          db.Db
 	EventSystem events.EventSystem
+	OnChange    func(registry *Registry)
 	crypto      crypto.Client
 	configOnce  sync.Once
 	_logger     *logrus.Entry
 	closers     []chan struct{}
-	OnChange    func(registry *Registry)
+	vendor      db.Vendor
 }
 
 var instance *Registry
@@ -127,7 +129,7 @@ func init() {
 func RegistryInstance() *Registry {
 	oneRegistry.Do(func() {
 		instance = &Registry{
-			EventSystem: events.NewEventSystem(),
+			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 			_logger:     logrus.StandardLogger().WithField("module", ModuleName),
 		}
 	})
@@ -144,13 +146,22 @@ func (r *Registry) Configure() error {
 		r.crypto = crypto.NewCryptoClient()
 		r.Config.Mode = cfg.GetEngineMode(r.Config.Mode)
 		if r.Config.Mode == core.ServerEngineMode {
-			// Apply stored events
+			// Order of event processors:
+			// 1. TrustStore; must be first since certificates might be self-signed, and thus be added to the truststore
+			//    before signature validation takes place.
+			// 2. Signature validator
+			// 3. Database
+			trustStore := domain.NewTrustStore()
+			trustStore.RegisterEventHandlers(r.EventSystem.RegisterEventHandler)
+			signatureValidator := events.NewSignatureValidator(r.crypto.VerifyJWS, trustStore)
+			signatureValidator.RegisterEventHandlers(r.EventSystem.RegisterEventHandler, domain.GetEventTypes())
 			r.Db = db.New()
-			r.Db.RegisterEventHandlers(r.EventSystem)
+			r.Db.RegisterEventHandlers(r.EventSystem.RegisterEventHandler)
 			if err = r.EventSystem.Configure(r.getEventsDir()); err != nil {
 				r.logger().WithError(err).Warn("Unable to configure event system")
 				return
 			}
+			// Apply stored events
 			if err = r.EventSystem.LoadAndApplyEvents(); err != nil {
 				r.logger().WithError(err).Warn("Unable to load registry files")
 			}
