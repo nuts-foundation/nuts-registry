@@ -81,7 +81,7 @@ func IssueCertificate(crypt crypto.Client, csrTemplateFn func() (x509.Certificat
 		return nil, errors2.Wrap(err, "unable to create CSR template")
 	}
 
-	subjectPrivKey, err := crypt.GetOpqauePrivateKey(subject)
+	subjectPrivKey, err := crypt.GetOpaquePrivateKey(subject)
 	if err != nil {
 		return nil, errors2.Wrapf(err, "unable to retrieve subject private key: %s", subject)
 	}
@@ -136,3 +136,4 @@ func oid(base asn1.ObjectIdentifier, v int) asn1.ObjectIdentifier {
 	copy(r, base)
 	return append(r, v)
 }
+

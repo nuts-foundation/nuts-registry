@@ -194,6 +194,25 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 	}))
 }
 
+func TestMemoryDb_VendorByID(t *testing.T) {
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
+	eventSystem, db := initDb(*repo)
+	if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
+		return
+	}
+
+	t.Run("found", func(t *testing.T) {
+		assert.NotNil(t, db.VendorByID("v1"))
+	})
+	t.Run("not found", func(t *testing.T) {
+		assert.Nil(t, db.VendorByID("v2"))
+	})
+}
+
 func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 	t.Run("Valid example", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {

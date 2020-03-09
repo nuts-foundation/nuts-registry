@@ -40,6 +40,7 @@ These mocks are used by other modules
 .. code-block:: shell
 
     mockgen -destination=mock/mock_client.go -package=mock -source=pkg/registry.go
+    mockgen -destination=mock/mock_db.go -package=mock -source=pkg/db/db.go
 
 README
 ******
