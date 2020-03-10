@@ -41,7 +41,7 @@ func NewRegistryClient() pkg.RegistryClient {
 	} else {
 		return api.HttpClient{
 			ServerAddress: registry.Config.Address,
-			Timeout:       time.Second,
+			Timeout:       5 * time.Second,
 		}
 	}
 }
