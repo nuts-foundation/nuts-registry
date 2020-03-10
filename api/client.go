@@ -24,12 +24,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
@@ -183,7 +184,7 @@ func (hb HttpClient) VendorClaim(vendorID string, orgID string, orgName string, 
 	var keys = make([]JWK, 0)
 	if orgKeys != nil {
 		for _, key := range orgKeys {
-			keys = append(keys, key.(map[string]interface{}))
+			keys = append(keys, JWK{AdditionalProperties: key.(map[string]interface{})})
 		}
 	}
 	res, err := hb.client().VendorClaim(ctx, vendorID, VendorClaimJSONRequestBody{

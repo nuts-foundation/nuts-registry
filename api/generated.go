@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -41,7 +42,9 @@ type Endpoint struct {
 }
 
 // EndpointProperties defines model for EndpointProperties.
-type EndpointProperties map[string]interface{}
+type EndpointProperties struct {
+	AdditionalProperties map[string]string `json:"-"`
+}
 
 // Event defines model for Event.
 type Event struct {
@@ -60,7 +63,9 @@ type Event struct {
 type Identifier string
 
 // JWK defines model for JWK.
-type JWK map[string]interface{}
+type JWK struct {
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
 
 // Organization defines model for Organization.
 type Organization struct {
@@ -180,6 +185,112 @@ type VendorClaimJSONRequestBody VendorClaimJSONBody
 
 // RegisterVendorRequestBody defines body for RegisterVendor for application/json ContentType.
 type RegisterVendorJSONRequestBody RegisterVendorJSONBody
+
+// Getter for additional properties for EndpointProperties. Returns the specified
+// element and whether it was found
+func (a EndpointProperties) Get(fieldName string) (value string, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for EndpointProperties
+func (a *EndpointProperties) Set(fieldName string, value string) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]string)
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for EndpointProperties to handle AdditionalProperties
+func (a *EndpointProperties) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]string)
+		for fieldName, fieldBuf := range object {
+			var fieldVal string
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for EndpointProperties to handle AdditionalProperties
+func (a EndpointProperties) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for JWK. Returns the specified
+// element and whether it was found
+func (a JWK) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for JWK
+func (a *JWK) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for JWK to handle AdditionalProperties
+func (a *JWK) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for JWK to handle AdditionalProperties
+func (a JWK) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
+		}
+	}
+	return json.Marshal(object)
+}
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(req *http.Request, ctx context.Context) error
@@ -997,10 +1108,11 @@ func ParseRegisterEndpointResponse(rsp *http.Response) (*registerEndpointRespons
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		response.JSON200 = &Event{}
-		if err := json.Unmarshal(bodyBytes, response.JSON200); err != nil {
+		var dest Event
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
+		response.JSON200 = &dest
 
 	}
 
@@ -1041,10 +1153,11 @@ func ParseVendorClaimResponse(rsp *http.Response) (*vendorClaimResponse, error) 
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		response.JSON200 = &Event{}
-		if err := json.Unmarshal(bodyBytes, response.JSON200); err != nil {
+		var dest Event
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
+		response.JSON200 = &dest
 
 	}
 
@@ -1066,10 +1179,11 @@ func ParseRegisterVendorResponse(rsp *http.Response) (*registerVendorResponse, e
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		response.JSON200 = &Event{}
-		if err := json.Unmarshal(bodyBytes, response.JSON200); err != nil {
+		var dest Event
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
+		response.JSON200 = &dest
 
 	}
 
@@ -1110,11 +1224,6 @@ func (w *ServerInterfaceWrapper) EndpointsByOrganisationId(ctx echo.Context) err
 	// Parameter object where we will unmarshal all parameters from the context
 	var params EndpointsByOrganisationIdParams
 	// ------------- Required query parameter "orgIds" -------------
-	if paramValue := ctx.QueryParam("orgIds"); paramValue != "" {
-
-	} else {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Query argument orgIds is required, but not found"))
-	}
 
 	err = runtime.BindQueryParameter("form", true, true, "orgIds", ctx.QueryParams(), &params.OrgIds)
 	if err != nil {
@@ -1122,9 +1231,6 @@ func (w *ServerInterfaceWrapper) EndpointsByOrganisationId(ctx echo.Context) err
 	}
 
 	// ------------- Optional query parameter "type" -------------
-	if paramValue := ctx.QueryParam("type"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", true, false, "type", ctx.QueryParams(), &params.Type)
 	if err != nil {
@@ -1132,9 +1238,6 @@ func (w *ServerInterfaceWrapper) EndpointsByOrganisationId(ctx echo.Context) err
 	}
 
 	// ------------- Optional query parameter "strict" -------------
-	if paramValue := ctx.QueryParam("strict"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", true, false, "strict", ctx.QueryParams(), &params.Strict)
 	if err != nil {
@@ -1185,11 +1288,6 @@ func (w *ServerInterfaceWrapper) SearchOrganizations(ctx echo.Context) error {
 	// Parameter object where we will unmarshal all parameters from the context
 	var params SearchOrganizationsParams
 	// ------------- Required query parameter "query" -------------
-	if paramValue := ctx.QueryParam("query"); paramValue != "" {
-
-	} else {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Query argument query is required, but not found"))
-	}
 
 	err = runtime.BindQueryParameter("form", true, true, "query", ctx.QueryParams(), &params.Query)
 	if err != nil {
@@ -1197,9 +1295,6 @@ func (w *ServerInterfaceWrapper) SearchOrganizations(ctx echo.Context) error {
 	}
 
 	// ------------- Optional query parameter "exact" -------------
-	if paramValue := ctx.QueryParam("exact"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", true, false, "exact", ctx.QueryParams(), &params.Exact)
 	if err != nil {

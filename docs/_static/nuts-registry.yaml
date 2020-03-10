@@ -33,7 +33,6 @@ paths:
       operationId: "vendorClaim"
       tags:
         - vendors
-        - organisations
       parameters:
         - name: id
           in: path

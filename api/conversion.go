@@ -21,6 +21,7 @@ package api
 
 import (
 	"fmt"
+
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 )
 
@@ -47,7 +48,7 @@ func (o Organization) fromDb(db db.Organization) Organization {
 	keys := make([]JWK, len(db.Keys))
 
 	for i, k := range db.Keys {
-		keys[i] = k.(map[string]interface{})
+		keys[i] = JWK{AdditionalProperties: k.(map[string]interface{})}
 	}
 
 	o.Keys = &keys
@@ -86,7 +87,7 @@ func (e Endpoint) toDb() db.Endpoint {
 func fromEndpointProperties(endpointProperties *EndpointProperties) map[string]string {
 	props := make(map[string]string, 0)
 	if endpointProperties != nil {
-		for key, value := range *endpointProperties {
+		for key, value := range endpointProperties.AdditionalProperties {
 			props[key] = fmt.Sprintf("%s", value)
 		}
 	}
@@ -94,11 +95,11 @@ func fromEndpointProperties(endpointProperties *EndpointProperties) map[string]s
 }
 
 func toEndpointProperties(properties map[string]string) *EndpointProperties {
-	props := EndpointProperties{}
+	props := map[string]string{}
 	for key, value := range properties {
 		props[key] = value
 	}
-	return &props
+	return &EndpointProperties{AdditionalProperties: props}
 }
 
 func jwkToMap(jwk []JWK) []interface{} {
