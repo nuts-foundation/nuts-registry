@@ -104,6 +104,20 @@ func (mr *MockDbMockRecorder) VendorByID(id interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VendorByID", reflect.TypeOf((*MockDb)(nil).VendorByID), id)
 }
 
+// OrganizationsByVendorID mocks base method
+func (m *MockDb) OrganizationsByVendorID(id string) []*db.Organization {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OrganizationsByVendorID", id)
+	ret0, _ := ret[0].([]*db.Organization)
+	return ret0
+}
+
+// OrganizationsByVendorID indicates an expected call of OrganizationsByVendorID
+func (mr *MockDbMockRecorder) OrganizationsByVendorID(id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OrganizationsByVendorID", reflect.TypeOf((*MockDb)(nil).OrganizationsByVendorID), id)
+}
+
 // ReverseLookup mocks base method
 func (m *MockDb) ReverseLookup(name string) (*db.Organization, error) {
 	m.ctrl.T.Helper()

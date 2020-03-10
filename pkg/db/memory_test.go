@@ -373,6 +373,30 @@ func TestMemoryDb_OrganizationById(t *testing.T) {
 	}))
 }
 
+func TestMemoryDb_OrganizationsByVendorID(t *testing.T) {
+	t.Run("vendor with 2 orgs", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		if !pub(t, eventSystem, registerVendor1, vendorClaim1, vendorClaim2) {
+			return
+		}
+		orgs := db.OrganizationsByVendorID("v1")
+		assert.Len(t, orgs, 2)
+	}))
+	t.Run("vendor not found", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		if !pub(t, eventSystem) {
+			return
+		}
+		orgs := db.OrganizationsByVendorID("unknown vendor")
+		assert.Len(t, orgs, 0)
+	}))
+	t.Run("vendor with no orgs", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		if !pub(t, eventSystem, registerVendor1) {
+			return
+		}
+		orgs := db.OrganizationsByVendorID("v1")
+		assert.Len(t, orgs, 0)
+	}))
+}
+
 func withTestContext(fn func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb)) func(*testing.T) {
 	return func(t *testing.T) {
 		repo, err := test.NewTestRepo(t.Name())

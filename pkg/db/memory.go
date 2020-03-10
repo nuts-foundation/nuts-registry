@@ -210,6 +210,19 @@ func (db *MemoryDb) VendorByID(id string) *Vendor {
 	return &result
 }
 
+func (db *MemoryDb) OrganizationsByVendorID(id string) []*Organization {
+	vendor := db.vendors[id]
+	if vendor == nil {
+		return nil
+	}
+	orgs := make([]*Organization, 0, len(vendor.orgs))
+	for _, org := range vendor.orgs {
+		o := org.toDb()
+		orgs = append(orgs, &o)
+	}
+	return orgs
+}
+
 func (db *MemoryDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error) {
 	o := db.lookupOrg(organizationIdentifier)
 	if o == nil {

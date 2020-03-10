@@ -25,7 +25,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"github.com/lestrrat-go/jwx/jwk"
-	"github.com/nuts-foundation/nuts-registry/pkg/cert"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"time"
 )
@@ -57,6 +57,10 @@ type Organization struct {
 	PublicKey  *string       `json:"publicKey,omitempty"`
 	Keys       []interface{} `json:"keys,omitempty"`
 	Endpoints  []Endpoint
+}
+
+func (o Organization) GetActiveCertificates() []*x509.Certificate {
+	return cert.GetActiveCertificates(o.Keys, time.Now())
 }
 
 // Vendor defines component schema for Vendor.
@@ -145,12 +149,12 @@ func pemToPublicKey(pub []byte) (*rsa.PublicKey, error) {
 	return finalKey, nil
 }
 
-// todo: Db temporary abstraction
 type Db interface {
 	RegisterEventHandlers(system events.EventSystem)
 	FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error)
 	SearchOrganizations(query string) []Organization
 	OrganizationById(id string) (*Organization, error)
 	VendorByID(id string) *Vendor
+	OrganizationsByVendorID(id string) []*Organization
 	ReverseLookup(name string) (*Organization, error)
 }
