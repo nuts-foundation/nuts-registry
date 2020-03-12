@@ -42,7 +42,7 @@ func TestOrganization_validate(t *testing.T) {
 		Name       string
 		PublicKey  *string
 	}
-	keys := &[]JWK{map[string]interface{}{}}
+	keys := &[]JWK{{AdditionalProperties: map[string]interface{}{}}}
 	tests := []struct {
 		name    string
 		fields  fields

@@ -22,6 +22,15 @@
 package pkg
 
 import (
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/gommon/random"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -31,14 +40,6 @@ import (
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"path/filepath"
-	"sync"
-	"testing"
-	"time"
 )
 
 type ZipHandler struct {
@@ -173,7 +174,7 @@ func TestRegistry_Configure(t *testing.T) {
 			EventSystem: events.NewEventSystem(),
 		}
 		err := registry.Configure()
-		assert.EqualError(t, err, "mkdir ////events: permission denied")
+		assert.Error(t, err)
 	})
 
 	t.Run("error while loading events", func(t *testing.T) {

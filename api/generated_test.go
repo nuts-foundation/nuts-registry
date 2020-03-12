@@ -20,12 +20,13 @@
 package api
 
 import (
-	"github.com/labstack/echo/v4"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/labstack/echo/v4"
 )
 
 type RestInterfaceStub struct{}
@@ -115,7 +116,7 @@ func TestServerInterfaceWrapper_EndpointsByOrganisationId(t *testing.T) {
 			return
 		}
 
-		expected := "code=400, message=Query argument orgIds is required, but not found"
+		expected := "code=400, message=query parameter 'orgIds' is required"
 		if !strings.Contains(err.Error(), expected) {
 			t.Errorf("Got message=%s, want %s", err.Error(), expected)
 		}
@@ -171,7 +172,7 @@ func TestServerInterfaceWrapper_SearchOrganizations(t *testing.T) {
 			return
 		}
 
-		expected := "code=400, message=Query argument query is required, but not found"
+		expected := "code=400, message=query parameter 'query' is required"
 		if !strings.Contains(err.Error(), expected) {
 			t.Errorf("Got message=%s, want %s", err.Error(), expected)
 		}

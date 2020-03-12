@@ -22,6 +22,9 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"net/url"
+	"strings"
+
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/mock"
@@ -29,8 +32,6 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/stretchr/testify/assert"
-	"net/url"
-	"strings"
 
 	"net/http"
 	"net/http/httptest"
@@ -651,7 +652,7 @@ func TestApiResource_VendorClaim(t *testing.T) {
 			b, _ := json.Marshal(Organization{
 				Identifier: "abc",
 				Name:       "def",
-				Keys:       &[]JWK{map[string]interface{}{}},
+				Keys:       &[]JWK{{AdditionalProperties: map[string]interface{}{}}},
 			})
 
 			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
@@ -730,13 +731,13 @@ func TestApiResource_RegisterEndpoint(t *testing.T) {
 			e, wrapper := initMockEcho(registryClient)
 			registryClient.EXPECT().RegisterEndpoint("1", "", "foo:bar", "fhir", "", map[string]string{"key": "value"})
 
-			props := EndpointProperties{}
+			props := map[string]string{}
 			props["key"] = "value"
 			b, _ := json.Marshal(Endpoint{
 				Identifier:   "",
 				URL:          "foo:bar",
 				EndpointType: "fhir",
-				Properties:   &props,
+				Properties:   &EndpointProperties{AdditionalProperties: props},
 			})
 
 			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
