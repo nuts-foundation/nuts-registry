@@ -1,6 +1,9 @@
 package events
 
-import "time"
+import (
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	"time"
+)
 
 const (
 	// RegisterEndpoint event type
@@ -51,11 +54,15 @@ type RegisterVendorEvent struct {
 	Keys       []interface{} `json:"keys,omitempty"`
 }
 
-func (r *RegisterVendorEvent) unmarshalPostProcess() {
+func (r *RegisterVendorEvent) unmarshalPostProcess() error {
 	// Default fallback to 'healthcare' domain when none is set, for handling legacy data when 'domain' didn't exist.
 	if r.Domain == "" {
 		r.Domain = FallbackDomain
 	}
+	if err := crypto.IsJWK(r.Keys...); err != nil {
+		return err
+	}
+	return nil
 }
 
 // VendorClaimEvent event
@@ -70,4 +77,11 @@ type VendorClaimEvent struct {
 	OrgKeys []interface{} `json:"orgKeys,omitempty"`
 	Start   time.Time     `json:"start"`
 	End     *time.Time    `json:"end,omitempty"`
+}
+
+func (v VendorClaimEvent) unmarshalPostProcess() error {
+	if err := crypto.IsJWK(v.OrgKeys...); err != nil {
+		return err
+	}
+	return nil
 }

@@ -37,7 +37,7 @@ type Event interface {
 
 // unmarshalPostProcessor allows to define custom logic that should be executed after unmarshalling
 type unmarshalPostProcessor interface {
-	unmarshalPostProcess()
+	unmarshalPostProcess() error
 }
 
 // EventType defines a supported type of event, which is used for executing the right handler.
@@ -118,7 +118,9 @@ func (j jsonEvent) Unmarshal(out interface{}) error {
 	}
 	postProc, ok := out.(unmarshalPostProcessor)
 	if ok {
-		postProc.unmarshalPostProcess()
+		if err := postProc.unmarshalPostProcess(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

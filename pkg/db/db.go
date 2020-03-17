@@ -20,11 +20,9 @@
 package db
 
 import (
-	"crypto/rsa"
 	"crypto/x509"
-	"encoding/pem"
-	"errors"
 	"github.com/lestrrat-go/jwx/jwk"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"time"
@@ -77,32 +75,13 @@ func (v Vendor) GetActiveCertificates() []*x509.Certificate {
 	return cert.GetActiveCertificates(v.Keys, time.Now())
 }
 
-// copyKeys is needed since the jwkSet.extractMap consumes the contents
-func (o Organization) copyKeys() []interface{} {
-	var keys []interface{}
-	for _, k := range o.Keys {
-		nk := map[string]interface{}{}
-		m := k.(map[string]interface{})
-		for k, v := range m {
-			nk[k] = v
-		}
-		keys = append(keys, nk)
-	}
-	return keys
-}
-
 // KeysAsSet transforms the raw map in Keys to a jwk.Set. If no keys are present, it'll return an empty set
-func (o Organization) KeysAsSet() (jwk.Set, error) {
-	var set jwk.Set
-	if len(o.Keys) == 0 {
-		return set, nil
+func (o Organization) KeysAsSet() (*jwk.Set, error) {
+	var maps []map[string]interface{}
+	for _, key := range o.Keys {
+		maps = append(maps, key.(map[string]interface{}))
 	}
-
-	m := make(map[string]interface{})
-
-	m["keys"] = o.copyKeys()
-	err := set.ExtractMap(m)
-	return set, err
+	return crypto.MapsToJwkSet(maps)
 }
 
 // CurrentPublicKey returns the first current active public key. If a JWK set is registered, it'll search in the keys there.
@@ -121,32 +100,12 @@ func (o Organization) CurrentPublicKey() (jwk.Key, error) {
 		return key, nil
 	}
 
-	key, err := pemToPublicKey([]byte(*o.PublicKey))
+	key, err := crypto.PemToPublicKey([]byte(*o.PublicKey))
 	if err != nil {
 		return nil, err
 	}
 
 	return jwk.New(key)
-}
-
-// temporary func for converting pem public keys to rsaPublicKey
-func pemToPublicKey(pub []byte) (*rsa.PublicKey, error) {
-	block, _ := pem.Decode(pub)
-	if block == nil || block.Type != "PUBLIC KEY" {
-		return nil, errors.New("failed to decode PEM block containing public key, key is of the wrong type")
-	}
-
-	b := block.Bytes
-	key, err := x509.ParsePKIXPublicKey(b)
-	if err != nil {
-		return nil, err
-	}
-	finalKey, ok := key.(*rsa.PublicKey)
-	if !ok {
-		return nil, errors.New("unable to convert public key to RSA public key")
-	}
-
-	return finalKey, nil
 }
 
 type Db interface {

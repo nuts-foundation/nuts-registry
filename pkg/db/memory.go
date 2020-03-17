@@ -22,9 +22,7 @@ package db
 import (
 	"errors"
 	"fmt"
-	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	errors2 "github.com/pkg/errors"
 	"strings"
 )
 
@@ -53,34 +51,6 @@ func (o org) toDb() Organization {
 		Keys:       o.OrgKeys,
 		Endpoints:  o.toDbEndpoints(),
 	}
-}
-
-// copyKeys is needed since the jwkSet.extractMap consumes the contents
-func copyKeys(src []interface{}) []interface{} {
-	var keys []interface{}
-	for _, k := range src {
-		nk := map[string]interface{}{}
-		m := k.(map[string]interface{})
-		for k, v := range m {
-			nk[k] = v
-		}
-		keys = append(keys, nk)
-	}
-	return keys
-}
-
-// KeysAsSet transforms the raw map in Keys to a jwk.Set. If no keys are present, it'll return an empty set
-func keysAsSet(keys []interface{}) (jwk.Set, error) {
-	var set jwk.Set
-	if len(keys) == 0 {
-		return set, nil
-	}
-
-	m := make(map[string]interface{})
-
-	m["keys"] = copyKeys(keys)
-	err := set.ExtractMap(m)
-	return set, err
 }
 
 func (v vendor) toDb() Vendor {
@@ -123,10 +93,6 @@ func (db *MemoryDb) RegisterEventHandlers(system events.EventSystem) {
 		if db.vendors[id] != nil {
 			return fmt.Errorf("vendor already registered (id = %s)", event.Identifier)
 		}
-		_, err := keysAsSet(event.Keys)
-		if err != nil {
-			return errors2.Wrap(err, "invalid JWK")
-		}
 		// Process
 		db.vendors[id] = &vendor{
 			RegisterVendorEvent: event,
@@ -149,10 +115,6 @@ func (db *MemoryDb) RegisterEventHandlers(system events.EventSystem) {
 		}
 		if db.vendors[vendorID] == nil {
 			return fmt.Errorf("vendor is not registered (id = %s)", event.VendorIdentifier)
-		}
-		_, err = keysAsSet(event.OrgKeys)
-		if err != nil {
-			return errors2.Wrap(err, "invalid JWK")
 		}
 		// Process
 		db.vendors[vendorID].orgs[orgID] = &org{
