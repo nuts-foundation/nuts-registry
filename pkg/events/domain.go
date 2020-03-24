@@ -59,7 +59,7 @@ func (r *RegisterVendorEvent) unmarshalPostProcess() error {
 	if r.Domain == "" {
 		r.Domain = FallbackDomain
 	}
-	if err := crypto.IsJWK(r.Keys...); err != nil {
+	if err := crypto.ValidateJWK(r.Keys...); err != nil {
 		return err
 	}
 	return nil
@@ -80,7 +80,7 @@ type VendorClaimEvent struct {
 }
 
 func (v VendorClaimEvent) unmarshalPostProcess() error {
-	if err := crypto.IsJWK(v.OrgKeys...); err != nil {
+	if err := crypto.ValidateJWK(v.OrgKeys...); err != nil {
 		return err
 	}
 	return nil
