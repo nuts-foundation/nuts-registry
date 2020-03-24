@@ -120,21 +120,6 @@ func TestMemoryDb_RegisterVendor(t *testing.T) {
 		err = eventSystem.PublishEvent(registerVendor1)
 		assert.Error(t, err)
 	}))
-
-	t.Run("vendor with invalid key set", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
-		e := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
-			Identifier: "v2",
-			Name:       "Foobar",
-			Keys: []interface{}{
-				map[string]interface{}{
-					"kty": "EC",
-				},
-			},
-		})
-		err := eventSystem.PublishEvent(e)
-		assert.Error(t, err)
-		assert.Nil(t, db.vendors["v2"])
-	}))
 }
 
 func TestMemoryDb_VendorClaim(t *testing.T) {
@@ -154,25 +139,6 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 			return
 		}
 		assert.Len(t, db.vendors["v1"].orgs, 2)
-	}))
-
-	t.Run("organization with invalid key set", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
-		err := eventSystem.PublishEvent(registerVendor1)
-		if !assert.NoError(t, err) {
-			return
-		}
-
-		e := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
-			VendorIdentifier: "v1",
-			OrgKeys: []interface{}{
-				map[string]interface{}{
-					"kty": "EC",
-				},
-			},
-		})
-		err = eventSystem.PublishEvent(e)
-		assert.Error(t, err)
-		assert.Len(t, db.vendors["v1"].orgs, 0)
 	}))
 
 	t.Run("unknown vendor", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {

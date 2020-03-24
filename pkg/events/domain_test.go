@@ -17,6 +17,38 @@ func TestRegisterVendorEvent(t *testing.T) {
 		}
 		assert.Equal(t, "healthcare", registerVendorEvent.Domain)
 	})
+	t.Run("invalid JWK", func(t *testing.T) {
+		event := CreateEvent(RegisterVendor, RegisterVendorEvent{
+			Keys: []interface{}{
+				map[string]interface{}{
+					"kty": "EC",
+				},
+			},
+		})
+		data := event.Marshal()
+		unmarshalledEvent, _ := EventFromJSON(data)
+		var payload = RegisterVendorEvent{}
+		err := unmarshalledEvent.Unmarshal(&payload)
+		assert.Contains(t, err.Error(), "invalid JWK")
+	})
+}
+
+func TestVendorClaimEvent(t *testing.T) {
+	t.Run("invalid JWK", func(t *testing.T) {
+		event := CreateEvent(VendorClaim, VendorClaimEvent{
+			VendorIdentifier: "v1",
+			OrgKeys: []interface{}{
+				map[string]interface{}{
+					"kty": "EC",
+				},
+			},
+		})
+		data := event.Marshal()
+		unmarshalledEvent, _ := EventFromJSON(data)
+		var payload = VendorClaimEvent{}
+		err := unmarshalledEvent.Unmarshal(&payload)
+		assert.Contains(t, err.Error(), "invalid JWK")
+	})
 }
 
 func TestRegisterEndpointEvent(t *testing.T) {
@@ -31,4 +63,3 @@ func TestRegisterEndpointEvent(t *testing.T) {
 		}
 	})
 }
-
