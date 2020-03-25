@@ -104,3 +104,7 @@ func withMock(test func(t *testing.T, client *mock.MockRegistryClient)) func(t *
 func Test_flagSet(t *testing.T) {
 	assert.NotNil(t, flagSet())
 }
+
+func TestNewRegistryEngine(t *testing.T) {
+	assert.NotNil(t, NewRegistryEngine())
+}

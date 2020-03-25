@@ -211,18 +211,3 @@ func verifyCertChainNutsDomain(chain []*x509.Certificate) error {
 	}
 	return nil
 }
-
-// copyKeys is needed since the jwkSet.extractMap consumes the contents
-// TODO: Temporary function
-func copyKeys(src []interface{}) []interface{} {
-	var keys []interface{}
-	for _, k := range src {
-		nk := map[string]interface{}{}
-		m := k.(map[string]interface{})
-		for k, v := range m {
-			nk[k] = v
-		}
-		keys = append(keys, nk)
-	}
-	return keys
-}

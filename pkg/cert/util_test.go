@@ -2,6 +2,7 @@ package cert
 
 import (
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/base64"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
@@ -12,7 +13,7 @@ import (
 func TestGetDomain(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		csr, _ := VendorCertificateRequest("VendorID", "VendorName", "CA", "healthcare")
-		cert := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
+		cert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
 		domain, err := GetDomain(cert)
 		if !assert.NoError(t, err) {
 			return
@@ -27,4 +28,54 @@ func TestGetDomain(t *testing.T) {
 		assert.Empty(t, domain)
 		assert.NoError(t, err)
 	})
+}
+func TestGetOrganizationSubjectAltName(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		csr, _ := OrganisationCertificateRequest("VendorID", "VendorName", "CA", "healthcare")
+		cert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
+		altName, err := GetOrganizationSubjectAltName(cert)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, "VendorName", altName)
+	})
+}
+
+func TestGetVendorSubjectAltName(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		csr, _ := VendorCertificateRequest("VendorID", "VendorName", "CA", "healthcare")
+		cert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
+		altName, err := GetVendorSubjectAltName(cert)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, "VendorID", altName)
+	})
+}
+
+func Test_getOtherSubjectAltName(t *testing.T) {
+	type args struct {
+		certificate *x509.Certificate
+		oid         asn1.ObjectIdentifier
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getOtherSubjectAltName(tt.args.certificate, tt.args.oid)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getOtherSubjectAltName() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("getOtherSubjectAltName() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

@@ -36,8 +36,6 @@ type Event interface {
 	Marshal() []byte
 	Signature() []byte
 	Sign(signFn func([]byte) ([]byte, error)) error
-	SignatureDetails() SignatureDetails
-	SetSignatureDetails(details SignatureDetails)
 }
 
 // SignatureDetails describes the properties of the signature that secures the event
@@ -65,14 +63,6 @@ type jsonEvent struct {
 	JWS              string           `json:"jws,omitempty"`
 	EventPayload     interface{}      `json:"payload,omitempty"`
 	signatureDetails SignatureDetails `json:"-"`
-}
-
-func (j jsonEvent) SignatureDetails() SignatureDetails {
-	return j.signatureDetails
-}
-
-func (j *jsonEvent) SetSignatureDetails(details SignatureDetails) {
-	j.signatureDetails = details
 }
 
 func (j *jsonEvent) Sign(signFn func([]byte) ([]byte, error)) error {

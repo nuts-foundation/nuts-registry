@@ -31,13 +31,15 @@ func GenerateCertificateEx(notBefore time.Time, validityInDays int, privKey *rsa
 
 func SignCertificateFromCSRWithKey(csr x509.CertificateRequest, notBefore time.Time, validityInDays int, ca *x509.Certificate, caPrivKey crypto.Signer) *x509.Certificate {
 	template := &x509.Certificate{
-		SerialNumber:    big.NewInt(1),
-		Subject:         csr.Subject,
-		KeyUsage:        x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		NotBefore:       notBefore,
-		NotAfter:        notBefore.AddDate(0, 0, validityInDays),
-		ExtraExtensions: csr.ExtraExtensions,
-		PublicKey:       csr.PublicKey,
+		SerialNumber:          big.NewInt(1),
+		Subject:               csr.Subject,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		NotBefore:             notBefore,
+		NotAfter:              notBefore.AddDate(0, 0, validityInDays),
+		ExtraExtensions:       csr.ExtraExtensions,
+		PublicKey:             csr.PublicKey,
+		IsCA:                  true,
+		BasicConstraintsValid: true,
 	}
 	if ca == nil {
 		ca = template
@@ -53,8 +55,8 @@ func SignCertificateFromCSRWithKey(csr x509.CertificateRequest, notBefore time.T
 	return certificate
 }
 
-func SelfSignCertificateFromCSR(csr x509.CertificateRequest, notBefore time.Time, validityInDays int) *x509.Certificate {
+func SelfSignCertificateFromCSR(csr x509.CertificateRequest, notBefore time.Time, validityInDays int) (*x509.Certificate, *rsa.PrivateKey) {
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	csr.PublicKey = &key.PublicKey
-	return SignCertificateFromCSRWithKey(csr, notBefore, validityInDays, nil, key)
+	return SignCertificateFromCSRWithKey(csr, notBefore, validityInDays, nil, key), key
 }
