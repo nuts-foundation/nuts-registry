@@ -20,8 +20,12 @@
 package events
 
 import (
+	"bytes"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/lestrrat-go/jwx/jws"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	errors2 "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -39,6 +43,9 @@ var ErrInvalidTimestamp = errors.New("event timestamp does not match required pa
 
 // ErrEventSystemNotConfigured is returned when the event system is used but wasn't configured by calling Configure()
 var ErrEventSystemNotConfigured = errors.New("the event system hasn't been configured, please call Configure()")
+
+// ErrEventNotSigned is returned when the event is not signed
+var ErrEventNotSigned = errors.New("the event is not signed")
 
 const eventTimestampLayout = "20060102150405.000"
 const eventFileFormat = "(\\d{17})-([a-zA-Z]+)\\.json"
@@ -62,11 +69,40 @@ type EventSystem interface {
 	Configure(location string) error
 }
 
+// EventRegistrar is a function to register an event
+type EventRegistrar func(EventType, EventHandler)
+
 // EventHandler handles an event of a specific type.
 type EventHandler func(Event) error
 
+// JwsVerifier defines a verification delegate for JWS'.
+type JwsVerifier func(signature []byte, signingTime time.Time, verifier crypto.CertificateVerifier) ([]byte, error)
+
+// NoopJwsVerifier is a JwsVerifier that just parses the JWS without verifying the signatures
+var NoopJwsVerifier = func(signature []byte, signingTime time.Time, verifier crypto.CertificateVerifier) ([]byte, error) {
+	msg, err := jws.Parse(bytes.NewReader(signature))
+	if err != nil {
+		return nil, err
+	}
+	return msg.Payload(), nil
+}
+
+// NoopTrustStore is a TrustStore that holds no state
+var NoopTrustStore = &noopTrustStore{}
+
+type noopTrustStore struct{}
+
+func (n noopTrustStore) Verify(*x509.Certificate) error {
+	return nil
+}
+
+func (n noopTrustStore) RegisterEventHandlers(func(EventType, EventHandler)) {
+	// Nothing to do here
+}
+
 type diskEventSystem struct {
-	eventHandlers map[EventType]EventHandler
+	eventHandlers map[EventType][]EventHandler
+	eventTypes    []EventType
 	// lastLoadedEvent contains the identifier of the last event that was loaded. It is used to keep track from
 	// what event to resume when the events are reloaded (from disk)
 	lastLoadedEvent time.Time
@@ -74,8 +110,8 @@ type diskEventSystem struct {
 }
 
 // NewEventSystem creates and initializes a new event system.
-func NewEventSystem() EventSystem {
-	return &diskEventSystem{eventHandlers: make(map[EventType]EventHandler, 0)}
+func NewEventSystem(eventTypes ...EventType) EventSystem {
+	return &diskEventSystem{eventTypes: eventTypes, eventHandlers: make(map[EventType][]EventHandler, 0)}
 }
 
 func (system *diskEventSystem) Configure(location string) error {
@@ -84,26 +120,40 @@ func (system *diskEventSystem) Configure(location string) error {
 }
 
 func (system *diskEventSystem) RegisterEventHandler(eventType EventType, handler EventHandler) {
-	system.eventHandlers[eventType] = handler
+	system.eventHandlers[eventType] = append(system.eventHandlers[eventType], handler)
 }
+
+// isEventType checks whether the given type is supported.
+func (system diskEventSystem) isEventType(eventType EventType) bool {
+	for _, actual := range system.eventTypes {
+		if actual == eventType {
+			return true
+		}
+	}
+	return false
+}
+
 
 func (system *diskEventSystem) ProcessEvent(event Event) error {
 	if err := system.assertConfigured(); err != nil {
 		return err
 	}
-	if !IsEventType(event.Type()) {
+	if !system.isEventType(event.Type()) {
 		return fmt.Errorf("unknown event type: %s", event.Type())
 	}
+	// Process
 	logrus.Infof("Processing event: %v - %s", event.IssuedAt(), event.Type())
-	handler := system.eventHandlers[event.Type()]
-	if handler == nil {
-		return fmt.Errorf("no handler registered for event (type = %s), handlers are: %v", event.Type(), system.eventHandlers)
+	handlers := system.eventHandlers[event.Type()]
+	if handlers == nil {
+		return fmt.Errorf("no handlers registered for event (type = %s), handlers are: %v", event.Type(), system.eventHandlers)
 	}
-	err := handler(event)
-	if err == nil {
-		system.lastLoadedEvent = event.IssuedAt()
+	for _, handler := range handlers {
+		if err := handler(event); err != nil {
+			return err
+		}
 	}
-	return err
+	system.lastLoadedEvent = event.IssuedAt()
+	return nil
 }
 
 func (system *diskEventSystem) PublishEvent(event Event) error {
@@ -114,7 +164,8 @@ func (system *diskEventSystem) PublishEvent(event Event) error {
 		return err
 	}
 
-	err := ioutil.WriteFile(normalizeLocation(system.location, SuggestEventFileName(event)), event.Marshal(), os.ModePerm)
+	eventFileName := SuggestEventFileName(event)
+	err := ioutil.WriteFile(normalizeLocation(system.location, eventFileName), event.Marshal(), os.ModePerm)
 	if err != nil {
 		return errors2.Wrap(err, "event processed, but enable to save it to disk")
 	}
@@ -200,6 +251,11 @@ func (system diskEventSystem) findStartIndex(entries []os.FileInfo) int {
 	return len(entries) + 1
 }
 
+type TrustStore interface {
+	crypto.CertificateVerifier
+	RegisterEventHandlers(func(EventType, EventHandler))
+}
+
 func isJSONFile(file os.FileInfo) bool {
 	return !file.IsDir() && strings.HasSuffix(file.Name(), ".json")
 }
@@ -228,7 +284,7 @@ func readEvent(file string, timestamp string) (Event, error) {
 	if err != nil {
 		return nil, err
 	}
-	je := event.(jsonEvent)
+	je := event.(*jsonEvent)
 	je.EventIssuedAt = t
 	return je, nil
 }

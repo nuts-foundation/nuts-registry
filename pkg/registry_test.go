@@ -37,6 +37,7 @@ import (
 	"github.com/nuts-foundation/nuts-registry/mock"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -154,7 +155,7 @@ func TestRegistry_Configure(t *testing.T) {
 				Mode:    core.ServerEngineMode,
 				Datadir: "../test_data/valid_files",
 			},
-			EventSystem: events.NewEventSystem(),
+			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
 
 		if err := registry.Configure(); err != nil {
@@ -171,7 +172,7 @@ func TestRegistry_Configure(t *testing.T) {
 				Mode:    core.ServerEngineMode,
 				Datadir: "///",
 			},
-			EventSystem: events.NewEventSystem(),
+			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
 		err := registry.Configure()
 		assert.Error(t, err)
@@ -188,7 +189,7 @@ func TestRegistry_Configure(t *testing.T) {
 				Mode:    core.ServerEngineMode,
 				Datadir: repo.Directory,
 			},
-			EventSystem: events.NewEventSystem(),
+			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
 		os.MkdirAll(filepath.Join(repo.Directory, "events"), os.ModePerm)
 		err = ioutil.WriteFile(filepath.Join(repo.Directory, "events/20200123091400001-RegisterOrganizationEvent.json"), []byte("this is a file"), os.ModePerm)
@@ -223,7 +224,7 @@ func TestRegistry_FileUpdate(t *testing.T) {
 			OnChange: func(registry *Registry) {
 				wg.Done()
 			},
-			EventSystem: events.NewEventSystem(),
+			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
 		defer registry.Shutdown()
 
@@ -283,7 +284,7 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 				println("EVENT")
 				wg.Done()
 			},
-			EventSystem: events.NewEventSystem(),
+			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
 		defer registry.Shutdown()
 

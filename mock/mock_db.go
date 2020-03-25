@@ -35,15 +35,15 @@ func (m *MockDb) EXPECT() *MockDbMockRecorder {
 }
 
 // RegisterEventHandlers mocks base method
-func (m *MockDb) RegisterEventHandlers(system events.EventSystem) {
+func (m *MockDb) RegisterEventHandlers(fn events.EventRegistrar) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RegisterEventHandlers", system)
+	m.ctrl.Call(m, "RegisterEventHandlers", fn)
 }
 
 // RegisterEventHandlers indicates an expected call of RegisterEventHandlers
-func (mr *MockDbMockRecorder) RegisterEventHandlers(system interface{}) *gomock.Call {
+func (mr *MockDbMockRecorder) RegisterEventHandlers(fn interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterEventHandlers", reflect.TypeOf((*MockDb)(nil).RegisterEventHandlers), system)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterEventHandlers", reflect.TypeOf((*MockDb)(nil).RegisterEventHandlers), fn)
 }
 
 // FindEndpointsByOrganizationAndType mocks base method

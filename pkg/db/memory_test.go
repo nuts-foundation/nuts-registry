@@ -22,6 +22,7 @@ package db
 import (
 	"errors"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -35,37 +36,37 @@ import (
 //   o2 Organization Dos
 // v2 Vendor Dos
 
-var registerVendor1 = events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
+var registerVendor1 = events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{
 	Identifier: "v1",
 	Name:       "Vendor Uno",
 })
-var registerVendor2 = events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
+var registerVendor2 = events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{
 	Identifier: "v2",
 	Name:       "Vendor Dos",
 })
 
-var vendorClaim1 = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+var vendorClaim1 = events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
 	VendorIdentifier: "v1",
 	OrgIdentifier:    "o1",
 	OrgName:          "Organization Uno",
 	OrgKeys:          nil,
 })
 
-var vendorClaim2 = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+var vendorClaim2 = events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
 	VendorIdentifier: "v1",
 	OrgIdentifier:    "o2",
 	OrgName:          "Organization Dos",
 	OrgKeys:          nil,
 })
 
-var registerEndpoint1 = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
+var registerEndpoint1 = events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{
 	Organization: "o1",
 	URL:          "foo:bar",
 	EndpointType: "simple",
 	Identifier:   "e1",
 	Status:       StatusActive,
 })
-var registerEndpoint2 = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
+var registerEndpoint2 = events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{
 	Organization: "o1",
 	URL:          "foo:bar",
 	EndpointType: "simple",
@@ -83,9 +84,9 @@ func TestNew(t *testing.T) {
 
 func initDb(repo test.TestRepo) (events.EventSystem, *MemoryDb) {
 	db := New()
-	eventSystem := events.NewEventSystem()
+	eventSystem := events.NewEventSystem(domain.GetEventTypes()...)
 	eventSystem.Configure(repo.Directory + "/events")
-	db.RegisterEventHandlers(eventSystem)
+	db.RegisterEventHandlers(eventSystem.RegisterEventHandler)
 	return eventSystem, db
 }
 

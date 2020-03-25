@@ -31,6 +31,7 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/stretchr/testify/assert"
 
 	"net/http"
@@ -64,7 +65,7 @@ func (mdb *MockDb) VendorByID(id string) *db.Vendor {
 	panic("implement me")
 }
 
-func (mdb *MockDb) RegisterEventHandlers(system events.EventSystem) {
+func (mdb *MockDb) RegisterEventHandlers(fn events.EventRegistrar) {
 
 }
 
@@ -130,7 +131,7 @@ var organizations = []db.Organization{
 
 func initEcho(db *MockDb) (*echo.Echo, *ServerInterfaceWrapper) {
 	e := echo.New()
-	stub := ApiWrapper{R: &pkg.Registry{Db: db, EventSystem: events.NewEventSystem()}}
+	stub := ApiWrapper{R: &pkg.Registry{Db: db, EventSystem: events.NewEventSystem(domain.GetEventTypes()...)}}
 	wrapper := &ServerInterfaceWrapper{
 		Handler: stub,
 	}
