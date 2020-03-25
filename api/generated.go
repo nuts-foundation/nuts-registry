@@ -34,6 +34,9 @@ type Endpoint struct {
 	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
 	Identifier Identifier `json:"identifier"`
 
+	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
+	Organization Identifier `json:"organization"`
+
 	// A property bag, containing extra properties for endpoints
 	Properties *EndpointProperties `json:"properties,omitempty"`
 

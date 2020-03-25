@@ -27,6 +27,7 @@ import (
 
 func (e Endpoint) fromDb(db db.Endpoint) Endpoint {
 	e.URL = db.URL
+	e.Organization = Identifier(db.Organization)
 	e.EndpointType = db.EndpointType
 	e.Identifier = Identifier(db.Identifier)
 	e.Status = db.Status
@@ -79,6 +80,7 @@ func (e Endpoint) toDb() db.Endpoint {
 		URL:          e.URL,
 		EndpointType: e.EndpointType,
 		Identifier:   db.Identifier(e.Identifier),
+		Organization: db.Identifier(e.Organization),
 		Status:       e.Status,
 		Properties:   fromEndpointProperties(e.Properties),
 	}

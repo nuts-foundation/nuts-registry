@@ -66,6 +66,7 @@ func (v vendor) toDb() Vendor {
 func (e endpoint) toDb() Endpoint {
 	return Endpoint{
 		URL:          e.URL,
+		Organization: toDbIdentifier(e.Organization),
 		EndpointType: e.EndpointType,
 		Identifier:   toDbIdentifier(e.Identifier),
 		Status:       e.Status,

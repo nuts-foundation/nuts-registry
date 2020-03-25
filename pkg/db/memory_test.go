@@ -191,6 +191,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 			return
 		}
 		assert.Len(t, result, 1)
+		assert.NotEmpty(t, result[0].Organization)
 	}))
 
 	t.Run("Valid example with type", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
