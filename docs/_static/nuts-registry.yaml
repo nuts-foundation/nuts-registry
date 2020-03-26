@@ -277,11 +277,14 @@ components:
             $ref: "#/components/schemas/JWK"
     Endpoint:
       required:
+        - organization
         - endpointType
         - identifier
         - status
         - URL
       properties:
+        organization:
+          $ref: "#/components/schemas/Identifier"
         endpointType:
           type: string
           description: URI of the type of endpoint
