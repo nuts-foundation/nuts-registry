@@ -13,7 +13,7 @@ require (
 	github.com/nuts-foundation/nuts-crypto v0.0.0-20200324073637-ee78270cf395
 	github.com/nuts-foundation/nuts-go-core v0.0.0-20200305093237-74ae80214e1c
 	github.com/pelletier/go-toml v1.5.0 // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
