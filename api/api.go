@@ -137,7 +137,7 @@ func (apiResource ApiWrapper) OrganizationById(ctx echo.Context, id string) erro
 
 // EndpointsByOrganisationId is the Api implementation for getting all or certain types of endpoints for an organization
 func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error {
-	var dupEndpoints []Endpoint
+	dupEndpoints := []Endpoint{}
 	strict := params.Strict
 	endpointIds := make(map[string]bool)
 	for _, id := range params.OrgIds {
