@@ -26,11 +26,12 @@ import (
 	"net/http"
 	"net/url"
 
+	"io/ioutil"
+
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
 )
 
 // String converts an identifier to string
@@ -136,7 +137,7 @@ func (apiResource ApiWrapper) OrganizationById(ctx echo.Context, id string) erro
 
 // EndpointsByOrganisationId is the Api implementation for getting all or certain types of endpoints for an organization
 func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error {
-	var dupEndpoints []Endpoint
+	dupEndpoints := []Endpoint{}
 	strict := params.Strict
 	endpointIds := make(map[string]bool)
 	for _, id := range params.OrgIds {
@@ -168,7 +169,7 @@ func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params
 	}
 
 	// filter on type
-	var uniqFiltered []Endpoint
+	uniqFiltered := []Endpoint{}
 	if params.Type == nil {
 		uniqFiltered = uniq
 	} else {

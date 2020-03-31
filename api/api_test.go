@@ -22,6 +22,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/url"
 	"strings"
 
@@ -155,6 +156,10 @@ func deserializeEndpoints(data *bytes.Buffer) ([]Endpoint, error) {
 
 	if err != nil {
 		return nil, err
+	}
+
+	if stub == nil {
+		return nil, errors.New("got nil value")
 	}
 
 	return stub, err
