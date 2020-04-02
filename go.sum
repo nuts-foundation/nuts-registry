@@ -116,6 +116,8 @@ github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/nuts-foundation/nuts-crypto v0.13.0 h1:szSHnYpK+0ORHNpeBdhPocVoukp9oxZWowKF4YCaPlI=
 github.com/nuts-foundation/nuts-crypto v0.13.0/go.mod h1:2JTdNvxWBbqv/VWQw3PazNNjY4FlbDf6LAyv2u2vtGo=
+github.com/nuts-foundation/nuts-crypto v0.13.1-0.20200402090327-2ec6f557b445 h1:lgK+JXUAomfpLn4yPuqgmMXIMuKZ9HU/FbWhVWRJw8I=
+github.com/nuts-foundation/nuts-crypto v0.13.1-0.20200402090327-2ec6f557b445/go.mod h1:A+8TA3p+b73Bc1Hx8TFods389I3hWmJ9oXMtS7KE1w0=
 github.com/nuts-foundation/nuts-go-core v0.13.0 h1:kdmBClufcCZMKjeTyfLhxyLAtPMlk3U2049U1B7p/i4=
 github.com/nuts-foundation/nuts-go-core v0.13.0/go.mod h1:YVG736ZUyC0nHRozNUsbLPRnxQouCzoARpswWgPV55g=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=

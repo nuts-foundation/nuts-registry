@@ -217,7 +217,7 @@ func Test_trustStore_Verify(t *testing.T) {
 		caCert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
 		ts := NewTrustStore().(*trustStore)
 		ts.certPool.AddCert(caCert)
-		err := ts.Verify(caCert)
+		err := ts.Verify(caCert, time.Now())
 		assert.NoError(t, err)
 	})
 	t.Run("error - incorrect domain", func(t *testing.T) {
@@ -228,7 +228,7 @@ func Test_trustStore_Verify(t *testing.T) {
 		cert := test.SignCertificateFromCSRWithKey(csr, time.Now(), 2, caCert, caPrivKey)
 		ts := NewTrustStore().(*trustStore)
 		ts.certPool.AddCert(caCert)
-		err := ts.Verify(cert)
+		err := ts.Verify(cert, time.Now())
 		assert.EqualError(t, err, "domain (healthcare) in certificate (subject: CN=vendorName CA,O=vendorName,C=NL) differs from expected domain (somethingelse)")
 	})
 	t.Run("error - missing domain", func(t *testing.T) {
@@ -237,8 +237,17 @@ func Test_trustStore_Verify(t *testing.T) {
 		cert, _ := x509.ParseCertificate(asn1Data)
 		ts := NewTrustStore().(*trustStore)
 		ts.certPool.AddCert(cert)
-		err := ts.Verify(cert)
+		err := ts.Verify(cert, time.Now())
 		assert.Contains(t, err.Error(), "certificate is missing domain")
+	})
+	t.Run("error - certificate has expired", func(t *testing.T) {
+		base64cert := "MIIDWTCCAkGgAwIBAgIIPFp5m2SmCOMwDQYJKoZIhvcNAQELBQAwPTELMAkGA1UEBhMCTkwxDjAMBgNVBAoTBU5lZGFwMR4wHAYDVQQDExVOZWRhcCBDQSBJbnRlcm1lZGlhdGUwHhcNMjAwNDAyMDgxODQwWhcNMjAwNDAyMDgxOTQwWjAtMQswCQYDVQQGEwJOTDEOMAwGA1UEChMFTmVkYXAxDjAMBgNVBAMTBU5lZGFwMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvWB8KpKRNV1RnyzkHTV4eXb8AFQPhT8DuyFsMGpYrRFV9RFXG6RjgoYVMbi9GyT/yddN92YEcDvTaLUlwxZAWeTB4uorDM69ezwrJNlFDn0T3E9Vz8tU8Yi4ZvLwD4RY5vINK8sHhVlx829/yJV0Fa8vY1t4I3M2LQMDjhPeV8QX72b6Y54fAZfAbIycrIiZOzTuoHTKjqk7nU7+aTEH7M9uXIrAEMWz7bF/rgwRhFJ2vss+ca843vtfnctOAS15ku5g661O/E/zqLyjEyUq1N4i0sI85wnopXSAiRdb4IlQm1Jht9gqL+TTx0Hio8rQk2zTpjGYnOoQ44JUGMM4KQIDAQABo20wazAOBgNVHQ8BAf8EBAMCB4AwPgYDVR0RBDcwNaAzBgkrBgEEAYOsQwSgJgwkdXJuOm9pZDoxLjMuNi4xLjQuMS41NDg1MS40OjAwMDAwMDAxMBkGCSsGAQQBg6xDAwQMDApoZWFsdGhjYXJlMA0GCSqGSIb3DQEBCwUAA4IBAQAw07XWznfAZBzhlOW9Z2/XuAsvmQMEHo8FdYV+9RdxS1YNnlIVSIlXrhuaoksJS2pKqzPJ211E0KpGx8m6YcHxKdm9Hm8kVz7GMpqRLmT1KtDoiWkt/aPGvGg8vDcq4wCeJbAmkDYmh8H2L5Asb2FRZxcvK4jP6jLTAyDDQYBJS9cLXDUQhcC6LIXKP4QRNZzuse2hgtIqRakfOSFHDudquarllvWvn2wZ5ZiqNbV586oWzMYsN8rgnK6v/UpwHkXJl48oMuQuM0N8JUQUPvgJL+p9YVMnb/Z9zlRClF52Swad+Cl6BoPa5Mt3Lwh2XYhC1a1SdsXbuNFaSjvjjxnx"
+		asn1cert, _ := base64.StdEncoding.DecodeString(base64cert)
+		cert, _ := x509.ParseCertificate(asn1cert)
+		ts := NewTrustStore().(*trustStore)
+		ts.certPool.AddCert(cert)
+		err := ts.Verify(cert, time.Now())
+		assert.Contains(t, err.Error(), "x509: certificate has expired or is not yet valid")
 	})
 }
 
