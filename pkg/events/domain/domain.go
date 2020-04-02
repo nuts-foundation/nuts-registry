@@ -132,8 +132,8 @@ func (t *trustStore) RegisterEventHandlers(fn func(events.EventType, events.Even
 	}
 }
 
-func (t trustStore) Verify(certificate *x509.Certificate) error {
-	chains, err := certificate.Verify(x509.VerifyOptions{Roots: t.certPool})
+func (t trustStore) Verify(certificate *x509.Certificate, moment time.Time) error {
+	chains, err := certificate.Verify(x509.VerifyOptions{Roots: t.certPool, CurrentTime: moment})
 	if err != nil {
 		return err
 	}
@@ -177,7 +177,7 @@ func (t *trustStore) handleEvent(event events.Event) error {
 			if len(chain) > 0 {
 				// Make sure the certificate is issued by a trusted vendor
 				certificate := chain[0]
-				if err := t.Verify(certificate); err != nil {
+				if err := t.Verify(certificate, event.IssuedAt()); err != nil {
 					return errors2.Wrap(err, "organization certificate is not trusted (issued by untrusted vendor certificate?)")
 				}
 				// We only add the actual certificate, since the issuing certificate is vendor CA certificate, which is

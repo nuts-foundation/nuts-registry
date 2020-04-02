@@ -92,7 +92,7 @@ var NoopTrustStore = &noopTrustStore{}
 
 type noopTrustStore struct{}
 
-func (n noopTrustStore) Verify(*x509.Certificate) error {
+func (n noopTrustStore) Verify(*x509.Certificate, time.Time) error {
 	return nil
 }
 
