@@ -268,3 +268,8 @@ func TestNoopJwsVerifier(t *testing.T) {
 	}
 	assert.NotNil(t, payload)
 }
+
+func Test_noopTrustStore(t *testing.T) {
+	assert.NoError(t, NoopTrustStore.Verify(nil, time.Now()))
+	NoopTrustStore.RegisterEventHandlers(nil)
+}
