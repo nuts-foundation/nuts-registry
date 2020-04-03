@@ -20,6 +20,8 @@
 package db
 
 import (
+	"bytes"
+	crypto2 "crypto"
 	"crypto/x509"
 	"errors"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -83,7 +85,47 @@ func (o Organization) KeysAsSet() (*jwk.Set, error) {
 	for _, key := range o.Keys {
 		maps = append(maps, key.(map[string]interface{}))
 	}
-	return crypto.MapsToJwkSet(maps)
+	result, err := crypto.MapsToJwkSet(maps)
+	if err != nil {
+		return nil, err
+	}
+	// Support deprecated PublicKey
+	if o.PublicKey != nil {
+		key, err := crypto.PemToPublicKey([]byte(*o.PublicKey))
+		if err != nil {
+			return nil, err
+		}
+		pubKey, _ := jwk.New(key)
+		result.Keys = append(result.Keys, pubKey)
+	}
+	return result, nil
+}
+
+// HasKey checks whether the given key is owned by the organization
+func (o Organization) HasKey(key jwk.Key, validAtMoment time.Time) (bool, error) {
+	// func can't return error
+	keyTp, _ := key.Thumbprint(crypto2.SHA256)
+	keys, err := o.KeysAsSet()
+	if err != nil {
+		return false, err
+	}
+	for _, k := range keys.Keys {
+		// func can't return error
+		tp, _ := k.Thumbprint(crypto2.SHA256)
+		if bytes.Compare(keyTp, tp) == 0 {
+			// Found the key
+			chainInterf, chainExists := k.Get("x5c")
+			if chainExists {
+				certificate := chainInterf.([]*x509.Certificate)[0]
+				// JWK has a certificate attached, check if it's valid at the specified time
+				if validAtMoment.Before(certificate.NotBefore) || validAtMoment.After(certificate.NotAfter) {
+					return false, nil
+				}
+			}
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // CurrentPublicKey returns the public key associated with the organization certificate which has the longest validity.
@@ -108,20 +150,12 @@ func (o Organization) CurrentPublicKey() (jwk.Key, error) {
 		return nil, errors.New("organization has no active certificates")
 	} else {
 		// Organization has no certificates, fallback to plain JWKs
-		if len(o.Keys) > 0 {
-			set, err := o.KeysAsSet()
-			if err != nil {
-				return nil, err
-			}
-			key := set.Keys[0]
-			return key, nil
-		}
-		// Organization has no JWKs, fallback to PublicKey
-		key, err := crypto.PemToPublicKey([]byte(*o.PublicKey))
+		set, err := o.KeysAsSet()
 		if err != nil {
 			return nil, err
 		}
-		return jwk.New(key)
+		key := set.Keys[0]
+		return key, nil
 	}
 }
 

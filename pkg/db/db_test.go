@@ -57,6 +57,16 @@ func TestOrganization_KeysAsSet(t *testing.T) {
 		}
 	})
 
+	t.Run("deprecated PublicKey is supported", func(t *testing.T) {
+		_, pem := generatePEM()
+		o := Organization{PublicKey: &pem}
+		set, err := o.KeysAsSet()
+		if assert.NoError(t, err) && assert.NotNil(t, set) {
+			assert.Len(t, set.Keys, 1)
+			assert.Equal(t, jwa.RSA, set.Keys[0].KeyType())
+		}
+	})
+
 	t.Run("JWK as set can be called multiple times (bug: #20)", func(t *testing.T) {
 		o := Organization{}
 		if assert.NoError(t, json.Unmarshal([]byte(valid), &o)) {
@@ -200,4 +210,91 @@ func TestVendor_GetActiveCertificates(t *testing.T) {
 
 func TestOrganization_GetActiveCertificates(t *testing.T) {
 	assert.Len(t, Organization{}.GetActiveCertificates(), 0)
+}
+
+func TestOrganization_HasKey(t *testing.T) {
+	t.Run("ok - not found", func(t *testing.T) {
+		keyAsJWK := generateJWK()
+		o := Organization{}
+		hasKey, err := o.HasKey(keyAsJWK, time.Now())
+		assert.NoError(t, err)
+		assert.False(t, hasKey)
+	})
+	t.Run("ok - match: deprecated public key", func(t *testing.T) {
+		keyAsJWK, pem := generatePEM()
+		o := Organization{PublicKey: &pem}
+		hasKey, err := o.HasKey(keyAsJWK, time.Now())
+		assert.NoError(t, err)
+		assert.True(t, hasKey)
+	})
+	t.Run("ok - no match: JWK without certificate", func(t *testing.T) {
+		key1AsJWK := generateJWK()
+		jwk1AsMap, _ := pkg.JwkToMap(key1AsJWK)
+		jwk1AsMap["kty"] = "RSA"
+		key2AsJWK := generateJWK()
+		jwk2AsMap, _ := pkg.JwkToMap(key2AsJWK)
+		jwk2AsMap["kty"] = "RSA"
+		o := Organization{Keys: []interface{}{jwk1AsMap}}
+		hasKey, err := o.HasKey(key2AsJWK, time.Now())
+		assert.NoError(t, err)
+		assert.False(t, hasKey)
+	})
+	t.Run("ok - match: JWK without certificate", func(t *testing.T) {
+		keyAsJWK := generateJWK()
+		jwkAsMap, _ := pkg.JwkToMap(keyAsJWK)
+		jwkAsMap["kty"] = "RSA"
+		o := Organization{Keys: []interface{}{jwkAsMap}}
+		hasKey, err := o.HasKey(keyAsJWK, time.Now())
+		assert.NoError(t, err)
+		assert.True(t, hasKey)
+	})
+	t.Run("ok - match: JWK with certificate", func(t *testing.T) {
+		k, _ := rsa.GenerateKey(rand.Reader, 2048)
+		asn1cert := test.GenerateCertificateEx(time.Now(), 2, k)
+		cert, _ := x509.ParseCertificate(asn1cert)
+		certAsJWK, _ := pkg.CertificateToJWK(cert)
+		jwkAsMap, _ := pkg.JwkToMap(certAsJWK)
+		jwkAsMap["kty"] = "RSA"
+		o := Organization{Keys: []interface{}{jwkAsMap}}
+		hasKey, err := o.HasKey(certAsJWK, time.Now())
+		assert.NoError(t, err)
+		assert.True(t, hasKey)
+	})
+	t.Run("ok - match: JWK with certificate, but expired", func(t *testing.T) {
+		k, _ := rsa.GenerateKey(rand.Reader, 2048)
+		asn1cert := test.GenerateCertificateEx(time.Now(), 2, k)
+		cert, _ := x509.ParseCertificate(asn1cert)
+		certAsJWK, _ := pkg.CertificateToJWK(cert)
+		jwkAsMap, _ := pkg.JwkToMap(certAsJWK)
+		jwkAsMap["kty"] = "RSA"
+		o := Organization{Keys: []interface{}{jwkAsMap}}
+		hasKey, err := o.HasKey(certAsJWK, time.Now().AddDate(-1, 0, 0))
+		assert.NoError(t, err)
+		assert.False(t, hasKey)
+	})
+	t.Run("error - org contains invalid keys", func(t *testing.T) {
+		k, _ := rsa.GenerateKey(rand.Reader, 2048)
+		keyAsJWK, _ := jwk.New(k)
+		o := Organization{Keys: []interface{}{map[string]interface{}{}}}
+		hasKey, err := o.HasKey(keyAsJWK, time.Time{})
+		assert.Error(t, err)
+		assert.False(t, hasKey)
+	})
+}
+
+func generatePEM() (jwk.Key, string) {
+	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+	keyAsJWK, _ := jwk.New(key)
+	pem, _ := pkg.PublicKeyToPem(&key.PublicKey)
+	return keyAsJWK, pem
+}
+
+func generateJWK() jwk.Key {
+	k, _ := rsa.GenerateKey(rand.Reader, 2048)
+	jw, _ := jwk.New(k)
+	return jw
+}
+
+func TestIdentifier_String(t *testing.T) {
+	assert.Equal(t, "test", Identifier("test").String())
 }
