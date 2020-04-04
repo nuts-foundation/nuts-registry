@@ -20,7 +20,11 @@
 package db
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"errors"
+	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/nuts-foundation/nuts-registry/test"
@@ -375,4 +379,25 @@ func withTestContext(fn func(t *testing.T, eventSystem events.EventSystem, db *M
 		eventSystem, db := initDb(*repo)
 		fn(t, eventSystem, db)
 	}
+}
+
+func Test_org_toDb(t *testing.T) {
+	t.Run("PublicKey backwards compatibility", func(t *testing.T) {
+		rsaKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+		keyAsJWK, _ := jwk.New(&rsaKey.PublicKey)
+		jwkAsMap, _ := pkg.JwkToMap(keyAsJWK)
+		jwkAsMap["kty"] = "RSA"
+		o := org{VendorClaimEvent: domain.VendorClaimEvent{
+			VendorIdentifier: "v1",
+			OrgIdentifier:    "o1",
+			OrgName:          "Organization Uno",
+			OrgKeys:          []interface{}{jwkAsMap},
+		}}
+		publicKey := o.toDb().PublicKey
+		if !assert.NotNil(t, publicKey) {
+			return
+		}
+		pubKey, _ := pkg.PemToPublicKey([]byte(*publicKey))
+		assert.Equal(t, rsaKey.PublicKey, *pubKey)
+	})
 }

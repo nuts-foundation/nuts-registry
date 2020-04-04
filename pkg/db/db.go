@@ -56,6 +56,7 @@ func (i Identifier) String() string {
 type Organization struct {
 	Identifier Identifier    `json:"identifier"`
 	Name       string        `json:"name"`
+	// Deprecated: use Keys or helper functions to retrieve the current key in use by the organization
 	PublicKey  *string       `json:"publicKey,omitempty"`
 	Keys       []interface{} `json:"keys,omitempty"`
 	Endpoints  []Endpoint
