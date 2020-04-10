@@ -20,8 +20,10 @@
 package db
 
 import (
+	"crypto/rsa"
 	"errors"
 	"fmt"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"strings"
@@ -46,12 +48,25 @@ type endpoint struct {
 }
 
 func (o org) toDb() Organization {
-	return Organization{
+	result := Organization{
 		Identifier: toDbIdentifier(o.OrgIdentifier),
 		Name:       o.OrgName,
 		Keys:       o.OrgKeys,
 		Endpoints:  o.toDbEndpoints(),
 	}
+	// Backwards compatibility for deprecated PublicKey property: fill with first RSA key we can find
+	for _, k := range o.OrgKeys {
+		keyAsJwk, _ := crypto.MapToJwk(k.(map[string]interface{}))
+		if keyAsJwk != nil {
+			matKey, _ := keyAsJwk.Materialize()
+			pubKey, ok := matKey.(*rsa.PublicKey)
+			if ok {
+				p, _ := crypto.PublicKeyToPem(pubKey)
+				result.PublicKey = &p
+			}
+		}
+	}
+	return result
 }
 
 func (v vendor) toDb() Vendor {
