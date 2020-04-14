@@ -29,18 +29,40 @@ paths:
           description: "incorrect data"
   /api/vendor/{id}/claim:
     post:
+      deprecated: true
       summary: "Claim an organization for a vendor (registers an organization under a vendor in the registry)."
-      operationId: "vendorClaim"
+      operationId: "deprecatedVendorClaim"
       tags:
         - vendors
       parameters:
         - name: id
           in: path
-          description: "URL encoded identifier"
+          description: "Ignored since deprecation."
           required: true
-          example: "urn:oid:2.16.840.1.113883.2.4.6.1:00000007"
           schema:
             type: string
+      description: Deprecated, use /api/organization (POST)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Organization'
+      responses:
+        '200':
+          description: "Claim has been created successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: "incorrect data"
+  /api/organization:
+    post:
+      summary: "Claim an organization for the current vendor (registers an organization under the vendor in the registry)."
+      operationId: "vendorClaim"
+      tags:
+        - vendors
       description: |
         Keys can follow the following structures (EC or RSA):
         ```json
@@ -242,15 +264,12 @@ components:
     Vendor:
       required:
         - name
-        - identifier
         - domain
       properties:
         name:
           type: string
           description: the well-known name for the vendor
           example: Medicare Software for People B.V.
-        identifier:
-          $ref: "#/components/schemas/Identifier"
         domain:
           $ref: "#/components/schemas/Domain"
     Organization:

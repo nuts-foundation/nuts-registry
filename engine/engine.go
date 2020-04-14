@@ -128,16 +128,16 @@ func cmd() *cobra.Command {
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "register-vendor [identifier] [name] [(optional, default=healthcare) domain]",
+		Use:   "register-vendor [name] [(optional, default=healthcare) domain]",
 		Short: "Registers a vendor",
-		Args:  cobra.RangeArgs(2, 3),
+		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl := registryClientCreator()
 			var vendorDomain = domain.FallbackDomain
-			if len(args) == 3 {
-				vendorDomain = args[2]
+			if len(args) == 2 {
+				vendorDomain = args[1]
 			}
-			event, err := cl.RegisterVendor(args[0], args[1], vendorDomain)
+			event, err := cl.RegisterVendor(args[0], vendorDomain)
 			if err != nil {
 				logrus.Errorf("Unable to register vendor: %v", err)
 				return err
@@ -149,13 +149,13 @@ func cmd() *cobra.Command {
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "vendor-claim [vendor-identifier] [org-identifier] [org-name]",
+		Use:   "vendor-claim [org-identifier] [org-name]",
 		Short: "Registers a vendor claim.",
 		Long:  "Registers a vendor claiming a care organization as its client.",
-		Args:  cobra.ExactArgs(3),
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl := registryClientCreator()
-			event, err := cl.VendorClaim(args[0], args[1], args[2], nil)
+			event, err := cl.VendorClaim(args[0], args[1], nil)
 			if err != nil {
 				logrus.Errorf("Unable to register vendor organisation claim: %v", err)
 				return err

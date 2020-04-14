@@ -131,7 +131,7 @@ func TestHttpClient_VendorClaim(t *testing.T) {
 		key := map[string]interface{}{
 			"e": 12345,
 		}
-		event, err := c.VendorClaim("id", "orgID", "name", []interface{}{key})
+		event, err := c.VendorClaim( "orgID", "name", []interface{}{key})
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -141,7 +141,7 @@ func TestHttpClient_VendorClaim(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		event, err := c.VendorClaim("id", "orgID", "name", []interface{}{})
+		event, err := c.VendorClaim("orgID", "name", []interface{}{})
 		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
 	})
@@ -153,7 +153,7 @@ func TestHttpClient_RegisterVendor(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		vendor, err := c.RegisterVendor("id", "name", "")
+		vendor, err := c.RegisterVendor("name", "")
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -163,7 +163,7 @@ func TestHttpClient_RegisterVendor(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		event, err := c.RegisterVendor("id", "name", "")
+		event, err := c.RegisterVendor("name", "")
 		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
 	})

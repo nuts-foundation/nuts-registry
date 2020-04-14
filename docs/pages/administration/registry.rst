@@ -51,20 +51,20 @@ This command registers a vendor in the registry, giving it further access to the
 can be registered as the organisation's clients. When a vendor is registered, a CA certificate is issued. This certificate is used (by the vendor) to issue certificates,
 e.g. care organisation certificates.
 
-To register a vendor, you need its name (as registered at the Chamber of Commerce) and its identifier, which is the company's
-URN-encoded Chamber of Commerce registration number.
+To register a vendor, you need its name (as registered at the Chamber of Commerce) and its identifier should be
+configured as the node's ``identity``, which is the company's URN-encoded Chamber of Commerce registration number.
 
 The syntax of this command is as follows (parameter 'domain' defaults to 'healthcare'):
 
 .. code-block:: shell
 
-    ./nuts registry register-vendor <identifier> <name> <domain>
+    ./nuts registry register-vendor <name> <domain>
 
-To register vendor "BecauseWeCare B.V." identified by Chamber of Commerce registration number "00000001", run the following command:
+To register vendor "BecauseWeCare B.V." identified by Chamber of Commerce registration number "00000001", run the following command ('domain' defaults to 'healthcare'):
 
 .. code-block:: shell
 
-    NUTS_MODE=cli ./nuts registry register-vendor urn:oid:1.3.6.1.4.1.54851.4:00000001 "BecauseWeCare B.V."
+    NUTS_MODE=cli ./nuts registry register-vendor "BecauseWeCare B.V."
 
 If the command completes successfully, it should output the message: "Vendor registered."
 
@@ -82,21 +82,20 @@ the vendor can register endpoints for the organisation which are served by the v
 is registered, the vendor CA issues an organisation certificate. Its key is used for encrypting data exchanges and
 signing registry operations (e.g. registering endpoints).
 
-To register an organisation, you need the vendor's identifier, organisation name and its identifier, which is the organisation's
+To register an organisation you need the organisation's name and its identifier, which is the organisation's
 URN-encoded AGB-code.
 
 The syntax of this command is as follows:
 
 .. code-block:: shell
 
-    ./nuts registry vendor-claim <vendor-identifier> <organisation-identifier> <organisation-name>
+    ./nuts registry vendor-claim <organisation-identifier> <organisation-name>
 
 For example:
 
 .. code-block:: shell
 
-    NUTS_MODE=cli ./nuts registry vendor-claim urn:oid:1.3.6.1.4.1.54851.4:00000001 \
-        urn:oid:2.16.840.1.113883.2.4.6.1:123456 "Kunstgebit Thuiszorg"
+    NUTS_MODE=cli ./nuts registry vendor-claim urn:oid:2.16.840.1.113883.2.4.6.1:123456 "Kunstgebit Thuiszorg"
 
 If the command completes successfully, it should output the message: "Vendor organisation claim registered"
 

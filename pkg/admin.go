@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
@@ -26,7 +27,8 @@ var ErrJWKConstruction = errors.New("unable to construct JWK")
 var ErrCertificateIssue = errors.New("unable to issue certificate")
 
 // RegisterVendor registers a vendor
-func (r *Registry) RegisterVendor(id string, name string, domain string) (events.Event, error) {
+func (r *Registry) RegisterVendor(name string, domain string) (events.Event, error) {
+	id := core.NutsConfig().Identity()
 	r.logger().Infof("Registering vendor, id=%s, name=%s, domain=%s", id, name, domain)
 	entity := types.LegalEntity{URI: id}
 	err := r.crypto.GenerateKeyPairFor(entity)
@@ -73,7 +75,8 @@ func (r *Registry) RegisterVendor(id string, name string, domain string) (events
 // VendorClaim registers an organization under a vendor. The specified vendor has to exist and have a valid CA certificate
 // as to issue the organisation certificate. If specified orgKeys are interpreted as the organization's keys in JWK format.
 // If not specified, a new key pair is generated.
-func (r *Registry) VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) (events.Event, error) {
+func (r *Registry) VendorClaim(orgID string, orgName string, orgKeys []interface{}) (events.Event, error) {
+	vendorID := core.NutsConfig().Identity()
 	logrus.Infof("Vendor claiming organization, vendor=%s, organization=%s, name=%s, keys=%d",
 		vendorID, orgID, orgName, len(orgKeys))
 
