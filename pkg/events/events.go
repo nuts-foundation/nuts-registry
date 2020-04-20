@@ -111,6 +111,7 @@ func (j jsonEvent) Type() EventType {
 
 func (j jsonEvent) Unmarshal(out interface{}) error {
 	if j.signatureDetails.Payload == nil {
+		// https://github.com/nuts-foundation/nuts-registry/issues/84
 		// Backwards compatibility for events that aren't signed
 		data := j.Marshal()
 		decoder := json.NewDecoder(bytes.NewReader(data))
@@ -152,5 +153,8 @@ func (j jsonEvent) Marshal() []byte {
 }
 
 func (j jsonEvent) Signature() []byte {
+	if j.JWS == "" {
+		return nil
+	}
 	return []byte(j.JWS)
 }

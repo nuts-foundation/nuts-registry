@@ -27,51 +27,79 @@ import (
 )
 
 func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
+	var payload = domain.RegisterEndpointEvent{}
 	t.Run("ok", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		var event = domain.RegisterEndpointEvent{}
 		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event) error {
-			return e.Unmarshal(&event)
+			return e.Unmarshal(&payload)
 		})
-		cxt.registry.RegisterVendor("vendor", "vendor", domain.HealthcareDomain)
-		_, err := cxt.registry.VendorClaim("vendor", "orgId", "org", nil)
+		_, err := cxt.registry.RegisterVendor("vendor", "vendor", domain.HealthcareDomain)
 		if !assert.NoError(t, err) {
 			return
 		}
-		_, err = cxt.registry.RegisterEndpoint("orgId", "endpointId", "url", "type", "status", map[string]string{"foo": "bar"})
+		_, err = cxt.registry.VendorClaim("vendor", "orgId", "org", nil)
 		if !assert.NoError(t, err) {
 			return
 		}
-		assert.Equal(t, "orgId", string(event.Organization))
-		assert.Equal(t, "endpointId", string(event.Identifier))
-		assert.Equal(t, "url", event.URL)
-		assert.Equal(t, "type", event.EndpointType)
-		assert.Equal(t, "status", event.Status)
-		assert.Len(t, event.Properties, 1)
+		event, err := cxt.registry.RegisterEndpoint("orgId", "endpointId", "url", "type", "status", map[string]string{"foo": "bar"})
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.NotNil(t, event.Signature())
+		assert.Equal(t, "orgId", string(payload.Organization))
+		assert.Equal(t, "endpointId", string(payload.Identifier))
+		assert.Equal(t, "url", payload.URL)
+		assert.Equal(t, "type", payload.EndpointType)
+		assert.Equal(t, "status", payload.Status)
+		assert.Len(t, payload.Properties, 1)
 	})
 	t.Run("ok - auto generate id", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		var event = domain.RegisterEndpointEvent{}
 		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event) error {
-			return e.Unmarshal(&event)
+			return e.Unmarshal(&payload)
 		})
 		cxt.registry.RegisterVendor("vendor", "vendor", domain.HealthcareDomain)
 		cxt.registry.VendorClaim("vendor", "orgId", "org", nil)
-		_, err := cxt.registry.RegisterEndpoint("orgId", "", "url", "type", "status", map[string]string{"foo": "bar"})
+		event, err := cxt.registry.RegisterEndpoint("orgId", "", "url", "type", "status", map[string]string{"foo": "bar"})
 		if !assert.NoError(t, err) {
 			return
 		}
-		assert.Len(t, event.Identifier, 36) // 36 = length of UUIDv4 as string
+		assert.NotNil(t, event.Signature())
+		assert.Len(t, payload.Identifier, 36) // 36 = length of UUIDv4 as string
+	})
+	t.Run("ok - org has no certificates", func(t *testing.T) {
+		cxt := createTestContext(t)
+		defer cxt.close()
+		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event) error {
+			return e.Unmarshal(&payload)
+		})
+		cxt.registry.EventSystem.ProcessEvent(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{
+			Identifier: "vendorId",
+			Name:       "Test Vendor",
+		}))
+		cxt.registry.VendorClaim("vendorId", "orgId", "org", nil)
+		event, err := cxt.registry.RegisterEndpoint("orgId", "", "url", "type", "status", map[string]string{"foo": "bar"})
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Nil(t, event.Signature())
+	})
+	t.Run("error - org not found", func(t *testing.T) {
+		cxt := createTestContext(t)
+		defer cxt.close()
+		endpoint, err := cxt.registry.RegisterEndpoint("orgId", "", "url", "type", "status", map[string]string{"foo": "bar"})
+		assert.Nil(t, endpoint)
+		assert.Error(t, err)
 	})
 }
 
 func TestRegistryAdministration_VendorClaim(t *testing.T) {
-	var event = domain.VendorClaimEvent{}
+	var payload = domain.VendorClaimEvent{}
 	registerEventHandler := func(registry *Registry) {
 		registry.EventSystem.RegisterEventHandler(domain.VendorClaim, func(e events.Event) error {
-			return e.Unmarshal(&event)
+			return e.Unmarshal(&payload)
 		})
 	}
 
@@ -84,22 +112,23 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 		}
 		registerEventHandler(cxt.registry)
 
-		_, err = cxt.registry.VendorClaim("vendorId", t.Name(), "orgName", nil)
+		event, err := cxt.registry.VendorClaim("vendorId", t.Name(), "orgName", nil)
 		if !assert.NoError(t, err) {
 			return
 		}
-		assert.Equal(t, "vendorId", string(event.VendorIdentifier))
-		assert.Equal(t, t.Name(), string(event.OrgIdentifier))
-		assert.Equal(t, "orgName", event.OrgName)
-		if !assert.Len(t, event.OrgKeys, 1) {
+		assert.NotNil(t, event.Signature())
+		assert.Equal(t, "vendorId", string(payload.VendorIdentifier))
+		assert.Equal(t, t.Name(), string(payload.OrgIdentifier))
+		assert.Equal(t, "orgName", payload.OrgName)
+		if !assert.Len(t, payload.OrgKeys, 1) {
 			return
 		}
-		jwk, err := crypto.MapToJwk(event.OrgKeys[0].(map[string]interface{}))
+		jwk, err := crypto.MapToJwk(payload.OrgKeys[0].(map[string]interface{}))
 		if !assert.NoError(t, err) {
 			return
 		}
-		assert.False(t, event.Start.IsZero())
-		assert.Nil(t, event.End)
+		assert.False(t, payload.Start.IsZero())
+		assert.Nil(t, payload.End)
 		// Check certificate
 		chainInterf, _ := jwk.Get("x5c")
 		chain := chainInterf.([]*x509.Certificate)
@@ -137,13 +166,14 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 		key.Set(jwk.X509CertChainKey, base64.StdEncoding.EncodeToString(cert.Raw))
 		// Feed it to VendorClaim()
 		jwkAsMap, _ := crypto.JwkToMap(key)
-		_, err = cxt.registry.VendorClaim("vendorId", org.URI, orgName, []interface{}{jwkAsMap})
+		event, err := cxt.registry.VendorClaim("vendorId", org.URI, orgName, []interface{}{jwkAsMap})
 		if !assert.NoError(t, err) {
 			return
 		}
+		assert.NotNil(t, event.Signature())
 	})
 
-	t.Run("error - vendor has no active certificates", func(t *testing.T) {
+	t.Run("ok - vendor has no active certificates", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
 		cxt.registry.EventSystem.ProcessEvent(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{
@@ -151,8 +181,16 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 			Name:       "Test Vendor",
 		}))
 		org := types.LegalEntity{URI: t.Name()}
-		_, err := cxt.registry.VendorClaim("vendorId", org.URI, "orgName", nil)
-		assert.Equal(t, err.Error(), "vendor has no active certificates (id = vendorId)")
+		event, err := cxt.registry.VendorClaim("vendorId", org.URI, "orgName", nil)
+		assert.NoError(t, err)
+		assert.NoError(t, event.Unmarshal(&payload))
+		assert.Len(t, payload.OrgKeys, 1)
+		// No certificate means no signature
+		assert.Nil(t, event.Signature())
+		// A certificate couldn't have been issued
+		certChain, err := crypto.MapToX509CertChain(payload.OrgKeys[0].(map[string]interface{}))
+		assert.NoError(t, err)
+		assert.Nil(t, certChain)
 	})
 
 	t.Run("error - vendor not found", func(t *testing.T) {
@@ -297,8 +335,27 @@ func TestRegistry_signAsOrganization(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
 		cxt.registry.vendor = db.Vendor{Name: "Vendor"}
-		_, err := cxt.registry.signAsOrganization("orgId", "", []byte{1, 2, 3}, time.Now())
-		assert.Equal(t, err.Error(), "unable to create CSR for JWS signing: missing organization name")
+		_, err := cxt.registry.signAsOrganization("orgId", "", []byte{1, 2, 3}, time.Now(), true)
+		assert.Equal(t,"unable to create CSR for JWS signing: missing organization name", err.Error(), )
+	})
+	t.Run("error - unable to sign JWS (CA key material missing)", func(t *testing.T) {
+		cxt := createTestContext(t)
+		defer cxt.close()
+		cxt.registry.vendor = db.Vendor{Name: "Vendor"}
+		_, err := cxt.registry.signAsOrganization("orgId", "Foobar", nil, time.Now(), true)
+		assert.Contains(t, err.Error(), "unable to sign JWS: unknown CA")
+	})
+}
+
+func TestRegistry_signAndPublishEvent(t *testing.T) {
+	t.Run("error - signer returns error", func(t *testing.T) {
+		cxt := createTestContext(t)
+		defer cxt.close()
+		event, err := cxt.registry.signAndPublishEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, func([]byte, time.Time) ([]byte, error) {
+			return nil, errors.New("error")
+		})
+		assert.Nil(t, event)
+		assert.Error(t, err, "error")
 	})
 }
 
