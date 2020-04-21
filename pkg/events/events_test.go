@@ -102,6 +102,16 @@ func TestSignEvent(t *testing.T) {
 		}
 		assert.Equal(t, []byte("signature"), event.Signature())
 	})
+	t.Run("ok - no signature", func(t *testing.T) {
+		event := CreateEvent("Foobar", struct{}{})
+		err := event.Sign(func(bytes2 []byte) (bytes []byte, err error) {
+			return nil, nil
+		})
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Empty(t, event.Signature())
+	})
 	t.Run("error", func(t *testing.T) {
 		event := CreateEvent("Foobar", struct{}{})
 		err := event.Sign(func(bytes2 []byte) (bytes []byte, err error) {
