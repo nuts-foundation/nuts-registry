@@ -110,31 +110,31 @@ func (mr *MockRegistryClientMockRecorder) RegisterEndpoint(organizationID, id, u
 }
 
 // VendorClaim mocks base method
-func (m *MockRegistryClient) VendorClaim(vendorID, orgID, orgName string, orgKeys []interface{}) (events.Event, error) {
+func (m *MockRegistryClient) VendorClaim(orgID, orgName string, orgKeys []interface{}) (events.Event, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VendorClaim", vendorID, orgID, orgName, orgKeys)
+	ret := m.ctrl.Call(m, "VendorClaim", orgID, orgName, orgKeys)
 	ret0, _ := ret[0].(events.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // VendorClaim indicates an expected call of VendorClaim
-func (mr *MockRegistryClientMockRecorder) VendorClaim(vendorID, orgID, orgName, orgKeys interface{}) *gomock.Call {
+func (mr *MockRegistryClientMockRecorder) VendorClaim(orgID, orgName, orgKeys interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VendorClaim", reflect.TypeOf((*MockRegistryClient)(nil).VendorClaim), vendorID, orgID, orgName, orgKeys)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VendorClaim", reflect.TypeOf((*MockRegistryClient)(nil).VendorClaim), orgID, orgName, orgKeys)
 }
 
 // RegisterVendor mocks base method
-func (m *MockRegistryClient) RegisterVendor(id, name, domain string) (events.Event, error) {
+func (m *MockRegistryClient) RegisterVendor(name, domain string) (events.Event, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RegisterVendor", id, name, domain)
+	ret := m.ctrl.Call(m, "RegisterVendor", name, domain)
 	ret0, _ := ret[0].(events.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RegisterVendor indicates an expected call of RegisterVendor
-func (mr *MockRegistryClientMockRecorder) RegisterVendor(id, name, domain interface{}) *gomock.Call {
+func (mr *MockRegistryClientMockRecorder) RegisterVendor(name, domain interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterVendor", reflect.TypeOf((*MockRegistryClient)(nil).RegisterVendor), id, name, domain)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterVendor", reflect.TypeOf((*MockRegistryClient)(nil).RegisterVendor), name, domain)
 }

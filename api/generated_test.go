@@ -31,13 +31,19 @@ import (
 
 type RestInterfaceStub struct{}
 
+func (e RestInterfaceStub) DeprecatedVendorClaim(ctx echo.Context, id string) error {
+	var err error
+
+	return err
+}
+
 func (e RestInterfaceStub) RegisterEndpoint(ctx echo.Context, id string) error {
 	var err error
 
 	return err
 }
 
-func (e RestInterfaceStub) VendorClaim(ctx echo.Context, id string) error {
+func (e RestInterfaceStub) VendorClaim(ctx echo.Context) error {
 	var err error
 
 	return err

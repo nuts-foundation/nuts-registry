@@ -577,10 +577,9 @@ func TestApiResource_RegisterVendor(t *testing.T) {
 		t.Run("200", func(t *testing.T) {
 			var registryClient = mock.NewMockRegistryClient(mockCtrl)
 			e, wrapper := initMockEcho(registryClient)
-			registryClient.EXPECT().RegisterVendor("abc", "def", "xyz")
+			registryClient.EXPECT().RegisterVendor("def", "xyz")
 
 			b, _ := json.Marshal(Vendor{
-				Identifier: "abc",
 				Name:       "def",
 				Domain:     "xyz",
 			})
@@ -650,10 +649,10 @@ func TestApiResource_VendorClaim(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	t.Run("vendor claim", func(t *testing.T) {
-		t.Run("204", func(t *testing.T) {
+		t.Run("deprecated still works", func(t *testing.T) {
 			var registryClient = mock.NewMockRegistryClient(mockCtrl)
 			e, wrapper := initMockEcho(registryClient)
-			registryClient.EXPECT().VendorClaim("1", "abc", "def", gomock.Any())
+			registryClient.EXPECT().VendorClaim("abc", "def", gomock.Any())
 
 			b, _ := json.Marshal(Organization{
 				Identifier: "abc",
@@ -667,6 +666,32 @@ func TestApiResource_VendorClaim(t *testing.T) {
 			c.SetPath("/api/vendor/:id/claim")
 			c.SetParamNames("id")
 			c.SetParamValues("1")
+
+			err := wrapper.DeprecatedVendorClaim(c)
+
+			if err != nil {
+				t.Errorf("Got err during call: %s", err.Error())
+			}
+
+			if rec.Code != http.StatusOK {
+				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+			}
+		})
+		t.Run("204", func(t *testing.T) {
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
+			registryClient.EXPECT().VendorClaim("abc", "def", gomock.Any())
+
+			b, _ := json.Marshal(Organization{
+				Identifier: "abc",
+				Name:       "def",
+				Keys:       &[]JWK{{AdditionalProperties: map[string]interface{}{}}},
+			})
+
+			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/organization")
 
 			err := wrapper.VendorClaim(c)
 
@@ -686,9 +711,7 @@ func TestApiResource_VendorClaim(t *testing.T) {
 			req := httptest.NewRequest(echo.POST, "/", strings.NewReader("{{[[][}{"))
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-			c.SetPath("/api/vendor/:id/claim")
-			c.SetParamNames("id")
-			c.SetParamValues("1")
+			c.SetPath("/api/organization")
 
 			err := wrapper.VendorClaim(c)
 
@@ -710,9 +733,7 @@ func TestApiResource_VendorClaim(t *testing.T) {
 			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-			c.SetPath("/api/vendor/:id/claim")
-			c.SetParamNames("id")
-			c.SetParamValues("1")
+			c.SetPath("/api/organization")
 
 			err := wrapper.VendorClaim(c)
 

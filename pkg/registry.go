@@ -86,11 +86,11 @@ type RegistryClient interface {
 	RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, properties map[string]string) (events.Event, error)
 
 	// VendorClaim registers an organization under a vendor. orgKeys are the organization's keys in JWK format
-	VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) (events.Event, error)
+	VendorClaim(orgID string, orgName string, orgKeys []interface{}) (events.Event, error)
 
 	// RegisterVendor registers a vendor with the given id, name for the specified domain. If the vendor with this ID
 	// already exists, it functions as an update.
-	RegisterVendor(id string, name string, domain string) (events.Event, error)
+	RegisterVendor(name string, domain string) (events.Event, error)
 }
 
 // RegistryConfig holds the config

@@ -178,7 +178,7 @@ func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url stri
 }
 
 // VendorClaim is the client Api implementation for registering an organisation.
-func (hb HttpClient) VendorClaim(vendorID string, orgID string, orgName string, orgKeys []interface{}) (events.Event, error) {
+func (hb HttpClient) VendorClaim(orgID string, orgName string, orgKeys []interface{}) (events.Event, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 	var keys = make([]JWK, 0)
@@ -187,7 +187,7 @@ func (hb HttpClient) VendorClaim(vendorID string, orgID string, orgName string, 
 			keys = append(keys, JWK{AdditionalProperties: key.(map[string]interface{})})
 		}
 	}
-	res, err := hb.client().VendorClaim(ctx, vendorID, VendorClaimJSONRequestBody{
+	res, err := hb.client().VendorClaim(ctx, VendorClaimJSONRequestBody{
 		Identifier: Identifier(orgID),
 		Keys:       &keys,
 		Name:       orgName,
@@ -199,12 +199,11 @@ func (hb HttpClient) VendorClaim(vendorID string, orgID string, orgName string, 
 }
 
 // RegisterVendor is the client Api implementation for registering a vendor.
-func (hb HttpClient) RegisterVendor(id string, name string, domain string) (events.Event, error) {
+func (hb HttpClient) RegisterVendor(name string, domain string) (events.Event, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 
 	res, err := hb.client().RegisterVendor(ctx, RegisterVendorJSONRequestBody{
-		Identifier: Identifier(id),
 		Name:       name,
 		Domain:     Domain(domain),
 	})

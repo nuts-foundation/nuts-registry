@@ -44,6 +44,11 @@ type ApiWrapper struct {
 	R pkg.RegistryClient
 }
 
+// DeprecatedVendorClaim is deprecated, use VendorClaim.
+func (apiResource ApiWrapper) DeprecatedVendorClaim(ctx echo.Context, _ string) error {
+	return apiResource.VendorClaim(ctx)
+}
+
 // RegisterEndpoint is the Api implementation for registering an endpoint.
 func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) error {
 	unescapedID, err := url.PathUnescape(id)
@@ -70,11 +75,7 @@ func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) erro
 }
 
 // VendorClaim is the Api implementation for registering a vendor claim.
-func (apiResource ApiWrapper) VendorClaim(ctx echo.Context, id string) error {
-	unescapedID, err := url.PathUnescape(id)
-	if err != nil {
-		return err
-	}
+func (apiResource ApiWrapper) VendorClaim(ctx echo.Context) error {
 	bytes, err := ioutil.ReadAll(ctx.Request().Body)
 	if err != nil {
 		return err
@@ -91,7 +92,7 @@ func (apiResource ApiWrapper) VendorClaim(ctx echo.Context, id string) error {
 	if org.Keys != nil {
 		keys = jwkToMap(*org.Keys)
 	}
-	event, err := apiResource.R.VendorClaim(unescapedID, org.Identifier.String(), org.Name, keys)
+	event, err := apiResource.R.VendorClaim(org.Identifier.String(), org.Name, keys)
 	if err != nil {
 		return ctx.String(http.StatusInternalServerError, err.Error())
 	}
@@ -111,7 +112,7 @@ func (apiResource ApiWrapper) RegisterVendor(ctx echo.Context) error {
 	if err := v.validate(); err != nil {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-	event, err := apiResource.R.RegisterVendor(v.Identifier.String(), v.Name, string(v.Domain))
+	event, err := apiResource.R.RegisterVendor(v.Name, string(v.Domain))
 	if err != nil {
 		return ctx.String(http.StatusInternalServerError, err.Error())
 	}

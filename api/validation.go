@@ -32,9 +32,6 @@ func (o Organization) validate() error {
 }
 
 func (v Vendor) validate() error {
-	if err := nonEmptyString(v.Identifier.String(), "identifier"); err != nil {
-		return err
-	}
 	if err := nonEmptyString(v.Name, "name"); err != nil {
 		return err
 	}
