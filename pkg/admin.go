@@ -81,35 +81,48 @@ func (r *Registry) VendorClaim(vendorID string, orgID string, orgName string, or
 	if vendor == nil {
 		return nil, fmt.Errorf("vendor not found (id=%s)", vendorID)
 	}
-	certificates := vendor.GetActiveCertificates()
-	if len(certificates) == 0 {
-		return nil, fmt.Errorf("vendor has no active certificates (id = %s)", vendorID)
-	}
 
-	// If no keys are supplied, make there's a key in the crypto module for the organisation
-	if orgKeys == nil || len(orgKeys) == 0 {
-		logrus.Infof("No keys specified for organisation (id = %s). Keys will be generated or loaded from crypto module.", orgID)
+	// If no keys are supplied, make sure there's a key in the crypto module for the organisation
+	if len(orgKeys) == 0 {
+		logrus.Infof("No keys specified for organisation (id=%s). Keys will be generated or loaded from crypto module.", orgID)
 		_, err := r.loadOrGenerateKey(orgID)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	certificate, err := r.createAndSubmitCSR(func() (x509.CertificateRequest, error) {
-		return cert.OrganisationCertificateRequest(vendor.Name, orgID, orgName, vendor.Domain)
-	}, types.LegalEntity{URI: orgID}, types.LegalEntity{URI: vendorID}, crypto.CertificateProfile{
-		IsCA:         true,
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageDataEncipherment,
-		NumDaysValid: r.Config.OrganisationCertificateValidity,
-	})
-	if err != nil {
-		return nil, errors2.Wrap(err, ErrCertificateIssue.Error())
-	}
+	var orgHasCerts bool
+	if len(vendor.GetActiveCertificates()) > 0 {
+		// If the vendor has certificates, it means it has (should have) a CA certificate which can issue a certificate to the new org
+		certificate, err := r.createAndSubmitCSR(func() (x509.CertificateRequest, error) {
+			return cert.OrganisationCertificateRequest(vendor.Name, orgID, orgName, vendor.Domain)
+		}, types.LegalEntity{URI: orgID}, types.LegalEntity{URI: vendorID}, crypto.CertificateProfile{
+			IsCA:         true,
+			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageDataEncipherment,
+			NumDaysValid: r.Config.OrganisationCertificateValidity,
+		})
+		if err != nil {
+			return nil, errors2.Wrap(err, ErrCertificateIssue.Error())
+		}
 
-	jwkAsMap, err := certToJwkMap(certificate, cert.OrganisationCertificate)
-	orgKeys = append(orgKeys, jwkAsMap)
-	if err != nil {
-		return nil, errors2.Wrap(err, ErrJWKConstruction.Error())
+		jwkAsMap, err := certToJwkMap(certificate, cert.OrganisationCertificate)
+		orgKeys = append(orgKeys, jwkAsMap)
+		if err != nil {
+			return nil, errors2.Wrap(err, ErrJWKConstruction.Error())
+		}
+		orgHasCerts = true
+	} else {
+		// https://github.com/nuts-foundation/nuts-registry/issues/84
+		// Vendor has no certificates, we just make sure the org has a plain JWK without X.509 certificate, either
+		// provided or freshly generated. This else-branch should be removed when signing events is mandatory!
+		if len(orgKeys) == 0 {
+			orgKey, err := r.loadOrGenerateKey(orgID)
+			if err != nil {
+				return nil, err
+			}
+			orgKeys = append(orgKeys, orgKey)
+		}
+		orgHasCerts = false
 	}
 
 	return r.signAndPublishEvent(dom.VendorClaim, dom.VendorClaimEvent{
@@ -119,7 +132,7 @@ func (r *Registry) VendorClaim(vendorID string, orgID string, orgName string, or
 		OrgKeys:          orgKeys,
 		Start:            time.Now(),
 	}, func(dataToBeSigned []byte, instant time.Time) ([]byte, error) {
-		return r.signAsOrganization(orgID, orgName, dataToBeSigned, instant)
+		return r.signAsOrganization(orgID, orgName, dataToBeSigned, instant, orgHasCerts)
 	})
 }
 
@@ -142,7 +155,7 @@ func (r *Registry) RegisterEndpoint(organizationID string, id string, url string
 		Status:       status,
 		Properties:   properties,
 	}, func(dataToBeSigned []byte, instant time.Time) ([]byte, error) {
-		return r.signAsOrganization(org.Identifier.String(), org.Name, dataToBeSigned, instant)
+		return r.signAsOrganization(org.Identifier.String(), org.Name, dataToBeSigned, instant, len(org.GetActiveCertificates()) > 0)
 	})
 }
 
@@ -226,14 +239,24 @@ func (r *Registry) signAsVendor(vendorId string, vendorName string, domain strin
 	return signature, nil
 }
 
-func (r *Registry) signAsOrganization(orgID string, orgName string, payload []byte, instant time.Time) ([]byte, error) {
-	csr, err := cert.OrganisationCertificateRequest(r.vendor.Name, orgID, orgName, r.vendor.Domain)
-	if err != nil {
-		return nil, errors2.Wrap(err, "unable to create CSR for JWS signing")
-	}
-	signature, err := r.crypto.JWSSignEphemeral(payload, types.LegalEntity{URI: orgID}, csr, instant)
-	if err != nil {
-		return nil, errors2.Wrap(err, "unable to sign JWS")
+func (r *Registry) signAsOrganization(orgID string, orgName string, payload []byte, instant time.Time, hasCerts bool) ([]byte, error) {
+	var signature []byte
+	// https://github.com/nuts-foundation/nuts-registry/issues/84
+	// The check below is for backwards compatibility when the organization or vendor creating the organization has no
+	// certificates, so we can't sign
+	//the event. This should be removed when event signing is mandatory, when
+	// all vendors and organizations have certificates.
+	// Or maybe this check should be changed (by then) to let it return an error since the vendor
+	// should first make sure to have an active certificate.
+	if hasCerts {
+		csr, err := cert.OrganisationCertificateRequest(r.vendor.Name, orgID, orgName, r.vendor.Domain)
+		if err != nil {
+			return nil, errors2.Wrap(err, "unable to create CSR for JWS signing")
+		}
+		signature, err = r.crypto.JWSSignEphemeral(payload, types.LegalEntity{URI: orgID}, csr, instant)
+		if err != nil {
+			return nil, errors2.Wrap(err, "unable to sign JWS")
+		}
 	}
 	return signature, nil
 }
