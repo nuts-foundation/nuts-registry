@@ -178,7 +178,7 @@ func (r *Registry) loadOrGenerateKey(identifier string) (map[string]interface{},
 }
 
 func (r *Registry) signAndPublishEvent(eventType events.EventType, payload interface{}, signer func([]byte, time.Time) ([]byte, error)) (events.Event, error) {
-	event := events.CreateEvent(eventType, payload)
+	event := events.CreateEvent(eventType, payload, nil)
 	if signer != nil {
 		err := event.Sign(func(data []byte) ([]byte, error) {
 			return signer(data, event.IssuedAt())

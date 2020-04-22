@@ -46,7 +46,7 @@ func TestRegistry_verifyAndMigrateRegistry(t *testing.T) {
 		err := cxt.registry.EventSystem.PublishEvent(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{
 			Name:       vendorName,
 			Identifier: domain.Identifier(vendorId),
-		}))
+		}, nil))
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -70,7 +70,7 @@ func TestRegistry_verifyAndMigrateRegistry(t *testing.T) {
 			VendorIdentifier: domain.Identifier(vendorId),
 			OrgIdentifier:    domain.Identifier(orgId),
 			OrgName:          orgName,
-		}))
+		}, nil))
 		cxt.registry.verifyAndMigrateRegistry(mockConfig{vendorId})
 	})
 	t.Run("org has certificates but no key material", func(t *testing.T) {

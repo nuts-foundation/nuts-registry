@@ -19,7 +19,7 @@ import (
 
 func TestRegisterVendorEvent(t *testing.T) {
 	t.Run("check default domain fallback", func(t *testing.T) {
-		event := events.CreateEvent(RegisterVendor, RegisterVendorEvent{})
+		event := events.CreateEvent(RegisterVendor, RegisterVendorEvent{}, nil)
 		data := event.Marshal()
 		unmarshalledEvent, _ := events.EventFromJSON(data)
 		var registerVendorEvent = RegisterVendorEvent{}
@@ -36,7 +36,7 @@ func TestRegisterVendorEvent(t *testing.T) {
 					"kty": "EC",
 				},
 			},
-		})
+		}, nil)
 		data := event.Marshal()
 		unmarshalledEvent, _ := events.EventFromJSON(data)
 		var payload = RegisterVendorEvent{}
@@ -53,12 +53,12 @@ func TestRegisterVendorEvent_PostProcessUnmarshal(t *testing.T) {
 			Identifier: Identifier("abc"),
 			Keys:       []interface{}{certToMap(cert)},
 		}
-		err := event.PostProcessUnmarshal(events.CreateEvent(RegisterVendor, event))
+		err := event.PostProcessUnmarshal(events.CreateEvent(RegisterVendor, event, nil))
 		assert.NoError(t, err)
 	})
 	t.Run("ok - fallback to healthcare domain", func(t *testing.T) {
 		event := RegisterVendorEvent{}
-		err := event.PostProcessUnmarshal(events.CreateEvent(RegisterVendor, event))
+		err := event.PostProcessUnmarshal(events.CreateEvent(RegisterVendor, event, nil))
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -71,7 +71,7 @@ func TestRegisterVendorEvent_PostProcessUnmarshal(t *testing.T) {
 			Identifier: Identifier("abc"),
 			Keys:       []interface{}{certToMap(cert)},
 		}
-		err := event.PostProcessUnmarshal(events.CreateEvent(RegisterVendor, event))
+		err := event.PostProcessUnmarshal(events.CreateEvent(RegisterVendor, event, nil))
 		assert.EqualError(t, err, "vendor ID in certificate (def) doesn't match event (abc)")
 	})
 }
@@ -85,7 +85,7 @@ func TestVendorClaimEvent(t *testing.T) {
 					"kty": "EC",
 				},
 			},
-		})
+		}, nil)
 		data := event.Marshal()
 		unmarshalledEvent, _ := events.EventFromJSON(data)
 		var payload = VendorClaimEvent{}
@@ -102,7 +102,7 @@ func TestVendorClaimEvent_PostProcessUnmarshal(t *testing.T) {
 			OrgIdentifier: Identifier("abc"),
 			OrgKeys:       []interface{}{certToMap(cert)},
 		}
-		err := event.PostProcessUnmarshal(events.CreateEvent(VendorClaim, event))
+		err := event.PostProcessUnmarshal(events.CreateEvent(VendorClaim, event, nil))
 		assert.NoError(t, err)
 	})
 	t.Run("ok - key does not contain certificate", func(t *testing.T) {
@@ -114,7 +114,7 @@ func TestVendorClaimEvent_PostProcessUnmarshal(t *testing.T) {
 			OrgIdentifier: Identifier("abc"),
 			OrgKeys:       []interface{}{jwkAsMap},
 		}
-		err := event.PostProcessUnmarshal(events.CreateEvent(VendorClaim, event))
+		err := event.PostProcessUnmarshal(events.CreateEvent(VendorClaim, event, nil))
 		assert.NoError(t, err)
 	})
 	t.Run("error - certificate organization doesn't match", func(t *testing.T) {
@@ -124,14 +124,14 @@ func TestVendorClaimEvent_PostProcessUnmarshal(t *testing.T) {
 			OrgIdentifier: Identifier("abc"),
 			OrgKeys:       []interface{}{certToMap(cert)},
 		}
-		err := event.PostProcessUnmarshal(events.CreateEvent(VendorClaim, event))
+		err := event.PostProcessUnmarshal(events.CreateEvent(VendorClaim, event, nil))
 		assert.EqualError(t, err, "organization ID in certificate (def) doesn't match event (abc)")
 	})
 }
 
 func TestRegisterEndpointEvent(t *testing.T) {
 	t.Run("unmarshal event with no post processors", func(t *testing.T) {
-		event := events.CreateEvent(RegisterEndpoint, RegisterEndpointEvent{})
+		event := events.CreateEvent(RegisterEndpoint, RegisterEndpointEvent{}, nil)
 		data := event.Marshal()
 		unmarshalledEvent, _ := events.EventFromJSON(data)
 		var registerEndpointEvent = RegisterEndpointEvent{}
@@ -165,7 +165,7 @@ func Test_trustStore_HandleEvent(t *testing.T) {
 			Identifier: Identifier("vendorId"),
 			Keys: []interface{}{jwkAsMap},
 		}
-		err := ts.handleEvent(events.CreateEvent(RegisterVendor, event))
+		err := ts.handleEvent(events.CreateEvent(RegisterVendor, event, nil), nil)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -182,7 +182,7 @@ func Test_trustStore_HandleEvent(t *testing.T) {
 		event := RegisterVendorEvent{
 			Keys: []interface{}{jwkAsMap},
 		}
-		err := ts.handleEvent(events.CreateEvent(RegisterVendor, event))
+		err := ts.handleEvent(events.CreateEvent(RegisterVendor, event, nil), nil)
 		assert.Equal(t, err.Error(), "unexpected X.509 certificate chain length for vendor (it should be self-signed)")
 		assert.Len(t, ts.certPool.Subjects(), 0)
 	})
@@ -201,7 +201,7 @@ func Test_trustStore_HandleEvent(t *testing.T) {
 		event := VendorClaimEvent{
 			OrgKeys: []interface{}{jwkAsMap},
 		}
-		err := ts.handleEvent(events.CreateEvent(VendorClaim, event))
+		err := ts.handleEvent(events.CreateEvent(VendorClaim, event, nil), nil)
 		assert.NoError(t, err)
 	})
 	t.Run("error - vendor claim - organization certificate not trusted", func(t *testing.T) {
@@ -214,7 +214,7 @@ func Test_trustStore_HandleEvent(t *testing.T) {
 		event := VendorClaimEvent{
 			OrgKeys: []interface{}{jwkAsMap},
 		}
-		err := ts.handleEvent(events.CreateEvent(VendorClaim, event))
+		err := ts.handleEvent(events.CreateEvent(VendorClaim, event, nil), nil)
 		assert.Equal(t, "organization certificate is not trusted (issued by untrusted vendor certificate?): x509: certificate signed by unknown authority", err.Error())
 		assert.Len(t, ts.certPool.Subjects(), 0)
 	})

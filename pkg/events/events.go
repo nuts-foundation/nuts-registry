@@ -21,17 +21,46 @@ package events
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
 	"time"
 )
 
+// EventRef is a reference to an event
+type Ref []byte
+
+func (r Ref) IsZero() bool {
+	for _, v := range r {
+		if v != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func (r Ref) String() string {
+	return hex.EncodeToString(r)
+}
+
+// Version
+type Version int
+
+const currentEventVersion Version = 1
+
 // Event defines an event which can be (un)marshalled.
 type Event interface {
 	Type() EventType
 	IssuedAt() time.Time
+	// Version holds the version of the event, which can be used for differentiate processing/ignoring legacy events
+	Version() Version
+	// Ref holds the reference to the current event
+	Ref() Ref
+	// PreviousRef holds the reference to the previous event
+	PreviousRef() Ref
 	Unmarshal(out interface{}) error
 	Marshal() []byte
 	Signature() []byte
@@ -58,11 +87,35 @@ type EventType string
 var ErrMissingEventType = errors.New("unmarshalling error: missing event type")
 
 type jsonEvent struct {
+	EventVersion     Version          `json:"version"`
 	EventType        string           `json:"type"`
 	EventIssuedAt    time.Time        `json:"issuedAt"`
+	ThisEventRef     Ref              `json:"ref"`
+	PreviousEvent    Ref              `json:"prev,omitempty"`
 	JWS              string           `json:"jws,omitempty"`
 	EventPayload     interface{}      `json:"payload,omitempty"`
 	signatureDetails SignatureDetails `json:"-"`
+}
+
+func (j jsonEvent) Version() Version {
+	return j.EventVersion
+}
+
+func (j *jsonEvent) Ref() Ref {
+	// TODO: Canonicalize
+	// TODO: Should the JWS be included in the ref?
+	var eventCopy jsonEvent = *j
+	eventJson, err := json.Marshal(eventCopy)
+	if err != nil {
+		// This should never happen
+		panic(err)
+	}
+	sum := sha1.Sum(eventJson)
+	return sum[:]
+}
+
+func (j *jsonEvent) PreviousRef() Ref {
+	return j.PreviousEvent
 }
 
 func (j *jsonEvent) Sign(signFn func([]byte) ([]byte, error)) error {
@@ -91,11 +144,12 @@ func EventFromJSON(data []byte) (Event, error) {
 	return &e, nil
 }
 
-// CreateEvent creates an event of the given type and the provided payload. If the event can't be created, an error is
-// returned.
-func CreateEvent(eventType EventType, payload interface{}) Event {
+// CreateEvent creates an event of the given type and the provided payload.
+func CreateEvent(eventType EventType, payload interface{}, previousEvent Ref) Event {
 	return &jsonEvent{
+		EventVersion:  currentEventVersion,
 		EventType:     string(eventType),
+		PreviousEvent: previousEvent,
 		EventIssuedAt: time.Now(),
 		EventPayload:  payload,
 	}

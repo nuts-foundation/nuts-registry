@@ -72,17 +72,17 @@ func TestNoEventHandler(t *testing.T) {
 func TestLoadEvents(t *testing.T) {
 	system := NewEventSystem("RegisterVendorEvent", "VendorClaimEvent", "RegisterEndpointEvent")
 	vendorsCreated := 0
-	system.RegisterEventHandler("RegisterVendorEvent", func(e Event) error {
+	system.RegisterEventHandler("RegisterVendorEvent", func(e Event, _ EventLookup) error {
 		vendorsCreated++
 		return nil
 	})
 	organizationsCreated := 0
-	system.RegisterEventHandler("VendorClaimEvent", func(e Event) error {
+	system.RegisterEventHandler("VendorClaimEvent", func(e Event, _ EventLookup) error {
 		organizationsCreated++
 		return nil
 	})
 	endpointsCreated := 0
-	system.RegisterEventHandler("RegisterEndpointEvent", func(e Event) error {
+	system.RegisterEventHandler("RegisterEndpointEvent", func(e Event, _ EventLookup) error {
 		endpointsCreated++
 		return nil
 	})
@@ -149,12 +149,12 @@ func TestLoadEvents(t *testing.T) {
 func TestSystemNotConfigured(t *testing.T) {
 	t.Run("publish", func(t *testing.T) {
 		system := NewEventSystem()
-		err := system.PublishEvent(CreateEvent("RegisterVendorEvent", struct{}{}))
+		err := system.PublishEvent(CreateEvent("RegisterVendorEvent", struct{}{}, nil))
 		assert.EqualError(t, err, ErrEventSystemNotConfigured.Error())
 	})
 	t.Run("process", func(t *testing.T) {
 		system := NewEventSystem()
-		err := system.ProcessEvent(CreateEvent("RegisterVendorEvent", struct{}{}))
+		err := system.ProcessEvent(CreateEvent("RegisterVendorEvent", struct{}{}, nil))
 		assert.EqualError(t, err, ErrEventSystemNotConfigured.Error())
 	})
 	t.Run("LoadAndApply", func(t *testing.T) {
@@ -216,7 +216,7 @@ func TestPublishEvents(t *testing.T) {
 	system := NewEventSystem("evt")
 	system.Configure(repo.Directory)
 	called := 0
-	system.RegisterEventHandler("evt", func(event Event) error {
+	system.RegisterEventHandler("evt", func(event Event, _ EventLookup) error {
 		called++
 		return nil
 	})
@@ -235,7 +235,7 @@ func TestPublishEvents(t *testing.T) {
 		if !assert.Len(t, dirEntriesBeforePublish, 0, "directory empty") {
 			return
 		}
-		event := CreateEvent("evt", struct{}{})
+		event := CreateEvent("evt", struct{}{}, nil)
 		err = system.PublishEvent(event)
 		if !assert.NoError(t, err) {
 			return

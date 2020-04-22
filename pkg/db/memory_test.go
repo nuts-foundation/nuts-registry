@@ -43,25 +43,25 @@ import (
 var registerVendor1 = events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{
 	Identifier: "v1",
 	Name:       "Vendor Uno",
-})
+}, nil)
 var registerVendor2 = events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{
 	Identifier: "v2",
 	Name:       "Vendor Dos",
-})
+}, nil)
 
 var vendorClaim1 = events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
 	VendorIdentifier: "v1",
 	OrgIdentifier:    "o1",
 	OrgName:          "Organization Uno",
 	OrgKeys:          nil,
-})
+}, nil)
 
 var vendorClaim2 = events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
 	VendorIdentifier: "v1",
 	OrgIdentifier:    "o2",
 	OrgName:          "Organization Dos",
 	OrgKeys:          nil,
-})
+}, nil)
 
 var registerEndpoint1 = events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{
 	Organization: "o1",
@@ -69,14 +69,14 @@ var registerEndpoint1 = events.CreateEvent(domain.RegisterEndpoint, domain.Regis
 	EndpointType: "simple",
 	Identifier:   "e1",
 	Status:       StatusActive,
-})
+}, nil)
 var registerEndpoint2 = events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{
 	Organization: "o1",
 	URL:          "foo:bar",
 	EndpointType: "simple",
 	Identifier:   "e2",
 	Status:       "inactive",
-})
+}, nil)
 
 func TestNew(t *testing.T) {
 	emptyDb := New()

@@ -144,7 +144,7 @@ func (t trustStore) Verify(certificate *x509.Certificate, moment time.Time) erro
 	return nil
 }
 
-func (t *trustStore) handleEvent(event events.Event) error {
+func (t *trustStore) handleEvent(event events.Event, _ events.EventLookup) error {
 	if event.Type() == RegisterVendor {
 		// Vendors (for now) self-sign their vendor CA certificates. These have to be in our trust store.
 		payload := RegisterVendorEvent{}

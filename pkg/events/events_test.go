@@ -36,6 +36,13 @@ func TestEventFromJSON(t *testing.T) {
 	})
 }
 
+func TestRef(t *testing.T) {
+	eventAsJson, _ := readTestEvent()
+	event, _ := EventFromJSON(eventAsJson)
+	assert.Equal(t, "86a4ad1bfb7e2a97a21b0d9c548fe97c7840173d", event.Ref().String())
+	assert.Equal(t, event.Ref(), event.Ref())
+}
+
 func TestMarshalEvent(t *testing.T) {
 	expected, _ := readTestEvent()
 	event, _ := EventFromJSON(expected)
@@ -62,7 +69,7 @@ func TestUnmarshalJSONPayload(t *testing.T) {
 		assert.Equal(t, "Zorggroep Nuts", r["orgName"])
 	})
 	t.Run("ok - with postprocessor", func(t *testing.T) {
-		data := CreateEvent("testEvent", testEvent{}).Marshal()
+		data := CreateEvent("testEvent", testEvent{}, nil).Marshal()
 		event, err := EventFromJSON(data)
 		if !assert.NoError(t, err) {
 			return
@@ -86,14 +93,14 @@ func TestUnmarshalJSONPayload(t *testing.T) {
 }
 
 func TestCreateEvent(t *testing.T) {
-	event := CreateEvent("Foobar", struct{}{})
+	event := CreateEvent("Foobar", struct{}{}, nil)
 	assert.Equal(t, "Foobar", string(event.Type()))
 	assert.Equal(t, int64(0), time.Now().Unix()-event.IssuedAt().Unix())
 }
 
 func TestSignEvent(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		event := CreateEvent("Foobar", struct{}{})
+		event := CreateEvent("Foobar", struct{}{}, nil)
 		err := event.Sign(func(bytes2 []byte) (bytes []byte, err error) {
 			return []byte("signature"), nil
 		})
@@ -103,7 +110,7 @@ func TestSignEvent(t *testing.T) {
 		assert.Equal(t, []byte("signature"), event.Signature())
 	})
 	t.Run("ok - no signature", func(t *testing.T) {
-		event := CreateEvent("Foobar", struct{}{})
+		event := CreateEvent("Foobar", struct{}{}, nil)
 		err := event.Sign(func(bytes2 []byte) (bytes []byte, err error) {
 			return nil, nil
 		})
@@ -113,7 +120,7 @@ func TestSignEvent(t *testing.T) {
 		assert.Empty(t, event.Signature())
 	})
 	t.Run("error", func(t *testing.T) {
-		event := CreateEvent("Foobar", struct{}{})
+		event := CreateEvent("Foobar", struct{}{}, nil)
 		err := event.Sign(func(bytes2 []byte) (bytes []byte, err error) {
 			return nil, errors.New("failed")
 		})

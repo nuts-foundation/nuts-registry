@@ -26,6 +26,7 @@ import (
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
+	errors2 "github.com/pkg/errors"
 	"strings"
 )
 
@@ -97,64 +98,139 @@ func (o org) toDbEndpoints() []Endpoint {
 	return r
 }
 
+// assertSameVendor asserts that the event concerns the expected vendor (the event must be a RegisterVendorEvent or VendorClaimEvent).
+func assertSameVendor(expectedId string, event events.Event) error {
+	var actualId string
+	switch event.Type() {
+	case domain.RegisterVendor:
+		payload := domain.RegisterVendorEvent{}
+		if err := event.Unmarshal(&payload); err != nil {
+			return err
+		}
+		actualId = string(payload.Identifier)
+	case domain.VendorClaim:
+		payload := domain.VendorClaimEvent{}
+		if err := event.Unmarshal(&payload); err != nil {
+			return err
+		}
+		actualId = string(payload.VendorIdentifier)
+	default:
+		// Should not be reachable
+		panic("unsupported event type: " + event.Type())
+	}
+	if actualId != expectedId {
+		return fmt.Errorf("actual vendorId (%s) differs from expected (%s)", actualId, expectedId)
+	}
+	return nil
+}
+
+// assertSameOrganization asserts that the event concerns the expected organization (the event must be a VendorClaimEvent or RegisterEndpointEvent).
+func assertSameOrganization(expectedId string, event events.Event) error {
+	var actualId string
+	switch event.Type() {
+	case domain.VendorClaim:
+		payload := domain.VendorClaimEvent{}
+		if err := event.Unmarshal(&payload); err != nil {
+			return err
+		}
+		actualId = string(payload.OrgIdentifier)
+	case domain.RegisterEndpoint:
+		payload := domain.RegisterEndpointEvent{}
+		if err := event.Unmarshal(&payload); err != nil {
+			return err
+		}
+		actualId = string(payload.Organization)
+	default:
+		// Should not be reachable
+		panic("unsupported event type: " + event.Type())
+	}
+	if actualId != expectedId {
+		return fmt.Errorf("actual organizationId (%s) differs from expected (%s)", actualId, expectedId)
+	}
+	return nil
+}
+
 // RegisterEventHandlers registers event handlers on this database
 func (db *MemoryDb) RegisterEventHandlers(fn events.EventRegistrar) {
-	fn(domain.RegisterVendor, func(e events.Event) error {
+	fn(domain.RegisterVendor, func(event events.Event, lookup events.EventLookup) error {
 		// Unmarshal
-		event := domain.RegisterVendorEvent{}
-		if err := e.Unmarshal(&event); err != nil {
+		payload := domain.RegisterVendorEvent{}
+		if err := event.Unmarshal(&payload); err != nil {
 			return err
 		}
-		// Validate
-		id := string(event.Identifier)
+		// Process
+		id := string(payload.Identifier)
 		if db.vendors[id] != nil {
-			return fmt.Errorf("vendor already registered (id = %s)", event.Identifier)
-		}
-		// Process
-		db.vendors[id] = &vendor{
-			RegisterVendorEvent: event,
-			orgs:                make(map[string]*org),
-		}
-		return nil
-	})
-	fn(domain.VendorClaim, func(e events.Event) error {
-		// Unmarshal
-		event := domain.VendorClaimEvent{}
-		if err := e.Unmarshal(&event); err != nil {
-			return err
-		}
-		// Validate
-		orgID := string(event.OrgIdentifier)
-		vendorID := string(event.VendorIdentifier)
-		_, err := db.OrganizationById(orgID)
-		if !errors.Is(err, ErrOrganizationNotFound) {
-			return fmt.Errorf("organization already registered (id = %s)", event.OrgIdentifier)
-		}
-		if db.vendors[vendorID] == nil {
-			return fmt.Errorf("vendor is not registered (id = %s)", event.VendorIdentifier)
-		}
-		// Process
-		db.vendors[vendorID].orgs[orgID] = &org{
-			VendorClaimEvent: event,
-			endpoints:        make(map[string]*endpoint),
+			if event.PreviousRef() == nil {
+				return fmt.Errorf("vendor already registered (id = %s)", payload.Identifier)
+			}
+			// Update event
+			if err := assertSameVendor(id, lookup(event.PreviousRef())); err != nil {
+				return errors2.Wrap(err, "referred event contains a different vendor")
+			}
+			db.vendors[id].RegisterVendorEvent = payload
+		} else {
+			// Registration event
+			db.vendors[id] = &vendor{
+				RegisterVendorEvent: payload,
+				orgs:                make(map[string]*org),
+			}
 		}
 		return nil
 	})
-	fn(domain.RegisterEndpoint, func(e events.Event) error {
+	fn(domain.VendorClaim, func(event events.Event, lookup events.EventLookup) error {
 		// Unmarshal
-		event := domain.RegisterEndpointEvent{}
-		if err := e.Unmarshal(&event); err != nil {
+		payload := domain.VendorClaimEvent{}
+		if err := event.Unmarshal(&payload); err != nil {
+			return err
+		}
+		// Process
+		orgID := string(payload.OrgIdentifier)
+		vendorID := string(payload.VendorIdentifier)
+		if db.lookupOrg(orgID) != nil {
+			if event.PreviousRef() == nil {
+				return fmt.Errorf("organization already registered (id = %s)", payload.OrgIdentifier)
+			}
+			// Update event
+			if err := assertSameVendor(vendorID, lookup(event.PreviousRef())); err != nil {
+				return errors2.Wrap(err, "can't change organization's vendor")
+			}
+			if err := assertSameOrganization(orgID, lookup(event.PreviousRef())); err != nil {
+				return errors2.Wrap(err, "referred event contains a different organization")
+			}
+			db.vendors[vendorID].orgs[orgID].VendorClaimEvent = payload
+		} else {
+			// Registration event
+			db.vendors[vendorID].orgs[orgID] = &org{
+				VendorClaimEvent: payload,
+				endpoints:        make(map[string]*endpoint),
+			}
+		}
+		return nil
+	})
+	fn(domain.RegisterEndpoint, func(event events.Event, lookup events.EventLookup) error {
+		// Unmarshal
+		payload := domain.RegisterEndpointEvent{}
+		if err := event.Unmarshal(&payload); err != nil {
 			return err
 		}
 		// Validate
-		orgID := string(event.Organization)
+		orgID := string(payload.Organization)
 		o := db.lookupOrg(orgID)
 		if o == nil {
 			return fmt.Errorf("organization not registered (id = %s)", orgID)
 		}
 		// Process
-		o.endpoints[string(event.Identifier)] = &endpoint{
-			RegisterEndpointEvent: event,
+		if o.endpoints[string(payload.Identifier)] != nil {
+			if event.PreviousRef() == nil {
+				return fmt.Errorf("endpoint already registered for this organization (id = %s)", payload.Identifier)
+			}
+			if err := assertSameOrganization(orgID, lookup(event.PreviousRef())); err != nil {
+				return errors2.Wrap(err, "can't change endpoint's organization")
+			}
+		}
+		o.endpoints[string(payload.Identifier)] = &endpoint{
+			RegisterEndpointEvent: payload,
 		}
 		return nil
 	})
