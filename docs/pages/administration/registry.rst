@@ -118,7 +118,7 @@ The syntax of this command is as follows:
 
 .. code-block:: shell
 
-    ./nuts registry register-endpoint <organisation-identifier> <endpoint-identifier> <type> <url>
+    ./nuts registry register-endpoint <organisation-identifier> <type> <url>
 
 In the following example we register a Corda consent endpoint for the previously registered organisation:
 
@@ -126,7 +126,16 @@ In the following example we register a Corda consent endpoint for the previously
 
     NUTS_MODE=cli ./nuts registry register-endpoint urn:oid:2.16.840.1.113883.2.4.6.1:123456 \
         urn:nuts:endpoint:consent \
-        "tcp://1.2.3.4:4321"
+        "tcp://1.2.3.4:4321" \
+        -i "urn:ietf:rfc:1779:O=Kunstgebit Thuiszorg,C=NL,L=Franeker,CN=kunstgebitthuiszorg_nuts_cordapp_development"
+
+Don't forget to replace the ID flag (``-i``) with the correct subject DN from the node's X.509 certificate (which is specific for this endpoint type).
+
+.. note::
+
+    Endpoint ID is application specific, some endpoint types (e.g. ``urn:nuts:endpoint:consent``) require a specific
+    ID for others it doesn't matter and the randomly generated ID is fine. When registering an endpoint for a Bolt,
+    please refer to the Bolt documentation for any specifics.
 
 
 In addition the following flags can be supplied:
