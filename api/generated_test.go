@@ -122,7 +122,7 @@ func TestServerInterfaceWrapper_EndpointsByOrganisationId(t *testing.T) {
 			return
 		}
 
-		expected := "code=400, message=query parameter 'orgIds' is required"
+		expected := "code=400, message=Invalid format for parameter orgIds: query parameter 'orgIds' is required"
 		if !strings.Contains(err.Error(), expected) {
 			t.Errorf("Got message=%s, want %s", err.Error(), expected)
 		}
@@ -178,7 +178,7 @@ func TestServerInterfaceWrapper_SearchOrganizations(t *testing.T) {
 			return
 		}
 
-		expected := "code=400, message=query parameter 'query' is required"
+		expected := "code=400, message=Invalid format for parameter query: query parameter 'query' is required"
 		if !strings.Contains(err.Error(), expected) {
 			t.Errorf("Got message=%s, want %s", err.Error(), expected)
 		}
@@ -232,7 +232,7 @@ func TestServerInterfaceWrapper_OrganizationById(t *testing.T) {
 			return
 		}
 
-		expected := "code=400, message=Invalid format for parameter id: code=400, message=parameter '%s' is empty, can't bind its value"
+		expected := "code=400, message=Invalid format for parameter id: parameter 'id' is empty, can't bind its value"
 		if !strings.Contains(err.Error(), expected) {
 			t.Errorf("Got message=%s, want %s", err.Error(), expected)
 		}
