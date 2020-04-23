@@ -36,6 +36,10 @@ const (
 // Identifier defines component schema for Identifier.
 type Identifier string
 
+func (i Identifier) String() string {
+	return string(i)
+}
+
 // RegisterEndpointEvent event
 type RegisterEndpointEvent struct {
 	Organization Identifier        `json:"organization"`

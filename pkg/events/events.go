@@ -105,12 +105,15 @@ func (j *jsonEvent) Ref() Ref {
 	// TODO: Canonicalize
 	// TODO: Should the JWS be included in the ref?
 	var eventCopy jsonEvent = *j
+	// Stuff that should be included in the ref: version, type, issuedAt, previousEvent, payload
+	eventCopy.ThisEventRef = nil
+	eventCopy.JWS = ""
 	eventJson, err := json.Marshal(eventCopy)
 	if err != nil {
 		// This should never happen
 		panic(err)
 	}
-	sum := sha1.Sum(eventJson)
+	sum := sha1.Sum(canonicalizeJSON(eventJson))
 	return sum[:]
 }
 
@@ -123,12 +126,18 @@ func (j *jsonEvent) Sign(signFn func([]byte) ([]byte, error)) error {
 	if err != nil {
 		return err
 	}
-	signature, err := signFn(payload)
+	signature, err := signFn(canonicalizeJSON(payload))
 	if err != nil {
 		return err
 	}
 	j.JWS = string(signature)
 	return nil
+}
+
+func canonicalizeJSON(input []byte) []byte {
+	// TODO: When actually canonicalized, signature verification should be made backwards compatible since there are
+	// signatures of non-canonicalized JSON. This is the case when event.version = 0 (and maybe 1 if canonicalization is introduced in version 1)
+	return input
 }
 
 // EventFromJSON unmarshals an event. If the event can't be unmarshalled, an error is returned.
@@ -202,7 +211,10 @@ func (j jsonEvent) Unmarshal(out interface{}) error {
 }
 
 func (j jsonEvent) Marshal() []byte {
-	data, _ := json.MarshalIndent(j, "", "  ")
+	// Marshal a copy since Ref should be calculated
+	var e = j
+	e.ThisEventRef = e.Ref()
+	data, _ := json.MarshalIndent(e, "", "  ")
 	return data
 }
 

@@ -165,7 +165,7 @@ func (db *MemoryDb) RegisterEventHandlers(fn events.EventRegistrar) {
 				return fmt.Errorf("vendor already registered (id = %s)", payload.Identifier)
 			}
 			// Update event
-			if err := assertSameVendor(id, lookup(event.PreviousRef())); err != nil {
+			if err := assertSameVendor(id, lookup.Get(event.PreviousRef())); err != nil {
 				return errors2.Wrap(err, "referred event contains a different vendor")
 			}
 			db.vendors[id].RegisterVendorEvent = payload
@@ -184,20 +184,26 @@ func (db *MemoryDb) RegisterEventHandlers(fn events.EventRegistrar) {
 		if err := event.Unmarshal(&payload); err != nil {
 			return err
 		}
-		// Process
 		orgID := string(payload.OrgIdentifier)
 		vendorID := string(payload.VendorIdentifier)
+		// Validate
+		if db.vendors[vendorID] == nil {
+			return fmt.Errorf("vendor is not registered (id = %s)", payload.VendorIdentifier)
+		}
+		if !event.PreviousRef().IsZero() {
+			if err := assertSameVendor(vendorID, lookup.Get(event.PreviousRef())); err != nil {
+				return errors2.Wrap(err, "can't change organization's vendor")
+			}
+			if err := assertSameOrganization(orgID, lookup.Get(event.PreviousRef())); err != nil {
+				return errors2.Wrap(err, "referred event contains a different organization")
+			}
+		}
+		// Process
 		if db.lookupOrg(orgID) != nil {
 			if event.PreviousRef() == nil {
 				return fmt.Errorf("organization already registered (id = %s)", payload.OrgIdentifier)
 			}
 			// Update event
-			if err := assertSameVendor(vendorID, lookup(event.PreviousRef())); err != nil {
-				return errors2.Wrap(err, "can't change organization's vendor")
-			}
-			if err := assertSameOrganization(orgID, lookup(event.PreviousRef())); err != nil {
-				return errors2.Wrap(err, "referred event contains a different organization")
-			}
 			db.vendors[vendorID].orgs[orgID].VendorClaimEvent = payload
 		} else {
 			// Registration event
@@ -220,15 +226,17 @@ func (db *MemoryDb) RegisterEventHandlers(fn events.EventRegistrar) {
 		if o == nil {
 			return fmt.Errorf("organization not registered (id = %s)", orgID)
 		}
-		// Process
 		if o.endpoints[string(payload.Identifier)] != nil {
 			if event.PreviousRef() == nil {
 				return fmt.Errorf("endpoint already registered for this organization (id = %s)", payload.Identifier)
 			}
-			if err := assertSameOrganization(orgID, lookup(event.PreviousRef())); err != nil {
+		}
+		if !event.PreviousRef().IsZero() {
+			if err := assertSameOrganization(orgID, lookup.Get(event.PreviousRef())); err != nil {
 				return errors2.Wrap(err, "can't change endpoint's organization")
 			}
 		}
+		// Process
 		o.endpoints[string(payload.Identifier)] = &endpoint{
 			RegisterEndpointEvent: payload,
 		}

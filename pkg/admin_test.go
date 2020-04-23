@@ -36,14 +36,8 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event, _ events.EventLookup) error {
 			return e.Unmarshal(&payload)
 		})
-		_, err := cxt.registry.RegisterVendor("vendor", domain.HealthcareDomain)
-		if !assert.NoError(t, err) {
-			return
-		}
-		_, err = cxt.registry.VendorClaim("orgId", "org", nil)
-		if !assert.NoError(t, err) {
-			return
-		}
+		cxt.registry.RegisterVendor("vendor", domain.HealthcareDomain)
+		cxt.registry.VendorClaim("orgId", "org", nil)
 		event, err := cxt.registry.RegisterEndpoint("orgId", "endpointId", "url", "type", "status", map[string]string{"foo": "bar"})
 		if !assert.NoError(t, err) {
 			return
@@ -54,6 +48,29 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 		assert.Equal(t, "url", payload.URL)
 		assert.Equal(t, "type", payload.EndpointType)
 		assert.Equal(t, "status", payload.Status)
+		assert.Len(t, payload.Properties, 1)
+	})
+	t.Run("ok - update", func(t *testing.T) {
+		cxt := createTestContext(t)
+		defer cxt.close()
+		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event, _ events.EventLookup) error {
+			return e.Unmarshal(&payload)
+		})
+		cxt.registry.RegisterVendor("vendor", domain.HealthcareDomain)
+		cxt.registry.VendorClaim("orgId", "org", nil)
+		cxt.registry.RegisterEndpoint("orgId", "endpointId", "url", "type", "status", map[string]string{"foo": "bar"})
+		// Now update endpoint
+		event, err := cxt.registry.RegisterEndpoint("orgId", "endpointId", "url-updated", "type-updated", "status-updated", map[string]string{"foo": "bar-updated"})
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.NotNil(t, event)
+		assert.False(t, event.PreviousRef().IsZero())
+		assert.Equal(t, "orgId", string(payload.Organization))
+		assert.Equal(t, "endpointId", string(payload.Identifier))
+		assert.Equal(t, "url-updated", payload.URL)
+		assert.Equal(t, "type-updated", payload.EndpointType)
+		assert.Equal(t, "status-updated", payload.Status)
 		assert.Len(t, payload.Properties, 1)
 	})
 	t.Run("ok - auto generate id", func(t *testing.T) {
@@ -353,7 +370,7 @@ func TestRegistry_signAndPublishEvent(t *testing.T) {
 	t.Run("error - signer returns error", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		event, err := cxt.registry.signAndPublishEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, func([]byte, time.Time) ([]byte, error) {
+		event, err := cxt.registry.signAndPublishEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil, func([]byte, time.Time) ([]byte, error) {
 			return nil, errors.New("error")
 		})
 		assert.Nil(t, event)

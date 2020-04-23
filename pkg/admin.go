@@ -57,7 +57,7 @@ func (r *Registry) RegisterVendor(name string, domain string) (events.Event, err
 		Name:       name,
 		Domain:     domain,
 		Keys:       []interface{}{jwkAsMap},
-	}, func(dataToBeSigned []byte, instant time.Time) ([]byte, error) {
+	}, nil, func(dataToBeSigned []byte, instant time.Time) ([]byte, error) {
 		return r.signAsVendor(id, name, domain, dataToBeSigned, instant)
 	})
 	if err == nil && r.vendor.Identifier == "" {
@@ -134,19 +134,32 @@ func (r *Registry) VendorClaim(orgID string, orgName string, orgKeys []interface
 		OrgName:          orgName,
 		OrgKeys:          orgKeys,
 		Start:            time.Now(),
-	}, func(dataToBeSigned []byte, instant time.Time) ([]byte, error) {
+	}, nil, func(dataToBeSigned []byte, instant time.Time) ([]byte, error) {
 		return r.signAsOrganization(orgID, orgName, dataToBeSigned, instant, orgHasCerts)
 	})
 }
 
 // RegisterEndpoint registers an endpoint for an organization
 func (r *Registry) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, properties map[string]string) (events.Event, error) {
-	logrus.Infof("Registering endpoint, organization=%s, id=%s, type=%s, url=%s, status=%s",
+	logrus.Infof("Registering/updating endpoint, organization=%s, id=%s, type=%s, url=%s, status=%s",
 		organizationID, id, endpointType, url, status)
 	if id == "" {
 		id = uuid.New().String()
 	}
 	org, err := r.Db.OrganizationById(organizationID)
+	if err != nil {
+		return nil, err
+	}
+	// Find out if this should be an update. That's the case if there's a RegisterEndpointEvent for the same organization
+	// and endpoint.
+	parentEvent, err := r.EventSystem.FindLastEvent(func(event events.Event) bool {
+		if event.Type() != dom.RegisterEndpoint {
+			return false
+		}
+		var payload = dom.RegisterEndpointEvent{}
+		_ = event.Unmarshal(&payload)
+		return dom.Identifier(id) == payload.Identifier && dom.Identifier(organizationID) == payload.Organization
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +170,7 @@ func (r *Registry) RegisterEndpoint(organizationID string, id string, url string
 		Identifier:   dom.Identifier(id),
 		Status:       status,
 		Properties:   properties,
-	}, func(dataToBeSigned []byte, instant time.Time) ([]byte, error) {
+	}, parentEvent, func(dataToBeSigned []byte, instant time.Time) ([]byte, error) {
 		return r.signAsOrganization(org.Identifier.String(), org.Name, dataToBeSigned, instant, len(org.GetActiveCertificates()) > 0)
 	})
 }
@@ -177,8 +190,12 @@ func (r *Registry) loadOrGenerateKey(identifier string) (map[string]interface{},
 	return crypto.JwkToMap(keyAsJwk)
 }
 
-func (r *Registry) signAndPublishEvent(eventType events.EventType, payload interface{}, signer func([]byte, time.Time) ([]byte, error)) (events.Event, error) {
-	event := events.CreateEvent(eventType, payload, nil)
+func (r *Registry) signAndPublishEvent(eventType events.EventType, payload interface{}, previousEvent events.Event, signer func([]byte, time.Time) ([]byte, error)) (events.Event, error) {
+	var previousEventRef events.Ref
+	if previousEvent != nil {
+		previousEventRef = previousEvent.Ref()
+	}
+	event := events.CreateEvent(eventType, payload, previousEventRef)
 	if signer != nil {
 		err := event.Sign(func(data []byte) ([]byte, error) {
 			return signer(data, event.IssuedAt())

@@ -263,9 +263,57 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 }
 
 func TestMemoryDb_RegisterEndpoint(t *testing.T) {
-	t.Run("unknown organization", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+	t.Run("ok", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		eventSystem.PublishEvent(registerVendor1)
+		eventSystem.PublishEvent(vendorClaim1)
 		err := eventSystem.PublishEvent(registerEndpoint1)
-		assert.Error(t, err)
+		assert.NoError(t, err)
+	}))
+	t.Run("ok - update", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		eventSystem.PublishEvent(registerVendor1)
+		eventSystem.PublishEvent(vendorClaim1)
+		payload1 := domain.RegisterEndpointEvent{}
+		registerEndpoint1.Unmarshal(&payload1)
+		eventSystem.PublishEvent(registerEndpoint1)
+		// Create updated event
+		payload2 := domain.RegisterEndpointEvent{}
+		registerEndpoint1.Unmarshal(&payload2)
+		payload2.Properties = map[string]string{"hello": "world"}
+		payload2.EndpointType += "-updated"
+		payload2.URL += "-updated"
+		err := eventSystem.PublishEvent(events.CreateEvent(registerEndpoint1.Type(), payload2, registerEndpoint1.Ref()))
+		if !assert.NoError(t, err) {
+			return
+		}
+		endpoints, _ := db.FindEndpointsByOrganizationAndType(payload1.Organization.String(), nil)
+		if !assert.Len(t, endpoints, 1) {
+			return
+		}
+		assert.Equal(t, payload2.EndpointType, endpoints[0].EndpointType)
+		assert.Equal(t, payload2.URL, endpoints[0].URL)
+		assert.Equal(t, payload2.Properties, endpoints[0].Properties)
+	}))
+	t.Run("error - can't change org for endpoint", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		eventSystem.PublishEvent(registerVendor1)
+		eventSystem.PublishEvent(vendorClaim1)
+		eventSystem.PublishEvent(registerEndpoint1)
+		eventSystem.PublishEvent(vendorClaim2)
+		payload := domain.RegisterEndpointEvent{}
+		registerEndpoint1.Unmarshal(&payload)
+		payload.Organization = "o2" // this is org from vendorClaim2
+		err := eventSystem.PublishEvent(events.CreateEvent(registerEndpoint1.Type(), payload, registerEndpoint1.Ref()))
+		assert.EqualError(t, err, "can't change endpoint's organization: actual organizationId (o1) differs from expected (o2)")
+	}))
+	t.Run("error - endpoint already registered", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		eventSystem.PublishEvent(registerVendor1)
+		eventSystem.PublishEvent(vendorClaim1)
+		eventSystem.PublishEvent(registerEndpoint1)
+		err := eventSystem.PublishEvent(registerEndpoint1)
+		assert.EqualError(t, err, "endpoint already registered for this organization (id = e1)")
+	}))
+	t.Run("error - unknown organization", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		err := eventSystem.PublishEvent(registerEndpoint1)
+		assert.EqualError(t, err, "organization not registered (id = o1)")
 	}))
 }
 
