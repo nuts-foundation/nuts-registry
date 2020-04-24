@@ -33,13 +33,25 @@ import (
 // EventRef is a reference to an event
 type Ref []byte
 
-func (r Ref) IsZero() bool {
-	for _, v := range r {
-		if v != 0 {
-			return false
-		}
+func (r *Ref) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
 	}
-	return true
+	if bytes, err := hex.DecodeString(str); err != nil {
+		return err
+	} else {
+		*r = bytes
+	}
+	return nil
+}
+
+func (r Ref) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r.String())
+}
+
+func (r Ref) IsZero() bool {
+	return len(r) == 0
 }
 
 func (r Ref) String() string {
@@ -90,7 +102,7 @@ type jsonEvent struct {
 	EventVersion     Version          `json:"version"`
 	EventType        string           `json:"type"`
 	EventIssuedAt    time.Time        `json:"issuedAt"`
-	ThisEventRef     Ref              `json:"ref"`
+	ThisEventRef     Ref              `json:"ref,omitempty"`
 	PreviousEvent    Ref              `json:"prev,omitempty"`
 	JWS              string           `json:"jws,omitempty"`
 	EventPayload     interface{}      `json:"payload,omitempty"`
@@ -101,14 +113,11 @@ func (j jsonEvent) Version() Version {
 	return j.EventVersion
 }
 
-func (j *jsonEvent) Ref() Ref {
-	// TODO: Canonicalize
-	// TODO: Should the JWS be included in the ref?
-	var eventCopy jsonEvent = *j
-	// Stuff that should be included in the ref: version, type, issuedAt, previousEvent, payload
-	eventCopy.ThisEventRef = nil
-	eventCopy.JWS = ""
-	eventJson, err := json.Marshal(eventCopy)
+func (j jsonEvent) Ref() Ref {
+	// Make sure ThisEventRef is not set since it should included in the hash. This can't mutate the struct itself,
+	// since the struct is passed by value to this function, not by reference.
+	j.ThisEventRef = nil
+	eventJson, err := json.Marshal(j)
 	if err != nil {
 		// This should never happen
 		panic(err)
@@ -143,8 +152,7 @@ func canonicalizeJSON(input []byte) []byte {
 // EventFromJSON unmarshals an event. If the event can't be unmarshalled, an error is returned.
 func EventFromJSON(data []byte) (Event, error) {
 	e := jsonEvent{}
-	err := json.Unmarshal(data, &e)
-	if err != nil {
+	if err := json.Unmarshal(data, &e); err != nil {
 		return nil, err
 	}
 	if e.EventType == "" {
