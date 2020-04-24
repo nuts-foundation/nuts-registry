@@ -138,16 +138,15 @@ func (apiResource ApiWrapper) OrganizationById(ctx echo.Context, id string) erro
 
 // EndpointsByOrganisationId is the Api implementation for getting all or certain types of endpoints for an organization
 func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error {
-	dupEndpoints := []Endpoint{}
+	foundEPs := []Endpoint{}
 	strict := params.Strict
-	endpointIds := make(map[string]bool)
 	for _, id := range params.OrgIds {
 		dbEndpoints, err := apiResource.R.EndpointsByOrganizationAndType(id, params.Type)
 
 		if err != nil {
 			logrus.Warning(err.Error())
 		} else {
-			dupEndpoints = append(endpointsFromDb(dbEndpoints), dupEndpoints...)
+			foundEPs = append(endpointsFromDb(dbEndpoints), foundEPs...)
 		}
 
 		if strict != nil && *strict && len(dbEndpoints) == 0 {
@@ -159,22 +158,12 @@ func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params
 		}
 	}
 
-	// deduplicate
-	uniq := dupEndpoints[:0]
-	for _, e := range dupEndpoints {
-		_, f := endpointIds[e.Identifier.String()]
-		if !f {
-			endpointIds[e.Identifier.String()] = true
-			uniq = append(uniq, e)
-		}
-	}
-
 	// filter on type
 	uniqFiltered := []Endpoint{}
 	if params.Type == nil {
-		uniqFiltered = uniq
+		uniqFiltered = foundEPs
 	} else {
-		for _, u := range uniq {
+		for _, u := range foundEPs {
 			if u.EndpointType == *params.Type {
 				uniqFiltered = append(uniqFiltered, u)
 			}
