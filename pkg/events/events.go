@@ -26,6 +26,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"io"
 	"time"
 )
@@ -144,9 +145,11 @@ func (j *jsonEvent) Sign(signFn func([]byte) ([]byte, error)) error {
 }
 
 func marshalCanonicalizedJSON(input interface{}) ([]byte, error) {
-	// TODO: When actually canonicalized, signature verification should be made backwards compatible since there are
-	// signatures of non-canonicalized JSON. This is the case when event.version = 0 (and maybe 1 if canonicalization is introduced in version 1)
-	return json.Marshal(input)
+	data, err := json.Marshal(input)
+	if err != nil {
+		return nil, err
+	}
+	return jsoncanonicalizer.Transform(data)
 }
 
 // EventFromJSON unmarshals an event. If the event can't be unmarshalled, an error is returned.

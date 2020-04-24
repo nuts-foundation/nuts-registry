@@ -13,13 +13,16 @@ An event is structured as follows:
     Event:
       IssuedAt (timestamp)
       Type (string enum)
+      Version (int)
+      Ref (hex SHA-1 hash)
+      Prev (hex SHA-1 hash)
       Signature (JWS)
       Payload (object)
 
-It contains 2 sections, its headers (*IssuedAt*, *Type* and *Signature*) and a human-readable copy of the content of event (*Payload*).
-We call it a copy because the authenticated content of the event is found encoded inside the *Signature* field. The *Payload*
+It contains 2 sections, its headers (``IssuedAt``, ``Type``, ``Signature``, ``Version``, ``Ref``, ``Prev``) and a human-readable copy of the content of event (``Payload``).
+We call it a copy because the authenticated content of the event is found encoded inside the ``Signature`` field. The ``Payload``
 field is there for ease of use but will be removed in a future version and thus should not be relied on.
-The *Type* field defines the type of the event (e.g. "RegisterVendorEvent"), indicating how to interpret the payload.
+The ``Type`` field defines the type of the event (e.g. ``RegisterVendorEvent``), indicating how to interpret the payload.
 
 Signing
 *******
@@ -32,7 +35,7 @@ Signature format
 ================
 
 The signatures are in the JWS (`JSON Web Signature <https://tools.ietf.org/html/rfc7515>`_) format. Since every key should be associated to a known entity,
-the JWS will contain an X.509 certificate (in the *x5c* field) describing the entity owning the key. The algorithm
+the JWS will contain an X.509 certificate (in the ``x5c`` field) describing the entity owning the key. The algorithm
 used for constructing the JWS is RS256 (RSA with SHA-256 hashing function).
 
 The JWS also contains the actual payload of the event.
@@ -43,10 +46,10 @@ Validation
 To validate an event signature, the following checks must be performed:
 
 1. Is the JWS parsable?
-2. Does the JWS contain an X.509 certificate chain (in the *x5c* field)?
-3. Is the certificate meant for signing (key usage must contain *digitalSignature*)
+2. Does the JWS contain an X.509 certificate chain (in the ``x5c`` field)?
+3. Is the certificate meant for signing (key usage must contain ``digitalSignature``)
 4. Is the certificate (extracted from the chain) trusted?
-5. Was the certificate valid at the time of signing (*IssuedAt*)?
+5. Was the certificate valid at the time of signing (``IssuedAt``)?
 6. Is the owning entity of the certificate (e.g. a vendor or organization) the one we expected to sign the certificate (see *Owner check* in the table below)?
 7. Is the JWS signed using the RS256 algorithm?
 8. Is the used RSA key of sufficient length (>=2048 bits)?
@@ -67,5 +70,19 @@ RegisterEndpoint        Organization  ``Event.Payload.Organization == Certificat
     The Nuts Foundation will act as Root Certificate Authority so that intermediates are issued by an entity which is trusted
     by all participating parties. However, this Root Certificate Authority isn't operational at the time of writing so
     vendors are expected to self-sign their own CA certificates in the meantime.
-    This means when validating a *RegisterVendor* event the certificate which signed the JWS will be self-signed and
+    This means when validating a ``RegisterVendor`` event the certificate which signed the JWS will be self-signed and
     thus can't be validated. **This is the only case** where an unvalidated certificate should be added to the trust store.
+
+Versioning
+**********
+
+Events have a ``Version`` field indicating the version of the data structure. New versions might introduce new fields or
+change the datatype of existing fields (although this change must be backwards compatible.
+
+===========  ==================================================
+Version      Change
+===========  ==================================================
+0            Any version before introduction of ``Version``
+1            ``Version``, ``Ref`` and ``Prev`` added
+2 (planned)  JWS signed payload is canonicalized before hashing
+===========  ==================================================

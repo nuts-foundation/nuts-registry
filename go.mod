@@ -3,6 +3,7 @@ module github.com/nuts-foundation/nuts-registry
 go 1.13
 
 require (
+    github.com/cyberphone/json-canonicalization v0.0.0-20200417180520-cd6247b5f11e
 	github.com/deepmap/oapi-codegen v1.3.7
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gibson042/canonicaljson-go v1.0.3

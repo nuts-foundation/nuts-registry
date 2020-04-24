@@ -41,7 +41,7 @@ func TestRefCalculation(t *testing.T) {
 	t.Run("ok - ref from unmarshalled v0 event", func(t *testing.T) {
 		eventAsJson, _ := readTestEvent()
 		event, _ := EventFromJSON(eventAsJson)
-		assert.Equal(t, "8b0eeb7a4e9ea3ff7b6a33f9bd81b3eaf076ce03", event.Ref().String())
+		assert.Equal(t, "7e3f9c1eef93d6685d029c058d50575b8a250960", event.Ref().String())
 		assert.Equal(t, event.Ref(), event.Ref())
 	})
 	t.Run("ok - ref changes when included fields change", func(t *testing.T) {
@@ -150,7 +150,7 @@ func TestMarshalEvent(t *testing.T) {
 		expected := `{
 	"issuedAt": ` + toJSON(event.IssuedAt()) + `,
 	"prev":		"010203",
-	"ref":		"1df81fd793098bbd8a4c830ca73b93a56e549fdf",
+	"ref":		"da46d3559e472e5c7fde9d7793f2a2c5626b9f75",
 	"type":		"v1",
 	"version":	1,
 	"payload": 	{"Hello": "World"}
