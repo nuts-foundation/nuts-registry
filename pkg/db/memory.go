@@ -158,16 +158,20 @@ func (db *MemoryDb) RegisterEventHandlers(fn events.EventRegistrar) {
 		if err := event.Unmarshal(&payload); err != nil {
 			return err
 		}
-		// Process
 		id := string(payload.Identifier)
+		// Validate
+		if !event.PreviousRef().IsZero() {
+			if err := assertSameVendor(id, lookup.Get(event.PreviousRef())); err != nil {
+				return errors2.Wrap(err, "referred event contains a different vendor")
+			}
+		}
+		// Process
 		if db.vendors[id] != nil {
 			if event.PreviousRef() == nil {
 				return fmt.Errorf("vendor already registered (id = %s)", payload.Identifier)
 			}
 			// Update event
-			if err := assertSameVendor(id, lookup.Get(event.PreviousRef())); err != nil {
-				return errors2.Wrap(err, "referred event contains a different vendor")
-			}
+
 			db.vendors[id].RegisterVendorEvent = payload
 		} else {
 			// Registration event
@@ -195,7 +199,7 @@ func (db *MemoryDb) RegisterEventHandlers(fn events.EventRegistrar) {
 				return errors2.Wrap(err, "can't change organization's vendor")
 			}
 			if err := assertSameOrganization(orgID, lookup.Get(event.PreviousRef())); err != nil {
-				return errors2.Wrap(err, "referred event contains a different organization")
+				return errors2.Wrap(err, "can't change organization ID")
 			}
 		}
 		// Process

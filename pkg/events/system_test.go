@@ -207,6 +207,25 @@ func TestParseTimestamp(t *testing.T) {
 
 }
 
+func TestEventLookup(t *testing.T) {
+	repo, err := test.NewTestRepo(t.Name())
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer repo.Cleanup()
+	system := NewEventSystem("evt")
+	t.Run("ok - Get is delegated", func(t *testing.T) {
+		assert.Nil(t, system.Get(Ref([]byte{1, 2, 3})))
+	})
+	t.Run("ok - FindLastEvent is delegated", func(t *testing.T) {
+		event, err := system.FindLastEvent(func(event Event) bool {
+			return true
+		})
+		assert.NoError(t, err)
+		assert.Nil(t, event)
+	})
+}
+
 func TestPublishEvents(t *testing.T) {
 	repo, err := test.NewTestRepo(t.Name())
 	if !assert.NoError(t, err) {

@@ -117,12 +117,12 @@ func (j jsonEvent) Ref() Ref {
 	// Make sure ThisEventRef is not set since it should included in the hash. This can't mutate the struct itself,
 	// since the struct is passed by value to this function, not by reference.
 	j.ThisEventRef = nil
-	eventJson, err := json.Marshal(j)
+	eventJson, err := marshalCanonicalizedJSON(j)
 	if err != nil {
 		// This should never happen
 		panic(err)
 	}
-	sum := sha1.Sum(canonicalizeJSON(eventJson))
+	sum := sha1.Sum(eventJson)
 	return sum[:]
 }
 
@@ -135,7 +135,7 @@ func (j *jsonEvent) Sign(signFn func([]byte) ([]byte, error)) error {
 	if err != nil {
 		return err
 	}
-	signature, err := signFn(canonicalizeJSON(payload))
+	signature, err := signFn(payload)
 	if err != nil {
 		return err
 	}
@@ -143,10 +143,10 @@ func (j *jsonEvent) Sign(signFn func([]byte) ([]byte, error)) error {
 	return nil
 }
 
-func canonicalizeJSON(input []byte) []byte {
+func marshalCanonicalizedJSON(input interface{}) ([]byte, error) {
 	// TODO: When actually canonicalized, signature verification should be made backwards compatible since there are
 	// signatures of non-canonicalized JSON. This is the case when event.version = 0 (and maybe 1 if canonicalization is introduced in version 1)
-	return input
+	return json.Marshal(input)
 }
 
 // EventFromJSON unmarshals an event. If the event can't be unmarshalled, an error is returned.

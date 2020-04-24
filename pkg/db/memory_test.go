@@ -105,7 +105,7 @@ func pub(t *testing.T, eventSystem events.EventSystem, events ...events.Event) b
 }
 
 func TestMemoryDb_RegisterVendor(t *testing.T) {
-	t.Run("valid example", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+	t.Run("ok", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		err := eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
@@ -117,18 +117,38 @@ func TestMemoryDb_RegisterVendor(t *testing.T) {
 		}
 	}))
 
-	t.Run("duplicate entry", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+	t.Run("ok - update", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		eventSystem.PublishEvent(registerVendor1)
+		payload := domain.RegisterVendorEvent{}
+		registerVendor1.Unmarshal(&payload)
+		payload.Name = "Foobar"
+		err := eventSystem.PublishEvent(events.CreateEvent(registerVendor1.Type(), payload, registerVendor1.Ref()))
+		assert.NoError(t, err)
+		assert.Equal(t, payload.Name, db.vendors[payload.Identifier.String()].Name)
+	}))
+
+	t.Run("errors - update - different vendorID", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		eventSystem.PublishEvent(registerVendor1)
+		payload := domain.RegisterVendorEvent{}
+		registerVendor1.Unmarshal(&payload)
+		payload.Name = "Foobar"
+		payload.Identifier = "123"
+		err := eventSystem.PublishEvent(events.CreateEvent(registerVendor1.Type(), payload, registerVendor1.Ref()))
+		assert.EqualError(t, err, "referred event contains a different vendor: actual vendorId (v1) differs from expected (123)")
+	}))
+
+	t.Run("error - vendor already exists", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		err := eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
 		}
 		err = eventSystem.PublishEvent(registerVendor1)
-		assert.Error(t, err)
+		assert.EqualError(t, err, "vendor already registered (id = v1)")
 	}))
 }
 
 func TestMemoryDb_VendorClaim(t *testing.T) {
-	t.Run("valid example", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+	t.Run("ok", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		err := eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return
@@ -146,12 +166,59 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 		assert.Len(t, db.vendors["v1"].orgs, 2)
 	}))
 
-	t.Run("unknown vendor", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+	t.Run("ok - update", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		eventSystem.PublishEvent(registerVendor1)
+		eventSystem.PublishEvent(vendorClaim1)
+		payload := domain.VendorClaimEvent{}
+		vendorClaim1.Unmarshal(&payload)
+		payload.OrgName = "Foobar"
+		err := eventSystem.PublishEvent(events.CreateEvent(vendorClaim1.Type(), payload, vendorClaim1.Ref()))
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, payload.OrgName, db.lookupOrg(payload.OrgIdentifier.String()).OrgName)
+	}))
+
+	t.Run("error - update - org ID differs", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		eventSystem.PublishEvent(registerVendor1)
+		eventSystem.PublishEvent(vendorClaim1)
+		payload := domain.VendorClaimEvent{}
+		vendorClaim1.Unmarshal(&payload)
+		payload.OrgIdentifier = "1234"
+		payload.OrgName = "Foobar"
+		err := eventSystem.PublishEvent(events.CreateEvent(vendorClaim1.Type(), payload, vendorClaim1.Ref()))
+		assert.EqualError(t, err, "can't change organization ID: actual organizationId (o1) differs from expected (1234)")
+	}))
+
+	t.Run("error - update - vendor ID differs", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		eventSystem.PublishEvent(registerVendor1)
+		eventSystem.PublishEvent(registerVendor2)
+		eventSystem.PublishEvent(vendorClaim1)
+		payload := domain.VendorClaimEvent{}
+		vendorClaim1.Unmarshal(&payload)
+		payload.VendorIdentifier = "v2"
+		payload.OrgName = "Foobar"
+		err := eventSystem.PublishEvent(events.CreateEvent(vendorClaim1.Type(), payload, vendorClaim1.Ref()))
+		assert.EqualError(t, err, "can't change organization's vendor: actual vendorId (v1) differs from expected (v2)")
+	}))
+
+	t.Run("error - update - org ID differs", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+		eventSystem.PublishEvent(registerVendor1)
+		eventSystem.PublishEvent(vendorClaim1)
+		payload := domain.VendorClaimEvent{}
+		vendorClaim1.Unmarshal(&payload)
+		payload.OrgIdentifier = "1234"
+		payload.OrgName = "Foobar"
+		err := eventSystem.PublishEvent(events.CreateEvent(vendorClaim1.Type(), payload, vendorClaim1.Ref()))
+		assert.EqualError(t, err, "can't change organization ID: actual organizationId (o1) differs from expected (1234)")
+	}))
+
+	t.Run("error - unknown vendor", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		err := eventSystem.PublishEvent(vendorClaim1)
 		assert.Error(t, err)
 	}))
 
-	t.Run("duplicate organization", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
+	t.Run("error - duplicate organization", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		err := eventSystem.PublishEvent(registerVendor1)
 		if !assert.NoError(t, err) {
 			return

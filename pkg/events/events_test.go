@@ -145,12 +145,12 @@ func TestMarshalEvent(t *testing.T) {
 	t.Run("marshal v1 event", func(t *testing.T) {
 		payload := map[string]string{"Hello": "World"}
 		event := CreateEvent("v1", payload, []byte{1, 2, 3})
-		(event.(*jsonEvent)).EventIssuedAt = time.Unix(0, 0)
+		(event.(*jsonEvent)).EventIssuedAt = time.Date(1970,1,1,0,0,0,0, time.FixedZone("UTC", 0))
 
 		expected := `{
 	"issuedAt": ` + toJSON(event.IssuedAt()) + `,
 	"prev":		"010203",
-	"ref":		"52c7214bf8365a7f442dd46581b5871fa3cd3f0c",
+	"ref":		"1df81fd793098bbd8a4c830ca73b93a56e549fdf",
 	"type":		"v1",
 	"version":	1,
 	"payload": 	{"Hello": "World"}
