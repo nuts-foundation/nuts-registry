@@ -159,19 +159,19 @@ func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params
 	}
 
 	// filter on type
-	uniqFiltered := []Endpoint{}
+	filtered := []Endpoint{}
 	if params.Type == nil {
-		uniqFiltered = foundEPs
+		filtered = foundEPs
 	} else {
 		for _, u := range foundEPs {
 			if u.EndpointType == *params.Type {
-				uniqFiltered = append(uniqFiltered, u)
+				filtered = append(filtered, u)
 			}
 		}
 	}
 
 	// generate output
-	return ctx.JSON(http.StatusOK, uniqFiltered)
+	return ctx.JSON(http.StatusOK, filtered)
 }
 
 // SearchOrganizations is the Api implementation for finding organizations by (partial) query
