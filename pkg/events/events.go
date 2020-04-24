@@ -117,13 +117,35 @@ func (j jsonEvent) Version() Version {
 func (j jsonEvent) Ref() Ref {
 	// Make sure ThisEventRef is not set since it should included in the hash. This can't mutate the struct itself,
 	// since the struct is passed by value to this function, not by reference.
-	j.ThisEventRef = nil
-	eventJson, err := marshalCanonicalizedJSON(j)
+	eventAsMap := make(map[string]interface{})
+	eventAsJSON, _ := json.Marshal(j)
+	_ = json.Unmarshal(eventAsJSON, &eventAsMap)
+	// Make a list of keys to be included in the ref
+	var includeKeys = []string{"issuedAt","type","jws","payload"}
+	if j.Version() == 1 {
+		includeKeys = append(includeKeys, "prev", "version")
+	}
+	// Remove all fields from the map that shouldn't be in there for this version
+	for key, _ := range eventAsMap {
+		included := false
+		for _, k := range includeKeys {
+			if k == key {
+				included = true
+				break
+			}
+		}
+		if !included {
+			delete(eventAsMap, key)
+		}
+	}
+	strippedJSON, _ := json.Marshal(eventAsMap)
+	canonicalizedJSON, err := canonicalizeJSON(strippedJSON)
 	if err != nil {
 		// This should never happen
 		panic(err)
 	}
-	sum := sha1.Sum(eventJson)
+	println(string(canonicalizedJSON))
+	sum := sha1.Sum(canonicalizedJSON)
 	return sum[:]
 }
 
@@ -144,12 +166,8 @@ func (j *jsonEvent) Sign(signFn func([]byte) ([]byte, error)) error {
 	return nil
 }
 
-func marshalCanonicalizedJSON(input interface{}) ([]byte, error) {
-	data, err := json.Marshal(input)
-	if err != nil {
-		return nil, err
-	}
-	return jsoncanonicalizer.Transform(data)
+func canonicalizeJSON(input []byte) ([]byte, error) {
+	return jsoncanonicalizer.Transform(input)
 }
 
 // EventFromJSON unmarshals an event. If the event can't be unmarshalled, an error is returned.

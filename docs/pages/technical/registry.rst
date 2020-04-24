@@ -6,23 +6,24 @@ Nuts Registry Data Model
 The Nuts Registry is event-sourced, meaning its data is stored as events which are replayed to determine the current state.
 The event store is append-only which makes it easier to migrate to a distributed architecture.
 
-An event is structured as follows:
+An event contains the following fields:
 
-.. code-block::
+=====     ======  =====  =============================================  ========
+Field     Type    Since  Description                                    Example
+=====     ======  =====  =============================================  ========
+issuedAt  string  v0     Time at which the event was issued
+type      string  v0     Type of the payload                            RegisterVendorEvent
+jws       string  v0     Optional. JWS-encoded signature of the event
+payload   object  v0     Actual payload of the event                    ``{"Message": "Hello, World!"}``
+version   int     v1     Version of the event                           1
+ref       string  v1     Hex-encoded reference to this event            67f732c4a421c8d7e097dfa55a27b67b4c5fbd9e
+prev      string  v1     Hex-encoded reference to the previous event    67f732c4a421c8d7e097dfa55a27b67b4c5fbd9e
+=====     ======  =====  =============================================  ========
 
-    Event:
-      IssuedAt (timestamp)
-      Type (string enum)
-      Version (int)
-      Ref (hex SHA-1 hash)
-      Prev (hex SHA-1 hash)
-      Signature (JWS)
-      Payload (object)
-
-It contains 2 sections, its headers (``IssuedAt``, ``Type``, ``Signature``, ``Version``, ``Ref``, ``Prev``) and a human-readable copy of the content of event (``Payload``).
-We call it a copy because the authenticated content of the event is found encoded inside the ``Signature`` field. The ``Payload``
+It contains 2 sections, its headers (``issuedAt``, ``type``, `jws`, ``version``, ``ref``, ``prev``) and a human-readable copy of the content of event (``payload``).
+We call it a copy because the authenticated content of the event is found encoded inside the `jws` field. The ``payload``
 field is there for ease of use but will be removed in a future version and thus should not be relied on.
-The ``Type`` field defines the type of the event (e.g. ``RegisterVendorEvent``), indicating how to interpret the payload.
+The ``type`` field defines the type of the event (e.g. ``RegisterVendorEvent``), indicating how to interpret the payload.
 
 Signing
 *******
@@ -49,7 +50,7 @@ To validate an event signature, the following checks must be performed:
 2. Does the JWS contain an X.509 certificate chain (in the ``x5c`` field)?
 3. Is the certificate meant for signing (key usage must contain ``digitalSignature``)
 4. Is the certificate (extracted from the chain) trusted?
-5. Was the certificate valid at the time of signing (``IssuedAt``)?
+5. Was the certificate valid at the time of signing (``issuedAt``)?
 6. Is the owning entity of the certificate (e.g. a vendor or organization) the one we expected to sign the certificate (see *Owner check* in the table below)?
 7. Is the JWS signed using the RS256 algorithm?
 8. Is the used RSA key of sufficient length (>=2048 bits)?
@@ -76,13 +77,13 @@ RegisterEndpoint        Organization  ``Event.Payload.Organization == Certificat
 Versioning
 **********
 
-Events have a ``Version`` field indicating the version of the data structure. New versions might introduce new fields or
+Events have a ``version`` field indicating the version of the data structure. New versions might introduce new fields or
 change the datatype of existing fields (although this change must be backwards compatible.
 
 ===========  ==================================================
 Version      Change
 ===========  ==================================================
-0            Any version before introduction of ``Version``
-1            ``Version``, ``Ref`` and ``Prev`` added
+0            Any version before introduction of ``version``
+1            ``version``, ``ref`` and ``prev`` added
 2 (planned)  JWS signed payload is canonicalized before hashing
 ===========  ==================================================
