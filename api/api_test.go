@@ -75,7 +75,15 @@ func (mdb *MockDb) FindEndpointsByOrganizationAndType(organizationIdentifier str
 		return nil, mdb.endpointsError
 	}
 
-	return mdb.endpoints, nil
+	// only return relevant EP's
+	eps := []db.Endpoint{}
+	for _, u := range mdb.endpoints {
+		if string(u.Organization) == organizationIdentifier {
+			eps = append(eps, u)
+		}
+	}
+
+	return eps, nil
 }
 
 func (mdb *MockDb) SearchOrganizations(query string) []db.Organization {
@@ -99,6 +107,7 @@ func (mdb *MockDb) OrganizationById(id string) (*db.Organization, error) {
 
 var endpoints = []db.Endpoint{
 	{
+		Organization: db.Identifier("urn:nuts:system:value"),
 		Identifier:   db.Identifier("urn:nuts:system:value"),
 		EndpointType: "type#value",
 	},
@@ -106,10 +115,12 @@ var endpoints = []db.Endpoint{
 
 var multiEndpoints = []db.Endpoint{
 	{
+		Organization: db.Identifier("urn:nuts:system:value"),
 		Identifier:   db.Identifier("urn:nuts:system:value"),
 		EndpointType: "type#value",
 	},
 	{
+		Organization: db.Identifier("urn:nuts:system:value2"),
 		Identifier:   db.Identifier("urn:nuts:system:value2"),
 		EndpointType: "type#value",
 	},
@@ -200,7 +211,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{endpoints: endpoints})
 
 		q := make(url.Values)
-		q.Set("orgIds", "1")
+		q.Set("orgIds", "urn:nuts:system:value")
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
 		rec := httptest.NewRecorder()
@@ -237,8 +248,8 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{endpoints: multiEndpoints})
 
 		q := make(url.Values)
-		q.Set("orgIds", "1")
-		q.Add("orgIds", "2")
+		q.Set("orgIds", "urn:nuts:system:value")
+		q.Add("orgIds", "urn:nuts:system:value2")
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
 		rec := httptest.NewRecorder()
@@ -251,7 +262,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		result, _ = deserializeEndpoints(rec.Body)
 
 		if len(result) != 2 {
-			t.Errorf("Got result size: %d, want 1", len(result))
+			t.Errorf("Got result size: %d, want 2", len(result))
 		}
 	})
 
@@ -259,7 +270,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{endpoints: endpoints})
 
 		q := make(url.Values)
-		q.Set("orgIds", "1")
+		q.Set("orgIds", "urn:nuts:system:value")
 		q.Set("type", "type#value")
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
