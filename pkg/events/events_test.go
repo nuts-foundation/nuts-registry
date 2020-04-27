@@ -124,8 +124,26 @@ func TestRefCalculation(t *testing.T) {
 			assert.Equalf(t, event.Ref(), actual, "ref changed when %s=%v", field, mutation)
 		}
 	})
-	t.Run("ok - test canonicalization invariants", func(t *testing.T) {
-		// TODO when implemented!
+	t.Run("test canonicalization", func(t *testing.T) {
+		test := func(expectedOutput, input string) {
+			bytes, err := canonicalizeJSON([]byte(input))
+			if !assert.NoError(t, err) {
+				return
+			}
+			assert.Equal(t, expectedOutput, string(bytes))
+		}
+		test( "{\"Array\":[1,2,3],\"Bsort\":true,\"Hello\":\"World\",\"Nested\":{\"Bool\":true,\"Scaler\":1.213123123,\"Scientic\":100}}", `{
+"Hello": "World",
+
+"Nested": {
+    "Scaler": 1.213123123,
+  "Scientic": 1E2,
+"Bool": true
+},
+"Bsort": true,
+"Array": [ 1, 2, 3 ]
+}`)
+		test(`{}`, `{   }`)
 	})
 }
 
