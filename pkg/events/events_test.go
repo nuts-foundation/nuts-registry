@@ -160,7 +160,6 @@ func TestRefCalculation(t *testing.T) {
 			})
 		}
 		t.Run("event version = 0", func(t *testing.T) {
-			logrus.SetLevel(logrus.DebugLevel)
 			event := CreateEvent("Test", map[string]interface{}{"Hello": "World"}, nil)
 			(event.(*jsonEvent)).EventVersion = 0
 			event.Sign(func([]byte) ([]byte, error) {
@@ -239,13 +238,13 @@ func TestMarshalEvent(t *testing.T) {
 	t.Run("marshal v1 event", func(t *testing.T) {
 		payload := map[string]interface{}{"Hello": "World"}
 		event := CreateEvent("v1", payload, []byte{1, 2, 3})
-		l, _ := time.LoadLocation("Local")
+		l, _ := time.LoadLocation("UTC")
 		(event.(*jsonEvent)).EventIssuedAt = time.Date(1970, 1, 1, 0, 0, 0, 0, l)
 
 		expected := `{
 	"issuedAt": ` + toJSON(event.IssuedAt()) + `,
 	"prev":		"010203",
-	"ref":		"ba3febad74af4ec1b5afc45586cf0807958da552",
+	"ref":		"da46d3559e472e5c7fde9d7793f2a2c5626b9f75",
 	"type":		"v1",
 	"version":	1,
 	"payload": 	{"Hello": "World"}

@@ -11,7 +11,7 @@ An event contains the following fields:
 =====     ======  =====  =============================================  ========
 Field     Type    Since  Description                                    Example
 =====     ======  =====  =============================================  ========
-issuedAt  string  v0     Time at which the event was issued
+issuedAt  string  v0     Time at which the event was issued in UTC      1970-01-01T00:00:00Z
 type      string  v0     Type of the payload                            RegisterVendorEvent
 jws       string  v0     Optional. JWS-encoded signature of the event
 payload   object  v0     Actual payload of the event                    ``{"Message": "Hello, World!"}``

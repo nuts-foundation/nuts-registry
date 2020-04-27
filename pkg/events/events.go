@@ -205,7 +205,7 @@ func CreateEvent(eventType EventType, payload interface{}, previousEvent Ref) Ev
 		EventVersion:  currentEventVersion,
 		EventType:     string(eventType),
 		PreviousEvent: previousEvent,
-		EventIssuedAt: time.Now(),
+		EventIssuedAt: time.Now().UTC(),
 		EventPayload:  payload,
 	}
 }
