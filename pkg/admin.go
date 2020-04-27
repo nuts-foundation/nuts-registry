@@ -151,7 +151,7 @@ func (r *Registry) RegisterEndpoint(organizationID string, id string, url string
 		return nil, err
 	}
 	// Find out if this should be an update. That's the case if there's a RegisterEndpointEvent for the same organization
-	// and endpoint.
+	// and endpoint (ID).
 	parentEvent, err := r.EventSystem.FindLastEvent(func(event events.Event) bool {
 		if event.Type() != dom.RegisterEndpoint {
 			return false
