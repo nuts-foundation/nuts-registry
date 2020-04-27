@@ -26,7 +26,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	"github.com/sirupsen/logrus"
 	"io"
 	"time"
 )
@@ -57,6 +59,10 @@ func (r Ref) IsZero() bool {
 
 func (r Ref) String() string {
 	return hex.EncodeToString(r)
+}
+
+func (r Ref) Equal(other Ref) bool {
+	return bytes.Equal(r, other)
 }
 
 // Version
@@ -122,7 +128,7 @@ func (j jsonEvent) Ref() Ref {
 	_ = json.Unmarshal(eventAsJSON, &eventAsMap)
 	// Make a list of keys to be included in the ref
 	var includeKeys = []string{"issuedAt","type","jws","payload"}
-	if j.Version() == 1 {
+	if j.Version() >= 1 {
 		includeKeys = append(includeKeys, "prev", "version")
 	}
 	// Remove all fields from the map that shouldn't be in there for this version
@@ -140,11 +146,16 @@ func (j jsonEvent) Ref() Ref {
 	}
 	strippedJSON, _ := json.Marshal(eventAsMap)
 	canonicalizedJSON, err := canonicalizeJSON(strippedJSON)
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		logrus.WithFields(map[string]interface{}{
+			"event": string(eventAsJSON),
+			"canonicalized": string(canonicalizedJSON),
+		}).Debug("Calculating event ref")
+	}
 	if err != nil {
 		// This should never happen
 		panic(err)
 	}
-	println(string(canonicalizedJSON))
 	sum := sha1.Sum(canonicalizedJSON)
 	return sum[:]
 }
@@ -178,6 +189,12 @@ func EventFromJSON(data []byte) (Event, error) {
 	}
 	if e.EventType == "" {
 		return nil, ErrMissingEventType
+	}
+	if !e.ThisEventRef.IsZero() {
+		actualRef := e.Ref()
+		if !e.ThisEventRef.Equal(actualRef) {
+			return nil, fmt.Errorf("event ref is invalid (specified: %s, actual: %s)", e.ThisEventRef, actualRef)
+		}
 	}
 	return &e, nil
 }
