@@ -31,6 +31,18 @@ import (
 
 type RestInterfaceStub struct{}
 
+func (e RestInterfaceStub) RefreshOrganizationCertificate(ctx echo.Context, id string) error {
+	var err error
+
+	return err
+}
+
+func (e RestInterfaceStub) RefreshVendorCertificate(ctx echo.Context) error {
+	var err error
+
+	return err
+}
+
 func (e RestInterfaceStub) DeprecatedVendorClaim(ctx echo.Context, id string) error {
 	var err error
 

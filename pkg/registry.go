@@ -91,6 +91,13 @@ type RegistryClient interface {
 	// RegisterVendor registers a vendor with the given id, name for the specified domain. If the vendor with this ID
 	// already exists, it functions as an update.
 	RegisterVendor(name string, domain string) (events.Event, error)
+
+	// RefreshVendorCertificate issues a new certificate for the current vendor. If successful it returns the resulting event.
+	RefreshVendorCertificate() (events.Event, error)
+
+	// RefreshOrganizationCertificate issues a new certificate for the organization. The organization must be registered under the current vendor.
+	// If successful it returns the resulting event.
+	RefreshOrganizationCertificate(organizationID string) (events.Event, error)
 }
 
 // RegistryConfig holds the config
@@ -115,7 +122,6 @@ type Registry struct {
 	configOnce  sync.Once
 	_logger     *logrus.Entry
 	closers     []chan struct{}
-	vendor      db.Vendor
 }
 
 var instance *Registry

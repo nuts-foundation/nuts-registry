@@ -57,6 +57,20 @@ paths:
                 $ref: '#/components/schemas/Event'
         '400':
           description: "incorrect data"
+  /api/vendor/refresh-cert:
+    post:
+      summary: "Refreshes the vendor's certificate."
+      description: "New vendor CA certificate is issued using existing keys. If there are no keys, they're generated."
+      operationId: "refreshVendorCertificate"
+      tags:
+        - vendors
+      responses:
+        '200':
+          description: "Certificate has been refreshed"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
   /api/organization:
     post:
       summary: "Claim an organization for the current vendor (registers an organization under the vendor in the registry)."
@@ -128,6 +142,28 @@ paths:
             text/plain:
               schema:
                 type: string
+  /api/organization/{id}/refresh-cert:
+    post:
+      summary: "Refreshes the organization's certificate."
+      description: "New organization certificate is issued using existing keys. If there are no keys, they're generated."
+      operationId: "refreshOrganizationCertificate"
+      tags:
+        - organizations
+      parameters:
+        - name: id
+          in: path
+          description: "URL encoded identifier"
+          required: true
+          example: "urn:oid:2.16.840.1.113883.2.4.6.1:00000007"
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Certificate has been refreshed"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
   /api/organization/{id}/endpoints:
     post:
       summary: "Adds/updates an endpoint for this organisation to the registry. If the endpoint already exists (matched by endpoint ID) it is updated."

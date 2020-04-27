@@ -28,7 +28,10 @@ func (r *Registry) verifyAndMigrateRegistry(config core.NutsConfigValues) {
 func (r *Registry) verifyAndMigrateVendorCertificates(vendor *db.Vendor, identity string) {
 	certificates := vendor.GetActiveCertificates()
 	if len(certificates) == 0 {
-		logrus.Info("No active certificates found for configured vendor, this will be auto-migrated in the next version.")
+		logrus.Info("No active certificates found for configured vendor, a new one will be issued.")
+		if _, err := r.RefreshVendorCertificate(); err != nil {
+			logrus.Error("Couldn't issue vendor certificate: ", err)
+		}
 	} else {
 		if !r.crypto.KeyExistsFor(types.LegalEntity{URI: identity}) {
 			logrus.Error("Active certificates were found for configured vendor, but there's no private key available for cryptographic operations. Please recover your key material.")
@@ -39,7 +42,10 @@ func (r *Registry) verifyAndMigrateVendorCertificates(vendor *db.Vendor, identit
 func (r *Registry) verifyAndMigrateOrganisation(org *db.Organization) {
 	certificates := org.GetActiveCertificates()
 	if len(certificates) == 0 {
-		logrus.Infof("No active certificates found for organisation (id = %s), this will be auto-migrated in the next version.", org.Identifier)
+		logrus.Infof("No active certificates found for organisation (id = %s), a new one will be issued.", org.Identifier)
+		if _, err := r.RefreshOrganizationCertificate(org.Identifier.String()); err != nil {
+			logrus.Error("Couldn't issue organization certificate: ", err)
+		}
 	} else {
 		if !r.crypto.KeyExistsFor(types.LegalEntity{URI: org.Identifier.String()}) {
 			logrus.Errorf("Active certificates were found for organisation (id = %s), but there's no private key available for cryptographic operations. Please recover your key material.", org.Identifier)

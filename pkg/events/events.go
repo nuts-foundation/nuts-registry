@@ -150,7 +150,7 @@ func (j jsonEvent) Ref() Ref {
 		logrus.WithFields(map[string]interface{}{
 			"event": string(eventAsJSON),
 			"canonicalized": string(canonicalizedJSON),
-		}).Debug("Calculating event ref")
+		}).Trace("Calculating event ref")
 	}
 	if err != nil {
 		// This should never happen

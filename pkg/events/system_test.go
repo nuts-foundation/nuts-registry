@@ -173,7 +173,7 @@ func TestLoadEventsInvalidJson(t *testing.T) {
 	system := NewEventSystem()
 	system.Configure(repo.Directory + "/events")
 	err = system.LoadAndApplyEvents()
-	assert.EqualError(t, err, "invalid character '{' looking for beginning of object key string")
+	assert.EqualError(t, err, "error reading event: 20200123091400001-InvalidJson.json: unable to parse event JSON: invalid character '{' looking for beginning of object key string")
 }
 
 func TestLoadEventsEmptyFile(t *testing.T) {
@@ -185,7 +185,7 @@ func TestLoadEventsEmptyFile(t *testing.T) {
 	system := NewEventSystem()
 	system.Configure(repo.Directory + "/events")
 	err = system.LoadAndApplyEvents()
-	assert.EqualError(t, err, "unexpected end of JSON input")
+	assert.EqualError(t, err, "error reading event: 20200123091400001-EmptyFile.json: unable to parse event JSON: unexpected end of JSON input")
 }
 
 func TestParseTimestamp(t *testing.T) {

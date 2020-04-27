@@ -26,6 +26,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/api"
 	"github.com/nuts-foundation/nuts-registry/client"
@@ -36,6 +37,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"time"
 )
 
 // registryClientCreator is a variable to aid testability
@@ -143,6 +145,61 @@ func cmd() *cobra.Command {
 				return err
 			}
 			logrus.Info("Vendor registered.")
+			logEventToConsole(event)
+			return nil
+		},
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "refresh-vendor-cert",
+		Short: "Issues a new vendor certificate using existing keys (or newly generated if none exist)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cl := registryClientCreator()
+			event, err := cl.RefreshVendorCertificate()
+			if err != nil {
+				logrus.Errorf("Unable to refresh vendor certificate: %v", err)
+				return err
+			}
+			payload := domain.RegisterVendorEvent{}
+			err = event.Unmarshal(&payload)
+			if err != nil {
+				logrus.Error("Unable to parse event payload.", err)
+			}
+			certificates := cert.GetActiveCertificates(payload.Keys, time.Now())
+			if len(certificates) == 0 {
+				logrus.Error("Certificate refresh succeeded, but couldn't find any activate certificate.")
+			} else {
+				// GetActiveCertificates returns the certificate with the longest validity first.
+				logrus.Infof("Vendor certificate refreshed, new certificate is valid until %v", certificates[0].NotAfter)
+			}
+			logEventToConsole(event)
+			return nil
+		},
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "refresh-organization-cert [orgID]",
+		Short: "Issues a new organization certificate using existing keys (or newly generated if none exist)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cl := registryClientCreator()
+			event, err := cl.RefreshOrganizationCertificate(args[0])
+			if err != nil {
+				logrus.Errorf("Unable to refresh organization certificate: %v", err)
+				return err
+			}
+			payload := domain.VendorClaimEvent{}
+			err = event.Unmarshal(&payload)
+			if err != nil {
+				logrus.Error("Unable to parse event payload.", err)
+			}
+			certificates := cert.GetActiveCertificates(payload.OrgKeys, time.Now())
+			if len(certificates) == 0 {
+				logrus.Error("Certificate refresh succeeded, but couldn't find any activate certificate.")
+			} else {
+				// GetActiveCertificates returns the certificate with the longest validity first.
+				logrus.Infof("Organization certificate refreshed, new certificate is valid until %v", certificates[0].NotAfter)
+			}
 			logEventToConsole(event)
 			return nil
 		},

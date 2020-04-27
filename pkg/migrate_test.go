@@ -40,17 +40,18 @@ func TestRegistry_verifyAndMigrateRegistry(t *testing.T) {
 		defer cxt.close()
 		cxt.registry.verifyAndMigrateRegistry(mockConfig{vendorId})
 	})
-	t.Run("vendor has no certificates", func(t *testing.T) {
+	t.Run("vendor has no certificates, issued", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
 		err := cxt.registry.EventSystem.PublishEvent(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{
 			Name:       vendorName,
-			Identifier: domain.Identifier(vendorId),
+			Identifier: vendorId,
 		}, nil))
 		if !assert.NoError(t, err) {
 			return
 		}
 		cxt.registry.verifyAndMigrateRegistry(mockConfig{vendorId})
+		assert.Len(t, cxt.registry.Db.VendorByID(vendorId).Keys, 1)
 	})
 	t.Run("vendor has certificates but no key material", func(t *testing.T) {
 		cxt := createTestContext(t)
@@ -67,11 +68,18 @@ func TestRegistry_verifyAndMigrateRegistry(t *testing.T) {
 		defer cxt.close()
 		cxt.registry.RegisterVendor(vendorName, domain.HealthcareDomain)
 		cxt.registry.EventSystem.PublishEvent(events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
-			VendorIdentifier: domain.Identifier(vendorId),
+			VendorIdentifier: vendorId,
 			OrgIdentifier:    domain.Identifier(orgId),
 			OrgName:          orgName,
 		}, nil))
+		// Assert that the org has no keys
+		org, _ := cxt.registry.Db.OrganizationById(orgId)
+		assert.Len(t, org.Keys, 0)
+		// Migrate
 		cxt.registry.verifyAndMigrateRegistry(mockConfig{vendorId})
+		// Assert a new certificate was issued
+		org, _ = cxt.registry.Db.OrganizationById(orgId)
+		assert.Len(t, org.Keys, 1)
 	})
 	t.Run("org has certificates but no key material", func(t *testing.T) {
 		cxt := createTestContext(t)

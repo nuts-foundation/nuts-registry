@@ -49,6 +49,22 @@ func (apiResource ApiWrapper) DeprecatedVendorClaim(ctx echo.Context, _ string) 
 	return apiResource.VendorClaim(ctx)
 }
 
+func (apiResource ApiWrapper) RefreshOrganizationCertificate(ctx echo.Context, id string) error {
+	event, err := apiResource.R.RefreshOrganizationCertificate(id)
+	if err != nil {
+		return ctx.String(http.StatusInternalServerError, err.Error())
+	}
+	return ctx.JSON(http.StatusOK, event)
+}
+
+func (apiResource ApiWrapper) RefreshVendorCertificate(ctx echo.Context) error {
+	event, err := apiResource.R.RefreshVendorCertificate()
+	if err != nil {
+		return ctx.String(http.StatusInternalServerError, err.Error())
+	}
+	return ctx.JSON(http.StatusOK, event)
+}
+
 // RegisterEndpoint is the Api implementation for registering an endpoint.
 func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) error {
 	unescapedID, err := url.PathUnescape(id)

@@ -49,6 +49,38 @@ func TestVendorClaim(t *testing.T) {
 	}))
 }
 
+func TestRefreshVendorCertificate(t *testing.T) {
+	command := cmd()
+	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil)
+		client.EXPECT().RefreshVendorCertificate().Return(event, nil)
+		command.SetArgs([]string{"refresh-vendor-cert"})
+		err := command.Execute()
+		assert.NoError(t, err)
+	}))
+	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		client.EXPECT().RefreshVendorCertificate().Return(nil, errors.New("failed"))
+		command.SetArgs([]string{"refresh-vendor-cert"})
+		command.Execute()
+	}))
+}
+
+func TestRefreshOrganizationCertificate(t *testing.T) {
+	command := cmd()
+	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		event := events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{}, nil)
+		client.EXPECT().RefreshOrganizationCertificate("123").Return(event, nil)
+		command.SetArgs([]string{"refresh-organization-cert", "123"})
+		err := command.Execute()
+		assert.NoError(t, err)
+	}))
+	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		client.EXPECT().RefreshOrganizationCertificate("123").Return(nil, errors.New("failed"))
+		command.SetArgs([]string{"refresh-organization-cert", "123"})
+		command.Execute()
+	}))
+}
+
 func TestRegisterEndpoint(t *testing.T) {
 	command := cmd()
 	t.Run("ok - bare minimum parameters", withMock(func(t *testing.T, client *mock.MockRegistryClient) {

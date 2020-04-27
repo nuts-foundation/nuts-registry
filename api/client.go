@@ -56,6 +56,26 @@ func (hb HttpClient) client() ClientInterface {
 	return response
 }
 
+func (hb HttpClient) RefreshVendorCertificate() (events.Event, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
+	defer cancel()
+	response, err := hb.client().RefreshVendorCertificate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return testAndParseEventResponse(response)
+}
+
+func (hb HttpClient) RefreshOrganizationCertificate(organizationID string) (events.Event, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
+	defer cancel()
+	response, err := hb.client().RefreshOrganizationCertificate(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	return testAndParseEventResponse(response)
+}
+
 // EndpointsByOrganization is the client Api implementation for getting all or certain types of endpoints for an organization
 func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpointType *string) ([]db.Endpoint, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)

@@ -12,7 +12,6 @@ import (
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/cert"
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/nuts-foundation/nuts-registry/test"
@@ -276,7 +275,6 @@ func TestRegistryAdministration_RegisterVendor(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		println(string(event.Marshal()))
 		// Verify RegisterVendor event emitted
 		if !assert.NotNil(t, registerVendorEvent) {
 			return
@@ -306,6 +304,59 @@ func TestRegistryAdministration_RegisterVendor(t *testing.T) {
 		})
 		_, err := cxt.registry.RegisterVendor("Foobar Software", "healthcare")
 		assert.Contains(t, err.Error(), "unit test error")
+	})
+}
+
+func TestRegistryAdministration_RefreshVendorCertificate(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		cxt := createTestContext(t)
+		defer cxt.close()
+		cxt.registry.RegisterVendor("Test Vendor", domain.HealthcareDomain)
+		event, err := cxt.registry.RefreshVendorCertificate()
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.NotNil(t, event.Signature())
+		vendor := cxt.registry.Db.VendorByID(vendorId)
+		assert.Len(t, vendor.Keys, 2)
+	})
+	t.Run("error - vendor not found", func(t *testing.T) {
+		cxt := createTestContext(t)
+		defer cxt.close()
+		event, err := cxt.registry.RefreshVendorCertificate()
+		assert.Nil(t, event)
+		assert.EqualError(t, err, "vendor doesn't exist (id=urn:oid:1.3.6.1.4.1.54851.4:4)")
+	})
+}
+
+func TestRegistryAdministration_RefreshOrganizationCertificate(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		cxt := createTestContext(t)
+		defer cxt.close()
+		cxt.registry.RegisterVendor("Test Vendor", domain.HealthcareDomain)
+		cxt.registry.VendorClaim("123", "Test Org", nil)
+		event, err := cxt.registry.RefreshOrganizationCertificate("123")
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.NotNil(t, event.Signature())
+		org, _ := cxt.registry.Db.OrganizationById("123")
+		assert.Len(t, org.Keys, 2)
+	})
+	t.Run("error - vendor not found", func(t *testing.T) {
+		cxt := createTestContext(t)
+		defer cxt.close()
+		event, err := cxt.registry.RefreshOrganizationCertificate("123")
+		assert.Nil(t, event)
+		assert.EqualError(t, err, "vendor not found (id=urn:oid:1.3.6.1.4.1.54851.4:4)")
+	})
+	t.Run("error - organization not found", func(t *testing.T) {
+		cxt := createTestContext(t)
+		defer cxt.close()
+		cxt.registry.RegisterVendor("Test Vendor", domain.HealthcareDomain)
+		event, err := cxt.registry.RefreshOrganizationCertificate("123")
+		assert.Nil(t, event)
+		assert.EqualError(t, err, "organization (id=123) not registered for vendor")
 	})
 }
 
@@ -353,15 +404,21 @@ func TestRegistry_signAsOrganization(t *testing.T) {
 	t.Run("error - unable to create CSR", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		cxt.registry.vendor = db.Vendor{Name: "Vendor"}
-		_, err := cxt.registry.signAsOrganization("orgId", "", []byte{1, 2, 3}, time.Now(), true)
+		err := cxt.registry.EventSystem.ProcessEvent(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{Identifier: vendorId, Name: "Vendor"}, nil))
+		if !assert.NoError(t, err) {
+			return
+		}
+		_, err = cxt.registry.signAsOrganization("orgId", "", []byte{1, 2, 3}, time.Now(), true)
 		assert.Equal(t, "unable to create CSR for JWS signing: missing organization name", err.Error(), )
 	})
 	t.Run("error - unable to sign JWS (CA key material missing)", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		cxt.registry.vendor = db.Vendor{Name: "Vendor"}
-		_, err := cxt.registry.signAsOrganization("orgId", "Foobar", nil, time.Now(), true)
+		err := cxt.registry.EventSystem.ProcessEvent(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{Identifier: vendorId, Name: "Vendor"}, nil))
+		if !assert.NoError(t, err) {
+			return
+		}
+		_, err = cxt.registry.signAsOrganization("orgId", "Foobar", nil, time.Now(), true)
 		assert.Contains(t, err.Error(), "unable to sign JWS: unknown CA")
 	})
 }

@@ -759,6 +759,60 @@ func TestApiResource_VendorClaim(t *testing.T) {
 	})
 }
 
+func TestApiResource_RefreshOrganizationCertificate(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	t.Run("refresh organization certificate", func(t *testing.T) {
+		t.Run("200", func(t *testing.T) {
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
+			registryClient.EXPECT().RefreshOrganizationCertificate(gomock.Eq("1234"))
+
+			b, _ := json.Marshal(VendorClaimEvent{
+				OrgName: "def",
+			})
+
+			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/organization/:id/refresh-cert")
+			c.SetParamNames("id")
+			c.SetParamValues("1234")
+
+			err := wrapper.RefreshOrganizationCertificate(c)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, rec.Code)
+		})
+	})
+}
+
+func TestApiResource_RefreshVendorCertificate(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	t.Run("refresh vendor certificate", func(t *testing.T) {
+		t.Run("200", func(t *testing.T) {
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
+			registryClient.EXPECT().RefreshVendorCertificate()
+
+			b, _ := json.Marshal(RegisterVendorEvent{
+				Name: "def",
+			})
+
+			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/vendor/refresh-cert")
+
+			err := wrapper.RefreshVendorCertificate(c)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, rec.Code)
+		})
+	})
+}
+
 func TestApiResource_RegisterEndpoint(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
