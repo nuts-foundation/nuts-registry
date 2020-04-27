@@ -16,7 +16,6 @@ import (
 	"time"
 )
 
-
 func TestRegisterVendorEvent(t *testing.T) {
 	t.Run("check default domain fallback", func(t *testing.T) {
 		event := events.CreateEvent(RegisterVendor, RegisterVendorEvent{}, nil)
@@ -149,6 +148,20 @@ func TestGetEventTypes(t *testing.T) {
 	}
 }
 
+func TestVendorEventMatcher(t *testing.T) {
+	assert.False(t, VendorEventMatcher("123")(events.CreateEvent(RegisterVendor, RegisterVendorEvent{}, nil)))
+	assert.False(t, VendorEventMatcher("123")(events.CreateEvent("foobar", struct{}{}, nil)))
+	assert.True(t, VendorEventMatcher("123")(events.CreateEvent(RegisterVendor, RegisterVendorEvent{Identifier: "123"}, nil)))
+}
+
+func TestOrganizationEventMatcher(t *testing.T) {
+	assert.False(t, OrganizationEventMatcher("123", "456")(events.CreateEvent("foobar", struct{}{}, nil)))
+	assert.False(t, OrganizationEventMatcher("123", "456")(events.CreateEvent(VendorClaim, VendorClaimEvent{}, nil)))
+	assert.False(t, OrganizationEventMatcher("123", "456")(events.CreateEvent(VendorClaim, VendorClaimEvent{VendorIdentifier: "123"}, nil)))
+	assert.False(t, OrganizationEventMatcher("123", "456")(events.CreateEvent(VendorClaim, VendorClaimEvent{OrgIdentifier: "456"}, nil)))
+	assert.True(t, OrganizationEventMatcher("123", "456")(events.CreateEvent(VendorClaim, VendorClaimEvent{VendorIdentifier: "123", OrgIdentifier: "456"}, nil)))
+}
+
 func TestNewTrustStore(t *testing.T) {
 	ts := NewTrustStore().(*trustStore)
 	assert.NotNil(t, ts.certPool)
@@ -163,7 +176,7 @@ func Test_trustStore_HandleEvent(t *testing.T) {
 		jwkAsMap, _ := crypto.JwkToMap(key)
 		event := RegisterVendorEvent{
 			Identifier: Identifier("vendorId"),
-			Keys: []interface{}{jwkAsMap},
+			Keys:       []interface{}{jwkAsMap},
 		}
 		err := ts.handleEvent(events.CreateEvent(RegisterVendor, event, nil), nil)
 		if !assert.NoError(t, err) {

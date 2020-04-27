@@ -169,6 +169,50 @@ func TestHttpClient_RegisterVendor(t *testing.T) {
 	})
 }
 
+func TestHttpClient_RefreshVendorCertificate(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil)
+		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
+		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
+
+		event, err := c.RefreshVendorCertificate()
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.NotNil(t, event)
+	})
+	t.Run("error 500", func(t *testing.T) {
+		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
+		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
+
+		event, err := c.RefreshVendorCertificate()
+		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
+		assert.Nil(t, event)
+	})
+}
+
+func TestHttpClient_RefreshOrganizationCertificate(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		event := events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{}, nil)
+		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
+		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
+
+		event, err := c.RefreshOrganizationCertificate("1234")
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.NotNil(t, event)
+	})
+	t.Run("error 500", func(t *testing.T) {
+		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
+		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
+
+		event, err := c.RefreshOrganizationCertificate("1234")
+		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
+		assert.Nil(t, event)
+	})
+}
+
 func TestHttpClient_RegisterEndpoint(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		event := events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{}, nil)
@@ -188,6 +232,41 @@ func TestHttpClient_RegisterEndpoint(t *testing.T) {
 		event, err := c.RegisterEndpoint("orgId", "id", "url", "type", "status", nil)
 		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
+	})
+}
+
+func TestHttpClient_Verify(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		response := altVerifyResponse{Fix: false, Events: []events.Event{
+			events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{}, nil),
+			events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{}, nil),
+			events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{}, nil),
+		}}
+		responseData, _ := json.Marshal(response)
+		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: responseData})
+		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
+		evts, fix, err := c.Verify(true)
+		assert.NoError(t, err)
+		assert.False(t, fix)
+		assert.Len(t, evts, 3)
+	})
+	t.Run("error - http status 500", func(t *testing.T) {
+		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
+		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
+
+		evts, fix, err := c.Verify(true)
+		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
+		assert.Nil(t, evts)
+		assert.False(t, fix)
+	})
+	t.Run("error - invalid response", func(t *testing.T) {
+		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: []byte("foobar")})
+		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
+
+		evts, fix, err := c.Verify(true)
+		assert.EqualError(t, err, "invalid character 'o' in literal false (expecting 'a')")
+		assert.Nil(t, evts)
+		assert.False(t, fix)
 	})
 }
 

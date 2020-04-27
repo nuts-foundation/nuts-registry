@@ -1,15 +1,21 @@
 package engine
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"errors"
 	"github.com/golang/mock/gomock"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-registry/mock"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
+	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 func TestRegisterVendor(t *testing.T) {
@@ -46,6 +52,91 @@ func TestVendorClaim(t *testing.T) {
 		client.EXPECT().VendorClaim(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("failed"))
 		command.SetArgs([]string{"vendor-claim", "orgId", "orgName"})
 		command.Execute()
+	}))
+}
+
+func TestRefreshVendorCertificate(t *testing.T) {
+	command := cmd()
+	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{Keys: []interface{}{generateCertificate()}}, nil)
+		client.EXPECT().RefreshVendorCertificate().Return(event, nil)
+		command.SetArgs([]string{"refresh-vendor-cert"})
+		err := command.Execute()
+		assert.NoError(t, err)
+	}))
+	t.Run("ok - no certs", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil)
+		client.EXPECT().RefreshVendorCertificate().Return(event, nil)
+		command.SetArgs([]string{"refresh-vendor-cert"})
+		err := command.Execute()
+		assert.NoError(t, err)
+	}))
+	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		client.EXPECT().RefreshVendorCertificate().Return(nil, errors.New("failed"))
+		command.SetArgs([]string{"refresh-vendor-cert"})
+		command.Execute()
+	}))
+}
+
+func TestRefreshOrganizationCertificate(t *testing.T) {
+	command := cmd()
+	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		event := events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{OrgKeys: []interface{}{generateCertificate()}}, nil)
+		client.EXPECT().RefreshOrganizationCertificate("123").Return(event, nil)
+		command.SetArgs([]string{"refresh-organization-cert", "123"})
+		err := command.Execute()
+		assert.NoError(t, err)
+	}))
+	t.Run("ok - no certs", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		event := events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{}, nil)
+		client.EXPECT().RefreshOrganizationCertificate("123").Return(event, nil)
+		command.SetArgs([]string{"refresh-organization-cert", "123"})
+		err := command.Execute()
+		assert.NoError(t, err)
+	}))
+	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		client.EXPECT().RefreshOrganizationCertificate("123").Return(nil, errors.New("failed"))
+		command.SetArgs([]string{"refresh-organization-cert", "123"})
+		command.Execute()
+	}))
+}
+
+func TestVerify(t *testing.T) {
+	t.Run("ok - fix data", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		client.EXPECT().Verify(true).Return(nil, false, nil)
+		command := cmd()
+		command.SetArgs([]string{"verify", "-f"})
+		err := command.Execute()
+		assert.NoError(t, err)
+	}))
+	t.Run("ok - nothing to do", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		client.EXPECT().Verify(false).Return(nil, false, nil)
+		command := cmd()
+		command.SetArgs([]string{"verify"})
+		err := command.Execute()
+		assert.NoError(t, err)
+	}))
+
+	t.Run("ok - data needs fixing", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		client.EXPECT().Verify(false).Return(nil, true, nil)
+		command := cmd()
+		command.SetArgs([]string{"verify"})
+		err := command.Execute()
+		assert.NoError(t, err)
+	}))
+	t.Run("ok - events emitted", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		client.EXPECT().Verify(true).Return([]events.Event{events.CreateEvent("foobar", struct{}{}, nil)}, true, nil)
+		command := cmd()
+		command.SetArgs([]string{"verify", "-f"})
+		err := command.Execute()
+		assert.NoError(t, err)
+	}))
+	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		client.EXPECT().Verify(false).Return(nil, false, errors.New("failed"))
+		command := cmd()
+		command.SetArgs([]string{"verify"})
+		err := command.Execute()
+		assert.Error(t, err)
 	}))
 }
 
@@ -89,6 +180,14 @@ func TestPrintVersion(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func Test_flagSet(t *testing.T) {
+	assert.NotNil(t, flagSet())
+}
+
+func TestNewRegistryEngine(t *testing.T) {
+	assert.NotNil(t, NewRegistryEngine())
+}
+
 func withMock(test func(t *testing.T, client *mock.MockRegistryClient)) func(t *testing.T) {
 	return func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
@@ -101,10 +200,11 @@ func withMock(test func(t *testing.T, client *mock.MockRegistryClient)) func(t *
 	}
 }
 
-func Test_flagSet(t *testing.T) {
-	assert.NotNil(t, flagSet())
-}
-
-func TestNewRegistryEngine(t *testing.T) {
-	assert.NotNil(t, NewRegistryEngine())
+func generateCertificate() map[string]interface{} {
+	privateKey, _ := rsa.GenerateKey(rand.Reader, 1024)
+	certAsBytes := test.GenerateCertificateEx(time.Now(), 1, privateKey)
+	cert, _ := x509.ParseCertificate(certAsBytes)
+	certAsJWK, _ := crypto.CertificateToJWK(cert)
+	certAsMap, _ := crypto.JwkToMap(certAsJWK)
+	return certAsMap
 }

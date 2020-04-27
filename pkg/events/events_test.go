@@ -20,6 +20,33 @@ func (t *testEvent) PostProcessUnmarshal(event Event) error {
 	return nil
 }
 
+func TestEventsFromJSON(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		singleEvent := `{
+ "version": 1,
+ "type": "Test",
+ "issuedAt": "2020-04-27T10:25:22.861204915+02:00",
+ "ref": "b1aa2fd05d040d20fe55152e14c336c0ab9d0e79",
+ "prev": "010203",
+ "jws": "my.awesome.jws",
+ "payload": {
+   "Hello": "World"
+ }
+}`
+		input := "[" + singleEvent + ", " + singleEvent + "]"
+		events, err := EventsFromJSON([]byte(input))
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Len(t, events, 2)
+	})
+	t.Run("error - unmarshal", func(t *testing.T) {
+		events, err := EventsFromJSON([]byte("foobar"))
+		assert.Error(t, err)
+		assert.Empty(t, events)
+	})
+}
+
 func TestEventFromJSON(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		t.Run("v0", func(t *testing.T) {
@@ -49,6 +76,11 @@ func TestEventFromJSON(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, event)
 		})
+	})
+	t.Run("error - unmarshalling", func(t *testing.T) {
+		event, err := EventFromJSON([]byte("foobar"))
+		assert.Error(t, err)
+		assert.Nil(t, event)
 	})
 	t.Run("error - missing event type", func(t *testing.T) {
 		_, err := EventFromJSON([]byte("{}"))

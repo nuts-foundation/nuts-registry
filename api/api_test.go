@@ -580,6 +580,39 @@ func TestApiResource_OrganizationById(t *testing.T) {
 	})
 }
 
+func TestApiResource_Verify(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	t.Run("ok - http status 200", func(t *testing.T) {
+		var registryClient = mock.NewMockRegistryClient(mockCtrl)
+		e, wrapper := initMockEcho(registryClient)
+		registryClient.EXPECT().Verify(true)
+
+		req := httptest.NewRequest(echo.POST, "/?fix=true", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/admin/verify")
+
+		err := wrapper.Verify(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+	t.Run("error - http status 500", func(t *testing.T) {
+		var registryClient = mock.NewMockRegistryClient(mockCtrl)
+		e, wrapper := initMockEcho(registryClient)
+		registryClient.EXPECT().Verify(true).Return([]events.Event{}, false, errors.New("oops"))
+
+		req := httptest.NewRequest(echo.POST, "/?fix=true", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/admin/verify")
+
+		_ = wrapper.Verify(c)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	})
+}
+
 func TestApiResource_RegisterVendor(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -759,6 +792,69 @@ func TestApiResource_VendorClaim(t *testing.T) {
 	})
 }
 
+func TestApiResource_RefreshOrganizationCertificate(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	t.Run("refresh organization certificate", func(t *testing.T) {
+		t.Run("200", func(t *testing.T) {
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
+			registryClient.EXPECT().RefreshOrganizationCertificate(gomock.Eq("1234"))
+
+			req := httptest.NewRequest(echo.POST, "/", nil)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/organization/:id/refresh-cert")
+			c.SetParamNames("id")
+			c.SetParamValues("1234")
+
+			err := wrapper.RefreshOrganizationCertificate(c)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, rec.Code)
+		})
+		t.Run("400", func(t *testing.T) {
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
+			registryClient.EXPECT().RefreshOrganizationCertificate(gomock.Eq("1234")).Return(nil, ErrOrganizationNotFound)
+
+			req := httptest.NewRequest(echo.POST, "/", nil)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/organization/:id/refresh-cert")
+			c.SetParamNames("id")
+			c.SetParamValues("1234")
+
+			err := wrapper.RefreshOrganizationCertificate(c)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Equal(t, ErrOrganizationNotFound.Error(), rec.Body.String())
+		})
+	})
+}
+
+func TestApiResource_RefreshVendorCertificate(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	t.Run("refresh vendor certificate", func(t *testing.T) {
+		t.Run("200", func(t *testing.T) {
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
+			registryClient.EXPECT().RefreshVendorCertificate()
+
+			req := httptest.NewRequest(echo.POST, "/", nil)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/vendor/refresh-cert")
+
+			err := wrapper.RefreshVendorCertificate(c)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, rec.Code)
+		})
+	})
+}
+
 func TestApiResource_RegisterEndpoint(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -841,5 +937,27 @@ func TestApiResource_RegisterEndpoint(t *testing.T) {
 				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
 			}
 		})
+	})
+}
+
+func Test_listOfEvents(t *testing.T) {
+	t.Run("ok - unmarshal", func(t *testing.T) {
+		input := []events.Event{
+			events.CreateEvent("foobar", struct{}{}, nil),
+			events.CreateEvent("foobar", struct{}{}, nil),
+		}
+		data, _ := json.Marshal(input)
+		list := listOfEvents{}
+		err := json.Unmarshal(data, &list)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Len(t, list, 2)
+	})
+	t.Run("error - unmarshal", func(t *testing.T) {
+		list := listOfEvents{}
+		err := json.Unmarshal([]byte("{}"), &list)
+		assert.Error(t, err)
+		assert.Empty(t, list)
 	})
 }

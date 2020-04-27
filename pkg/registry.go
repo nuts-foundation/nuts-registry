@@ -94,6 +94,18 @@ type RegistryClient interface {
 	// RegisterVendor registers a vendor with the given id, name for the specified domain. If the vendor with this ID
 	// already exists, it functions as an update.
 	RegisterVendor(name string, domain string) (events.Event, error)
+
+	// RefreshVendorCertificate issues a new certificate for the current vendor. If successful it returns the resulting event.
+	RefreshVendorCertificate() (events.Event, error)
+
+	// RefreshOrganizationCertificate issues a new certificate for the organization. The organization must be registered under the current vendor.
+	// If successful it returns the resulting event.
+	RefreshOrganizationCertificate(organizationID string) (events.Event, error)
+
+	// Verify verifies the data in the registry owned by this node.
+	// If fix=true, data will be fixed/upgraded when necessary (e.g. issue certificates). Events resulting from fixing the data are returned.
+	// If the returned bool=true there's data to be fixed and Verify should be run with fix=true.
+	Verify(fix bool) ([]events.Event, bool, error)
 }
 
 // RegistryConfig holds the config
@@ -119,7 +131,6 @@ type Registry struct {
 	configOnce  sync.Once
 	_logger     *logrus.Entry
 	closers     []chan struct{}
-	vendor      db.Vendor
 }
 
 var instance *Registry
@@ -174,6 +185,10 @@ func (r *Registry) Configure() error {
 	return err
 }
 
+func (r *Registry) Verify(fix bool) ([]events.Event, bool, error) {
+	return r.verify(core.NutsConfig(), fix)
+}
+
 // EndpointsByOrganization is a wrapper for sam func on DB
 func (r *Registry) EndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error) {
 	return r.Db.FindEndpointsByOrganizationAndType(organizationIdentifier, endpointType)
@@ -196,7 +211,10 @@ func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
 // Start initiates the routines for auto-updating the data
 func (r *Registry) Start() error {
 	if r.Config.Mode == core.ServerEngineMode {
-		r.verifyAndMigrateRegistry(*core.NutsConfig())
+		_, _, err := r.verify(*core.NutsConfig(), false)
+		if err != nil {
+			logrus.Error("Error occurred during registry data verification: ", err)
+		}
 		switch cm := r.Config.SyncMode; cm {
 		case "fs":
 			return r.startFileSystemWatcher()

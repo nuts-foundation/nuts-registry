@@ -22,6 +22,7 @@
 package pkg
 
 import (
+	"github.com/spf13/cobra"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -348,3 +349,21 @@ func TestRegistry_ReverseLookup(t *testing.T) {
 		(&Registry{Db: mockDb}).ReverseLookup("id")
 	})
 }
+
+func TestRegistry_Verify(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	t.Run("ok", func(t *testing.T) {
+		mockDb := mock.NewMockDb(mockCtrl)
+		mockDb.EXPECT().VendorByID(vendorId).Return(&db.Vendor{Identifier:vendorId})
+		mockDb.EXPECT().OrganizationsByVendorID(vendorId).Return(nil)
+		os.Setenv("NUTS_IDENTITY", vendorId)
+		core.NutsConfig().Load(&cobra.Command{})
+		defer os.Unsetenv("NUTS_IDENTITY")
+		evts, fix, err := (&Registry{Db: mockDb}).Verify(false)
+		assert.NoError(t, err)
+		assert.True(t, fix)
+		assert.Empty(t, evts)
+	})
+}
+

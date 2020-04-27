@@ -81,6 +81,31 @@ func (r *RegisterVendorEvent) PostProcessUnmarshal(event events.Event) error {
 	return nil
 }
 
+// VendorEventMatcher returns an EventMatcher which matches the RegisterVendorEvent for the vendor with the specified ID.
+func VendorEventMatcher(vendorID string) events.EventMatcher {
+	return func(event events.Event) bool {
+		if event.Type() != RegisterVendor {
+			return false
+		}
+		var p = RegisterVendorEvent{}
+		_ = event.Unmarshal(&p)
+		return Identifier(vendorID) == p.Identifier
+	}
+}
+
+// OrganizationEventMatcher returns an EventMatcher which matches the VendorClaimEvent which registered the organization
+// with the specified ID for the specified vendor (also by ID).
+func OrganizationEventMatcher(vendorID string, organizationID string) events.EventMatcher {
+	return func(event events.Event) bool {
+		if event.Type() != VendorClaim {
+			return false
+		}
+		var payload = VendorClaimEvent{}
+		_ = event.Unmarshal(&payload)
+		return Identifier(vendorID) == payload.VendorIdentifier && Identifier(organizationID) == payload.OrgIdentifier
+	}
+}
+
 // VendorClaimEvent event
 type VendorClaimEvent struct {
 	VendorIdentifier Identifier `json:"vendorIdentifier"`

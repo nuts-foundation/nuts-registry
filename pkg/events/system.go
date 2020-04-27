@@ -150,9 +150,9 @@ func (system *diskEventSystem) ProcessEvent(event Event) error {
 	}
 	// Process
 	logrus.WithFields(map[string]interface{}{
-		"ref": event.Ref(),
-		"prev": event.PreviousRef(),
-		"type": event.Type(),
+		"ref":      event.Ref(),
+		"prev":     event.PreviousRef(),
+		"type":     event.Type(),
 		"issuedAt": event.IssuedAt(),
 	}).Info("Processing event")
 	handlers := system.eventHandlers[event.Type()]
@@ -211,6 +211,7 @@ func (system *diskEventSystem) LoadAndApplyEvents() error {
 		if !isJSONFile(entry) {
 			continue
 		}
+		logrus.Debugf("Parsing event: %s", entry.Name())
 
 		matches := eventFileRegex.FindStringSubmatch(entry.Name())
 		if len(matches) != 3 {
@@ -218,7 +219,7 @@ func (system *diskEventSystem) LoadAndApplyEvents() error {
 		}
 		event, err := readEvent(normalizeLocation(system.location, entry.Name()), matches[1])
 		if err != nil {
-			return err
+			return errors2.Wrapf(err, "error reading event: %s", entry.Name())
 		}
 		events = append(events, fileEvent{
 			file:  entry.Name(),
@@ -294,11 +295,11 @@ func parseTimestamp(timestamp string) (time.Time, error) {
 func readEvent(file string, timestamp string) (Event, error) {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "unable to parse event file")
 	}
 	event, err := EventFromJSON(data)
 	if err != nil {
-		return nil, err
+		return nil, errors2.Wrap(err, "unable to parse event JSON")
 	}
 	je := event.(*jsonEvent)
 	if je.EventIssuedAt.IsZero() {
