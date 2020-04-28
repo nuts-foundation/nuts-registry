@@ -7,7 +7,8 @@ This administration guide will help you to achieve the following goals:
 
 - :ref:`register-vendor-label` (representing your company).
 - :ref:`register-organisation-label` as vendor customer, which allows you to register endpoints.
-- :ref:`register-endpoint-label` for the care organisation, served by your Nuts node.
+- :ref:`register-endpoint-label` for the care organisation.
+- :ref:`update-endpoint-label` of the care organisation.
 
 Updating the central Nuts Registry
 ==================================
@@ -146,3 +147,12 @@ Flag  Description                                                               
 -i    Identifier for the endpoint. If not supplied a type 4 UUID is randomly generated.  `-i abc`
 -p    Endpoint metadata in the form of string properties, specified as **key=value**     `-p foo=bar`
 ====  =================================================================================  ==========
+
+.. _update-endpoint-label:
+
+4. Updating an existing endpoint
+================================
+
+To update an endpoint, simply register it again using the ``register-endpoint`` command using the same ID. The update
+completely replaces the previous registration, so specify all relevant fields and properties. Don't forget to specify
+the ID (using the ``-i`` flag) if it was auto-generated during endpoint registration.
