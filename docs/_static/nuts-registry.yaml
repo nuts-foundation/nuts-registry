@@ -130,7 +130,7 @@ paths:
                 type: string
   /api/organization/{id}/endpoints:
     post:
-      summary: "Adds an endpoint for this organisation to the registry"
+      summary: "Adds/updates an endpoint for this organisation to the registry. If the endpoint already exists (matched by endpoint ID) it is updated."
       operationId: "registerEndpoint"
       tags:
         - endpoints
