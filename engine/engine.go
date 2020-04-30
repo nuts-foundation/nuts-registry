@@ -20,7 +20,10 @@
 package engine
 
 import (
-	"github.com/deepmap/oapi-codegen/pkg/runtime"
+	"os"
+	"os/signal"
+	"strings"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -33,9 +36,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"os"
-	"os/signal"
-	"strings"
 )
 
 // registryClientCreator is a variable to aid testability
@@ -52,7 +52,7 @@ func NewRegistryEngine() *core.Engine {
 		ConfigKey: "registry",
 		FlagSet:   flagSet(),
 		Name:      pkg.ModuleName,
-		Routes: func(router runtime.EchoRouter) {
+		Routes: func(router core.EchoRouter) {
 			api.RegisterHandlers(router, &api.ApiWrapper{R: r})
 		},
 		Start:    r.Start,
