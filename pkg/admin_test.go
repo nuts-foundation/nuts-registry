@@ -33,7 +33,7 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event) error {
+		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event, _ events.EventLookup) error {
 			return e.Unmarshal(&payload)
 		})
 		cxt.registry.RegisterVendor("vendor", domain.HealthcareDomain)
@@ -50,10 +50,33 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 		assert.Equal(t, "status", payload.Status)
 		assert.Len(t, payload.Properties, 1)
 	})
+	t.Run("ok - update", func(t *testing.T) {
+		cxt := createTestContext(t)
+		defer cxt.close()
+		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event, _ events.EventLookup) error {
+			return e.Unmarshal(&payload)
+		})
+		cxt.registry.RegisterVendor("vendor", domain.HealthcareDomain)
+		cxt.registry.VendorClaim("orgId", "org", nil)
+		cxt.registry.RegisterEndpoint("orgId", "endpointId", "url", "type", "status", map[string]string{"foo": "bar"})
+		// Now update endpoint
+		event, err := cxt.registry.RegisterEndpoint("orgId", "endpointId", "url-updated", "type-updated", "status-updated", map[string]string{"foo": "bar-updated"})
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.NotNil(t, event)
+		assert.False(t, event.PreviousRef().IsZero())
+		assert.Equal(t, "orgId", string(payload.Organization))
+		assert.Equal(t, "endpointId", string(payload.Identifier))
+		assert.Equal(t, "url-updated", payload.URL)
+		assert.Equal(t, "type-updated", payload.EndpointType)
+		assert.Equal(t, "status-updated", payload.Status)
+		assert.Len(t, payload.Properties, 1)
+	})
 	t.Run("ok - auto generate id", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event) error {
+		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event, _ events.EventLookup) error {
 			return e.Unmarshal(&payload)
 		})
 		cxt.registry.RegisterVendor("vendor", domain.HealthcareDomain)
@@ -68,13 +91,13 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 	t.Run("ok - org has no certificates", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event) error {
+		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event, _ events.EventLookup) error {
 			return e.Unmarshal(&payload)
 		})
 		cxt.registry.EventSystem.ProcessEvent(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{
 			Identifier: vendorId,
 			Name:       "Test Vendor",
-		}))
+		}, nil))
 		cxt.registry.VendorClaim("orgId", "org", nil)
 		event, err := cxt.registry.RegisterEndpoint("orgId", "", "url", "type", "status", map[string]string{"foo": "bar"})
 		if !assert.NoError(t, err) {
@@ -94,7 +117,7 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 func TestRegistryAdministration_VendorClaim(t *testing.T) {
 	var payload = domain.VendorClaimEvent{}
 	registerEventHandler := func(registry *Registry) {
-		registry.EventSystem.RegisterEventHandler(domain.VendorClaim, func(e events.Event) error {
+		registry.EventSystem.RegisterEventHandler(domain.VendorClaim, func(e events.Event, _ events.EventLookup) error {
 			return e.Unmarshal(&payload)
 		})
 	}
@@ -175,7 +198,7 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 		cxt.registry.EventSystem.ProcessEvent(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{
 			Identifier: vendorId,
 			Name:       "Test Vendor",
-		}))
+		}, nil))
 		org := types.LegalEntity{URI: t.Name()}
 		event, err := cxt.registry.VendorClaim(org.URI, "orgName", nil)
 		assert.NoError(t, err)
@@ -240,7 +263,7 @@ func TestRegistryAdministration_RegisterVendor(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
 		var registerVendorEvent *domain.RegisterVendorEvent
-		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterVendor, func(event events.Event) error {
+		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterVendor, func(event events.Event, _ events.EventLookup) error {
 			e := domain.RegisterVendorEvent{}
 			if err := event.Unmarshal(&e); err != nil {
 				return err
@@ -278,7 +301,7 @@ func TestRegistryAdministration_RegisterVendor(t *testing.T) {
 	t.Run("error - unable to publish event", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterVendor, func(event events.Event) error {
+		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterVendor, func(event events.Event, _ events.EventLookup) error {
 			return errors.New("unit test error")
 		})
 		_, err := cxt.registry.RegisterVendor("Foobar Software", "healthcare")
@@ -347,7 +370,7 @@ func TestRegistry_signAndPublishEvent(t *testing.T) {
 	t.Run("error - signer returns error", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		event, err := cxt.registry.signAndPublishEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, func([]byte, time.Time) ([]byte, error) {
+		event, err := cxt.registry.signAndPublishEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil, func([]byte, time.Time) ([]byte, error) {
 			return nil, errors.New("error")
 		})
 		assert.Nil(t, event)

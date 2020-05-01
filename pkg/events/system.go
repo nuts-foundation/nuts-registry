@@ -67,13 +67,17 @@ type EventSystem interface {
 	PublishEvent(event Event) error
 	LoadAndApplyEvents() error
 	Configure(location string) error
+	EventLookup
 }
 
 // EventRegistrar is a function to register an event
 type EventRegistrar func(EventType, EventHandler)
 
 // EventHandler handles an event of a specific type.
-type EventHandler func(Event) error
+type EventHandler func(Event, EventLookup) error
+
+// EventMatcher defines a matching function for events. The function should return true if the event matches, otherwise false.
+type EventMatcher func(Event) bool
 
 // JwsVerifier defines a verification delegate for JWS'.
 type JwsVerifier func(signature []byte, signingTime time.Time, verifier crypto.CertificateVerifier) ([]byte, error)
@@ -107,11 +111,12 @@ type diskEventSystem struct {
 	// what event to resume when the events are reloaded (from disk)
 	lastLoadedEvent time.Time
 	location        string
+	lut             *eventLookupTable
 }
 
 // NewEventSystem creates and initializes a new event system.
 func NewEventSystem(eventTypes ...EventType) EventSystem {
-	return &diskEventSystem{eventTypes: eventTypes, eventHandlers: make(map[EventType][]EventHandler, 0)}
+	return &diskEventSystem{eventTypes: eventTypes, eventHandlers: make(map[EventType][]EventHandler, 0), lut: newEventLookupTable()}
 }
 
 func (system *diskEventSystem) Configure(location string) error {
@@ -133,7 +138,6 @@ func (system diskEventSystem) isEventType(eventType EventType) bool {
 	return false
 }
 
-
 func (system *diskEventSystem) ProcessEvent(event Event) error {
 	if err := system.assertConfigured(); err != nil {
 		return err
@@ -141,14 +145,22 @@ func (system *diskEventSystem) ProcessEvent(event Event) error {
 	if !system.isEventType(event.Type()) {
 		return fmt.Errorf("unknown event type: %s", event.Type())
 	}
+	if err := system.lut.register(event); err != nil {
+		return err
+	}
 	// Process
-	logrus.Infof("Processing event: %v - %s", event.IssuedAt(), event.Type())
+	logrus.WithFields(map[string]interface{}{
+		"ref": event.Ref(),
+		"prev": event.PreviousRef(),
+		"type": event.Type(),
+		"issuedAt": event.IssuedAt(),
+	}).Info("Processing event")
 	handlers := system.eventHandlers[event.Type()]
 	if handlers == nil {
 		return fmt.Errorf("no handlers registered for event (type = %s), handlers are: %v", event.Type(), system.eventHandlers)
 	}
 	for _, handler := range handlers {
-		if err := handler(event); err != nil {
+		if err := handler(event, system.lut); err != nil {
 			return err
 		}
 	}
@@ -170,6 +182,14 @@ func (system *diskEventSystem) PublishEvent(event Event) error {
 		return errors2.Wrap(err, "event processed, but enable to save it to disk")
 	}
 	return nil
+}
+
+func (system diskEventSystem) Get(ref Ref) Event {
+	return system.lut.Get(ref)
+}
+
+func (system diskEventSystem) FindLastEvent(matcher EventMatcher) (Event, error) {
+	return system.lut.FindLastEvent(matcher)
 }
 
 // Load the db files from the datadir
@@ -232,7 +252,7 @@ func (system diskEventSystem) assertConfigured() error {
 
 func (system diskEventSystem) findStartIndex(entries []os.FileInfo) int {
 	if system.lastLoadedEvent.IsZero() {
-		// No entries were ever loaded
+		// No refs were ever loaded
 		return 0
 	}
 	for index, entry := range entries {
@@ -247,7 +267,7 @@ func (system diskEventSystem) findStartIndex(entries []os.FileInfo) int {
 			}
 		}
 	}
-	// No new entries
+	// No new refs
 	return len(entries) + 1
 }
 

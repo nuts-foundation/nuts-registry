@@ -15,13 +15,13 @@ import (
 func TestRegisterVendor(t *testing.T) {
 	command := cmd()
 	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		client.EXPECT().RegisterVendor("name", "domain").Return(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}), nil)
+		client.EXPECT().RegisterVendor("name", "domain").Return(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil), nil)
 		command.SetArgs([]string{"register-vendor", "name", "domain"})
 		err := command.Execute()
 		assert.NoError(t, err)
 	}))
 	t.Run("ok - no domain (default fallback to 'healthcare')", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		client.EXPECT().RegisterVendor("name", "healthcare").Return(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}), nil)
+		client.EXPECT().RegisterVendor("name", "healthcare").Return(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil), nil)
 		command.SetArgs([]string{"register-vendor", "name"})
 		err := command.Execute()
 		assert.NoError(t, err)
@@ -36,7 +36,7 @@ func TestRegisterVendor(t *testing.T) {
 func TestVendorClaim(t *testing.T) {
 	command := cmd()
 	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		event := events.CreateEvent(domain.VendorClaim, domain.RegisterVendorEvent{})
+		event := events.CreateEvent(domain.VendorClaim, domain.RegisterVendorEvent{}, nil)
 		client.EXPECT().VendorClaim("orgId", "orgName", nil).Return(event, nil)
 		command.SetArgs([]string{"vendor-claim", "orgId", "orgName"})
 		err := command.Execute()
@@ -52,14 +52,14 @@ func TestVendorClaim(t *testing.T) {
 func TestRegisterEndpoint(t *testing.T) {
 	command := cmd()
 	t.Run("ok - bare minimum parameters", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		event := events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{})
+		event := events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{}, nil)
 		client.EXPECT().RegisterEndpoint("orgId", "", "url", "type", db.StatusActive, map[string]string{}).Return(event, nil)
 		command.SetArgs([]string{"register-endpoint", "orgId", "type", "url"})
 		err := command.Execute()
 		assert.NoError(t, err)
 	}))
 	t.Run("ok - all parameters", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		event := events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{})
+		event := events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{}, nil)
 		client.EXPECT().RegisterEndpoint("orgId", "id", "url", "type", db.StatusActive, map[string]string{"k1": "v1", "k2": "v2"}).Return(event, nil)
 		command.SetArgs([]string{"register-endpoint", "orgId", "type", "url", "-i", "id", "-p", "k1=v1", "-p", "k2=v2"})
 		err := command.Execute()

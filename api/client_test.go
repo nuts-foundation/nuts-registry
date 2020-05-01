@@ -124,7 +124,7 @@ func TestHttpClient_ReverseLookup(t *testing.T) {
 
 func TestHttpClient_VendorClaim(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		event := events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{})
+		event := events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{}, nil)
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
@@ -149,7 +149,7 @@ func TestHttpClient_VendorClaim(t *testing.T) {
 
 func TestHttpClient_RegisterVendor(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{})
+		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil)
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
@@ -171,7 +171,7 @@ func TestHttpClient_RegisterVendor(t *testing.T) {
 
 func TestHttpClient_RegisterEndpoint(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		event := events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{})
+		event := events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{}, nil)
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 

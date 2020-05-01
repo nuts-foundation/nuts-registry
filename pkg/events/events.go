@@ -21,17 +21,65 @@ package events
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	"github.com/sirupsen/logrus"
 	"io"
 	"time"
 )
+
+// EventRef is a reference to an event
+type Ref []byte
+
+func (r *Ref) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+	if bytes, err := hex.DecodeString(str); err != nil {
+		return err
+	} else {
+		*r = bytes
+	}
+	return nil
+}
+
+func (r Ref) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r.String())
+}
+
+func (r Ref) IsZero() bool {
+	return len(r) == 0
+}
+
+func (r Ref) String() string {
+	return hex.EncodeToString(r)
+}
+
+func (r Ref) Equal(other Ref) bool {
+	return bytes.Equal(r, other)
+}
+
+// Version
+type Version int
+
+const currentEventVersion Version = 1
 
 // Event defines an event which can be (un)marshalled.
 type Event interface {
 	Type() EventType
 	IssuedAt() time.Time
+	// Version holds the version of the event, which can be used for differentiate processing/ignoring legacy events
+	Version() Version
+	// Ref holds the reference to the current event
+	Ref() Ref
+	// PreviousRef holds the reference to the previous event
+	PreviousRef() Ref
 	Unmarshal(out interface{}) error
 	Marshal() []byte
 	Signature() []byte
@@ -58,11 +106,62 @@ type EventType string
 var ErrMissingEventType = errors.New("unmarshalling error: missing event type")
 
 type jsonEvent struct {
+	EventVersion     Version          `json:"version"`
 	EventType        string           `json:"type"`
 	EventIssuedAt    time.Time        `json:"issuedAt"`
+	ThisEventRef     Ref              `json:"ref,omitempty"`
+	PreviousEvent    Ref              `json:"prev,omitempty"`
 	JWS              string           `json:"jws,omitempty"`
 	EventPayload     interface{}      `json:"payload,omitempty"`
 	signatureDetails SignatureDetails `json:"-"`
+}
+
+func (j jsonEvent) Version() Version {
+	return j.EventVersion
+}
+
+func (j jsonEvent) Ref() Ref {
+	// Make sure ThisEventRef is not set since it should included in the hash. This can't mutate the struct itself,
+	// since the struct is passed by value to this function, not by reference.
+	eventAsMap := make(map[string]interface{})
+	eventAsJSON, _ := json.Marshal(j)
+	_ = json.Unmarshal(eventAsJSON, &eventAsMap)
+	// Make a list of keys to be included in the ref
+	var includeKeys = []string{"issuedAt","type","jws","payload"}
+	if j.Version() >= 1 {
+		includeKeys = append(includeKeys, "prev", "version")
+	}
+	// Remove all fields from the map that shouldn't be in there for this version
+	for key, _ := range eventAsMap {
+		included := false
+		for _, k := range includeKeys {
+			if k == key {
+				included = true
+				break
+			}
+		}
+		if !included {
+			delete(eventAsMap, key)
+		}
+	}
+	strippedJSON, _ := json.Marshal(eventAsMap)
+	canonicalizedJSON, err := canonicalizeJSON(strippedJSON)
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		logrus.WithFields(map[string]interface{}{
+			"event": string(eventAsJSON),
+			"canonicalized": string(canonicalizedJSON),
+		}).Debug("Calculating event ref")
+	}
+	if err != nil {
+		// This should never happen
+		panic(err)
+	}
+	sum := sha1.Sum(canonicalizedJSON)
+	return sum[:]
+}
+
+func (j *jsonEvent) PreviousRef() Ref {
+	return j.PreviousEvent
 }
 
 func (j *jsonEvent) Sign(signFn func([]byte) ([]byte, error)) error {
@@ -78,25 +177,35 @@ func (j *jsonEvent) Sign(signFn func([]byte) ([]byte, error)) error {
 	return nil
 }
 
+func canonicalizeJSON(input []byte) ([]byte, error) {
+	return jsoncanonicalizer.Transform(input)
+}
+
 // EventFromJSON unmarshals an event. If the event can't be unmarshalled, an error is returned.
 func EventFromJSON(data []byte) (Event, error) {
 	e := jsonEvent{}
-	err := json.Unmarshal(data, &e)
-	if err != nil {
+	if err := json.Unmarshal(data, &e); err != nil {
 		return nil, err
 	}
 	if e.EventType == "" {
 		return nil, ErrMissingEventType
 	}
+	if !e.ThisEventRef.IsZero() {
+		actualRef := e.Ref()
+		if !e.ThisEventRef.Equal(actualRef) {
+			return nil, fmt.Errorf("event ref is invalid (specified: %s, actual: %s)", e.ThisEventRef, actualRef)
+		}
+	}
 	return &e, nil
 }
 
-// CreateEvent creates an event of the given type and the provided payload. If the event can't be created, an error is
-// returned.
-func CreateEvent(eventType EventType, payload interface{}) Event {
+// CreateEvent creates an event of the given type and the provided payload.
+func CreateEvent(eventType EventType, payload interface{}, previousEvent Ref) Event {
 	return &jsonEvent{
+		EventVersion:  currentEventVersion,
 		EventType:     string(eventType),
-		EventIssuedAt: time.Now(),
+		PreviousEvent: previousEvent,
+		EventIssuedAt: time.Now().UTC(),
 		EventPayload:  payload,
 	}
 }
@@ -148,7 +257,10 @@ func (j jsonEvent) Unmarshal(out interface{}) error {
 }
 
 func (j jsonEvent) Marshal() []byte {
-	data, _ := json.MarshalIndent(j, "", "  ")
+	// Marshal a copy since Ref should be calculated
+	var e = j
+	e.ThisEventRef = e.Ref()
+	data, _ := json.MarshalIndent(e, "", "  ")
 	return data
 }
 

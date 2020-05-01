@@ -162,7 +162,7 @@ func (o Organization) CurrentPublicKey() (jwk.Key, error) {
 
 type Db interface {
 	RegisterEventHandlers(fn events.EventRegistrar)
-	FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error)
+	FindEndpointsByOrganizationAndType(organizationID string, endpointType *string) ([]Endpoint, error)
 	SearchOrganizations(query string) []Organization
 	OrganizationById(id string) (*Organization, error)
 	VendorByID(id string) *Vendor

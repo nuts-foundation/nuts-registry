@@ -23,7 +23,7 @@ func (v SignatureValidator) RegisterEventHandlers(fn EventRegistrar, eventType [
 	}
 }
 
-func (v SignatureValidator) validate(event Event) error {
+func (v SignatureValidator) validate(event Event, _ EventLookup) error {
 	if len(event.Signature()) == 0 {
 		// https://github.com/nuts-foundation/nuts-registry/issues/84
 		logrus.Warnf("Event not signed, this is accepted for now but it will be rejected in future (event = %v).", event.IssuedAt())

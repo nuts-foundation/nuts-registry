@@ -147,10 +147,10 @@ func (r *Registry) Configure() error {
 		r.Config.Mode = cfg.GetEngineMode(r.Config.Mode)
 		if r.Config.Mode == core.ServerEngineMode {
 			// Order of event processors:
-			// 1. TrustStore; must be first since certificates might be self-signed, and thus be added to the truststore
+			// -  TrustStore; must be first since certificates might be self-signed, and thus be added to the truststore
 			//    before signature validation takes place.
-			// 2. Signature validator
-			// 3. Database
+			// -  Signature validator
+			// -  Database
 			trustStore := domain.NewTrustStore()
 			trustStore.RegisterEventHandlers(r.EventSystem.RegisterEventHandler)
 			signatureValidator := events.NewSignatureValidator(r.crypto.VerifyJWS, trustStore)
