@@ -70,6 +70,7 @@ func flagSet() *pflag.FlagSet {
 	flagSet.String(pkg.ConfSyncAddress, "https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master", "The remote url to download the latest registry data from github")
 	flagSet.Int(pkg.ConfSyncInterval, 30, "The interval in minutes between looking for updated registry files on github")
 	flagSet.Int(pkg.ConfOrganisationCertificateValidity, 365, "Number of days organisation certificates are valid, defaults to 1 year.")
+	flagSet.Int(pkg.ConfClientTimeout, 10, "Time-out for the client in seconds (e.g. when using the CLI).")
 
 	return flagSet
 }
