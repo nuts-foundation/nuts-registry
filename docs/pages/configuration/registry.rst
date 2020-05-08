@@ -24,6 +24,7 @@ registry.address                         localhost:1323                         
 registry.syncMode                        fs                                                                                                      ``fs`` or ``github``
 registry.syncInterval                    30                                                                                                      Interval in minutes to check for new registry data on github
 registry.syncAddress                     https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master                     The tar.gz to download from github
+registry.clientTimeout                   10                                                                                                      Time-out for the client in seconds (e.g. when using the CLI).
 ====================================     ====================================================================================================    ================================================================================
 
 As with all other properties for nuts-go, they can be set through yaml:
