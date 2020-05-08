@@ -61,6 +61,9 @@ const ConfSyncInterval = "syncInterval"
 // ConfOrganisationCertificateValidity is the config name for the number of days organisation certificates are valid
 const ConfOrganisationCertificateValidity = "organisationCertificateValidity"
 
+// ConfClientTimeout is the time-out for the client in seconds (e.g. when using the CLI).
+const ConfClientTimeout = "clientTimeout"
+
 // ModuleName == Registry
 const ModuleName = "Registry"
 
@@ -103,6 +106,7 @@ type RegistryConfig struct {
 	Address                         string
 	VendorCACertificateValidity     int
 	OrganisationCertificateValidity int
+	ClientTimeout                   int
 }
 
 // Registry holds the config and Db reference
