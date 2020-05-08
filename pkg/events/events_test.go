@@ -232,6 +232,7 @@ func TestMarshalEvent(t *testing.T) {
 			}
 			(actual.(*jsonEvent)).ThisEventRef = nil
 			assert.Equal(t, event, actual)
+			assert.Nil(t, event.PreviousRef())
 		})
 	})
 	t.Run("marshal v1 event", func(t *testing.T) {
@@ -258,6 +259,7 @@ func TestMarshalEvent(t *testing.T) {
 			}
 			(actual.(*jsonEvent)).ThisEventRef = nil
 			assert.Equal(t, event, actual)
+			assert.NotNil(t, event.PreviousRef())
 		})
 	})
 }

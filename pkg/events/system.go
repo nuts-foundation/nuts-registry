@@ -300,11 +300,13 @@ func readEvent(file string, timestamp string) (Event, error) {
 	if err != nil {
 		return nil, err
 	}
-	t, err := parseTimestamp(timestamp)
-	if err != nil {
-		return nil, err
-	}
 	je := event.(*jsonEvent)
-	je.EventIssuedAt = t
+	if je.EventIssuedAt.IsZero() {
+		t, err := parseTimestamp(timestamp)
+		if err != nil {
+			return nil, err
+		}
+		je.EventIssuedAt = t
+	}
 	return je, nil
 }
