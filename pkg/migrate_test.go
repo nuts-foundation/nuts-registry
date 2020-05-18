@@ -32,7 +32,7 @@ func (m mockConfig) GetEngineMode(engineMode string) string {
 }
 
 func TestRegistry_verifyAndMigrateRegistry(t *testing.T) {
-	vendorId := "vendorId"
+	vendorId := "urn:oid:1.3.6.1.4.1.54851.4:4"
 	vendorName := "vendorName"
 	orgId := "orgId"
 	orgName := "orgName"

@@ -119,7 +119,6 @@ type Registry struct {
 	configOnce  sync.Once
 	_logger     *logrus.Entry
 	closers     []chan struct{}
-	vendor      db.Vendor
 }
 
 var instance *Registry

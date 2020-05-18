@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/cert"
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	dom "github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	errors2 "github.com/pkg/errors"
@@ -50,7 +50,7 @@ func (r *Registry) RegisterVendor(id string, name string, domain string) (events
 	}
 
 	// The event is signed with the vendor certificate, which is issued by the just issued vendor CA.
-	event, err := r.signAndPublishEvent(dom.RegisterVendor, dom.RegisterVendorEvent{
+	return r.signAndPublishEvent(dom.RegisterVendor, dom.RegisterVendorEvent{
 		Identifier: dom.Identifier(id),
 		Name:       name,
 		Domain:     domain,
@@ -58,16 +58,6 @@ func (r *Registry) RegisterVendor(id string, name string, domain string) (events
 	}, func(dataToBeSigned []byte, instant time.Time) ([]byte, error) {
 		return r.signAsVendor(id, name, domain, dataToBeSigned, instant)
 	})
-	if err == nil && r.vendor.Identifier == "" {
-		// This node isn't configured with a vendor yet but we just registered it, so make it our current vendor.
-		r.vendor = db.Vendor{
-			Identifier: db.Identifier(id),
-			Name:       name,
-			Domain:     domain,
-			Keys:       []interface{}{jwkAsMap},
-		}
-	}
-	return event, err
 }
 
 // VendorClaim registers an organization under a vendor. The specified vendor has to exist and have a valid CA certificate
@@ -248,8 +238,13 @@ func (r *Registry) signAsOrganization(orgID string, orgName string, payload []by
 	// all vendors and organizations have certificates.
 	// Or maybe this check should be changed (by then) to let it return an error since the vendor
 	// should first make sure to have an active certificate.
+	vendorId := core.NutsConfig().Identity()
+	vendor := r.Db.VendorByID(vendorId)
+	if vendor == nil {
+		return nil, fmt.Errorf("current vendor not registered: %s", vendorId)
+	}
 	if hasCerts {
-		csr, err := cert.OrganisationCertificateRequest(r.vendor.Name, orgID, orgName, r.vendor.Domain)
+		csr, err := cert.OrganisationCertificateRequest(vendor.Name, orgID, orgName, vendor.Domain)
 		if err != nil {
 			return nil, errors2.Wrap(err, "unable to create CSR for JWS signing")
 		}
