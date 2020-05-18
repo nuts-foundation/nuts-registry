@@ -292,3 +292,44 @@ func Test_noopTrustStore(t *testing.T) {
 	assert.NoError(t, NoopTrustStore.Verify(nil, time.Now()))
 	NoopTrustStore.RegisterEventHandlers(nil)
 }
+
+func Test_readEvent(t *testing.T) {
+	t.Run("v0", func(t *testing.T) {
+		event, err := readEvent("../../test_data/valid_files/events/20200123091400001-RegisterVendorEvent.json", "20200123091400001")
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, "5e3afa352f26033bd62ac8d6843ccae0f5334296", event.Ref().String())
+	})
+	t.Run("v1", func(t *testing.T) {
+		// From v1 on event contains issuedAt which should be used instead of the file name
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		defer repo.Cleanup()
+
+		event := CreateEvent(eventType, eventPayload, nil)
+		(event.(*jsonEvent)).EventIssuedAt = time.Date(2020, 1, 2, 3, 4, 5, 6, time.UTC)
+		eventFilePath := normalizeLocation(repo.Directory, SuggestEventFileName(event))
+		ioutil.WriteFile(eventFilePath, event.Marshal(), os.ModePerm)
+		// Random timestamp = random string, makes sure it isn't parsable, which is only performed when overriding event.IssuedAt (because it's not set in source JSON).
+		randomTimestamp := make([]byte, 20)
+		rand.Read(randomTimestamp)
+		event, err = readEvent(eventFilePath, string(randomTimestamp))
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, "00fc6cf20e8105ef53a90914aab5414e8ed0059d", event.Ref().String())
+	})
+	t.Run("error - can't parse timestamp", func(t *testing.T) {
+		event, err := readEvent("../../test_data/valid_files/events/20200123091400001-RegisterVendorEvent.json", "foobar")
+		assert.EqualError(t, err, "event timestamp does not match required pattern (yyyyMMddHHmmssmmm)")
+		assert.Nil(t, event)
+	})
+	t.Run("error - can't read file", func(t *testing.T) {
+		event, err := readEvent("asadasd", "asdsd")
+		assert.EqualError(t, err, "open asadasd: no such file or directory")
+		assert.Nil(t, event)
+	})
+}

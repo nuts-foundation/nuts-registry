@@ -160,7 +160,7 @@ func (j jsonEvent) Ref() Ref {
 	return sum[:]
 }
 
-func (j *jsonEvent) PreviousRef() Ref {
+func (j jsonEvent) PreviousRef() Ref {
 	return j.PreviousEvent
 }
 
