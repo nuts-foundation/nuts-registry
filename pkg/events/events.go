@@ -127,7 +127,7 @@ func (j jsonEvent) Ref() Ref {
 	eventAsJSON, _ := json.Marshal(j)
 	_ = json.Unmarshal(eventAsJSON, &eventAsMap)
 	// Make a list of keys to be included in the ref
-	var includeKeys = []string{"issuedAt","type","jws","payload"}
+	var includeKeys = []string{"issuedAt", "type", "jws", "payload"}
 	if j.Version() >= 1 {
 		includeKeys = append(includeKeys, "prev", "version")
 	}
@@ -148,9 +148,9 @@ func (j jsonEvent) Ref() Ref {
 	canonicalizedJSON, err := canonicalizeJSON(strippedJSON)
 	if logrus.IsLevelEnabled(logrus.DebugLevel) {
 		logrus.WithFields(map[string]interface{}{
-			"event": string(eventAsJSON),
+			"event":         string(eventAsJSON),
 			"canonicalized": string(canonicalizedJSON),
-		}).Debug("Calculating event ref")
+		}).Trace("Calculating event ref")
 	}
 	if err != nil {
 		// This should never happen
@@ -181,22 +181,42 @@ func canonicalizeJSON(input []byte) ([]byte, error) {
 	return jsoncanonicalizer.Transform(input)
 }
 
+// EventsFromJSON is the same as EventsFromJSON except that it unmarshals a list of events rather than a single event.
+func EventsFromJSON(data []byte) ([]Event, error) {
+	var events []jsonEvent
+	if err := json.Unmarshal(data, &events); err != nil {
+		return nil, err
+	}
+	var result = make([]Event, len(events))
+	for i, _ := range events {
+		result[i] = &events[i]
+	}
+	return result, nil
+}
+
 // EventFromJSON unmarshals an event. If the event can't be unmarshalled, an error is returned.
 func EventFromJSON(data []byte) (Event, error) {
 	e := jsonEvent{}
 	if err := json.Unmarshal(data, &e); err != nil {
 		return nil, err
 	}
-	if e.EventType == "" {
-		return nil, ErrMissingEventType
-	}
-	if !e.ThisEventRef.IsZero() {
-		actualRef := e.Ref()
-		if !e.ThisEventRef.Equal(actualRef) {
-			return nil, fmt.Errorf("event ref is invalid (specified: %s, actual: %s)", e.ThisEventRef, actualRef)
-		}
+	if err := validateEvent(e); err != nil {
+		return nil, err
 	}
 	return &e, nil
+}
+
+func validateEvent(evt jsonEvent) error {
+	if evt.EventType == "" {
+		return ErrMissingEventType
+	}
+	if !evt.ThisEventRef.IsZero() {
+		actualRef := evt.Ref()
+		if !evt.ThisEventRef.Equal(actualRef) {
+			return fmt.Errorf("event ref is invalid (specified: %s, actual: %s)", evt.ThisEventRef, actualRef)
+		}
+	}
+	return nil
 }
 
 // CreateEvent creates an event of the given type and the provided payload.

@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"net/http"
 	"net/url"
 
@@ -44,9 +45,62 @@ type ApiWrapper struct {
 	R pkg.RegistryClient
 }
 
+// To unmarshal an event EventFromJSON must be used (since we expose the interface rather than the internal struct).
+// However, since we can't instruct Go to use a particular function to unmarshal list entries, we create a type alias
+// for the []events.Event and implement json.Unmarshaler to allow Go to unmarshal the list.
+type listOfEvents []events.Event
+
+func (l *listOfEvents) UnmarshalJSON(data []byte) error {
+	evts, err := events.EventsFromJSON(data)
+	if err != nil {
+		return err
+	}
+	*l = evts
+	return nil
+}
+
+// altVerifyResponse is alternative, unmarshallable version of VerifyResponse in generated.go for client-side usage.
+// Our OpenAPI code generator generates a struct for Event completely separate from our (thoroughly tested) implementation
+// events.Event. Using the generator's struct would require elaborate conversion code, which would only be a potential source of bugs.
+type altVerifyResponse struct {
+	Events listOfEvents
+	Fix    bool
+}
+
+func (apiResource ApiWrapper) Verify(ctx echo.Context, params VerifyParams) error {
+	var fix = false
+	if params.Fix != nil {
+		fix = *params.Fix
+	}
+	resultingEvents, needsFixing, err := apiResource.R.Verify(fix)
+	if err != nil {
+		return ctx.String(http.StatusInternalServerError, err.Error())
+	}
+	return ctx.JSON(http.StatusOK, altVerifyResponse{Events: resultingEvents, Fix: needsFixing})
+}
+
 // DeprecatedVendorClaim is deprecated, use VendorClaim.
 func (apiResource ApiWrapper) DeprecatedVendorClaim(ctx echo.Context, _ string) error {
 	return apiResource.VendorClaim(ctx)
+}
+
+func (apiResource ApiWrapper) RefreshOrganizationCertificate(ctx echo.Context, id string) error {
+	event, err := apiResource.R.RefreshOrganizationCertificate(id)
+	if errors.Is(err, ErrOrganizationNotFound) {
+		return ctx.String(http.StatusBadRequest, err.Error())
+	}
+	if err != nil {
+		return ctx.String(http.StatusInternalServerError, err.Error())
+	}
+	return ctx.JSON(http.StatusOK, event)
+}
+
+func (apiResource ApiWrapper) RefreshVendorCertificate(ctx echo.Context) error {
+	event, err := apiResource.R.RefreshVendorCertificate()
+	if err != nil {
+		return ctx.String(http.StatusInternalServerError, err.Error())
+	}
+	return ctx.JSON(http.StatusOK, event)
 }
 
 // RegisterEndpoint is the Api implementation for registering an endpoint.

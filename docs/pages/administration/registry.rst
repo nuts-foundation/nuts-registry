@@ -6,15 +6,20 @@ Nuts Registry Administration
 This administration guide will help you to achieve the following goals:
 
 - :ref:`register-vendor-label` (representing your company).
-- :ref:`register-organisation-label` as vendor customer, which allows you to register endpoints.
-- :ref:`register-endpoint-label` for the care organisation.
-- :ref:`update-endpoint-label` of the care organisation.
+- :ref:`register-organization-label` as vendor customer, which allows you to register endpoints.
+- :ref:`register-endpoint-label` for the care organization.
+- :ref:`update-endpoint-label` of the care organization.
+- :ref:`verify-registry-data-label`.
+- :ref:`refresh-vendor-certificate-label` of your registered vendor.
+- :ref:`refresh-organization-certificate-label` of one of your vendor's organizations.
+
+.. _update-nuts-registry-label:
 
 Updating the central Nuts Registry
 ==================================
 
 Currently, the data of the Nuts Registry is centrally hosted on Github. When you want other Nuts nodes to know about your
-vendor, care organisations and endpoints you have to submit the data, produced by the administration commands, to get it
+vendor, care organizations and endpoints you have to submit the data, produced by the administration commands, to get it
 included in the registry. To do so, you have to create a pull request on Github for the
 `nuts-foundation/nuts-registry-development <https://github.com/nuts-foundation/nuts-registry-development>`_ repository.
 Should you be unable to do so, contact the Nuts Foundation for alternatives.
@@ -48,9 +53,9 @@ Alternatively you can copy the output of the CLI commands, since they output the
 1. Registering a vendor
 =======================
 
-This command registers a vendor in the registry, giving it further access to the Nuts Registry. Afterwards, care organisations
-can be registered as the organisation's clients. When a vendor is registered, a CA certificate is issued. This certificate is used (by the vendor) to issue certificates,
-e.g. care organisation certificates.
+This command registers a vendor in the registry, giving it further access to the Nuts Registry. Afterwards, care organizations
+can be registered as the organization's clients. When a vendor is registered, a CA certificate is issued. This certificate is used (by the vendor) to issue certificates,
+e.g. care organization certificates.
 
 To register a vendor, you need its name (as registered at the Chamber of Commerce) and its identifier should be
 configured as the node's ``identity``, which is the company's URN-encoded Chamber of Commerce registration number.
@@ -73,24 +78,24 @@ If the command completes successfully, it should output the message: "Vendor reg
 
     The vendor CA certificate is currently self-signed. In the future, the vendor CA certificate will be issued by the Nuts Foundation.
 
-.. _register-organisation-label:
+.. _register-organization-label:
 
-2. Registering a care organisation
+2. Registering a care organization
 ==================================
 
-When a vendor is known in the Nuts Registry, it can register organisation by claiming them (as client). Afterwards
-the vendor can register endpoints for the organisation which are served by the vendor's Nuts node. When an organisation
-is registered, the vendor CA issues an organisation certificate. Its key is used for encrypting data exchanges and
+When a vendor is known in the Nuts Registry, it can register organization by claiming them (as client). Afterwards
+the vendor can register endpoints for the organization which are served by the vendor's Nuts node. When an organization
+is registered, the vendor CA issues an organization certificate. Its key is used for encrypting data exchanges and
 signing registry operations (e.g. registering endpoints).
 
-To register an organisation you need the organisation's name and its identifier, which is the organisation's
+To register an organization you need the organization's name and its identifier, which is the organization's
 URN-encoded AGB-code.
 
 The syntax of this command is as follows:
 
 .. code-block:: shell
 
-    ./nuts registry vendor-claim <organisation-identifier> <organisation-name>
+    ./nuts registry vendor-claim <organization-identifier> <organization-name>
 
 For example:
 
@@ -98,13 +103,13 @@ For example:
 
     NUTS_MODE=cli ./nuts registry vendor-claim urn:oid:2.16.840.1.113883.2.4.6.1:123456 "Kunstgebit Thuiszorg"
 
-If the command completes successfully, it should output the message: "Vendor organisation claim registered"
+If the command completes successfully, it should output the message: "Vendor organization claim registered"
 
 .. note::
 
-    Registering an organisation as vendor client is called *claiming* because in future instead of the vendor solely
-    registering an organisation being its client, the organisation has to do the same (claim being a client of a software
-    vendor). Only if both entities claim to have a relationship with each other, the organisation is registered being a
+    Registering an organization as vendor client is called *claiming* because in future instead of the vendor solely
+    registering an organization being its client, the organization has to do the same (claim being a client of a software
+    vendor). Only if both entities claim to have a relationship with each other, the organization is registered being a
     client of the vendor.
 
 .. _register-endpoint-label:
@@ -112,16 +117,16 @@ If the command completes successfully, it should output the message: "Vendor org
 3. Registering an endpoint
 ==========================
 
-After registering an organisation, the vendor can administer its endpoints. The endpoints are used by other Nuts nodes
-when they want to exchange data with the Nuts node serving a particular organisation.
+After registering an organization, the vendor can administer its endpoints. The endpoints are used by other Nuts nodes
+when they want to exchange data with the Nuts node serving a particular organization.
 
 The syntax of this command is as follows:
 
 .. code-block:: shell
 
-    ./nuts registry register-endpoint <organisation-identifier> <type> <url>
+    ./nuts registry register-endpoint <organization-identifier> <type> <url>
 
-In the following example we register a Corda consent endpoint for the previously registered organisation:
+In the following example we register a Corda consent endpoint for the previously registered organization:
 
 .. code-block:: shell
 
@@ -156,3 +161,71 @@ Flag  Description                                                               
 To update an endpoint, simply register it again using the ``register-endpoint`` command using the same ID. The update
 completely replaces the previous registration, so specify all relevant fields and properties. Don't forget to specify
 the ID (using the ``-i`` flag) if it was auto-generated during endpoint registration.
+
+.. _verify-registry-data-label:
+
+5. Verifying and fixing registry data
+=====================================
+
+In certain circumstances the registry data owned by your node might need maintenance. Examples are when certificates are
+missing or close to expiry, records that need to be migrated to a newer version (format) or missing signatures. The Nuts
+node performs verification on startup and will inform the you (through the logs) of any issues that need to be fixed.
+
+To verify the data using the CLI use the ``verify`` command:
+
+.. code-block:: shell
+
+    NUTS_MODE=cli ./nuts registry verify
+
+If your node's registry data needs fixing this command will inform you:
+
+.. code-block:: text
+
+    Verification complete, data must be fixed. Please rerun command with --fix or -f
+
+To apply the fixes, rerun the command with the ``-f`` flag:
+
+.. code-block:: shell
+
+    NUTS_MODE=cli ./nuts registry verify -f
+
+When data is fixed new events are emitted. It's **very important** that these events are submitted to the central
+Nuts registry (please refer to :ref:`update-nuts-registry-label`).
+
+.. note::
+
+    It's recommended to verify (and fix if necessary) your node's data after each upgrade to ensure compatibility in
+    the long term. The best way to spot problems is to inspect your node's logs when starting it after upgrading.
+
+.. _refresh-vendor-certificate-label:
+
+6. Refreshing vendor CA certificate
+===================================
+
+At some point the vendor CA certificate must be refreshed (issued again). Most often because the current certificate
+is nearing the end of its validity. If the vendor doesn't have a certificate yet this command is used to issue it.
+This command will **not** rotate (create a new) the key pair for the vendor but will create one if it doesn't exist.
+
+The syntax of this command is as follows:
+
+.. code-block:: shell
+
+    ./nuts registry refresh-vendor-cert
+
+.. _refresh-organization-certificate-label:
+
+7. Refreshing organization certificate
+======================================
+
+This works exactly the same as :ref:`refresh-vendor-certificate-label` but works on an organization.
+The syntax of this command is as follows:
+
+.. code-block:: shell
+
+    ./nuts registry refresh-organization-cert <organization-identifier>
+
+In the following example we refresh the certificate for a previously registered organization:
+
+.. code-block:: shell
+
+    NUTS_MODE=cli ./nuts registry refresh-organization-cert urn:oid:2.16.840.1.113883.2.4.6.1:123456

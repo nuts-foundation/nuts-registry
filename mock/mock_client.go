@@ -138,3 +138,49 @@ func (mr *MockRegistryClientMockRecorder) RegisterVendor(name, domain interface{
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterVendor", reflect.TypeOf((*MockRegistryClient)(nil).RegisterVendor), name, domain)
 }
+
+// RefreshVendorCertificate mocks base method
+func (m *MockRegistryClient) RefreshVendorCertificate() (events.Event, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RefreshVendorCertificate")
+	ret0, _ := ret[0].(events.Event)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RefreshVendorCertificate indicates an expected call of RefreshVendorCertificate
+func (mr *MockRegistryClientMockRecorder) RefreshVendorCertificate() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshVendorCertificate", reflect.TypeOf((*MockRegistryClient)(nil).RefreshVendorCertificate))
+}
+
+// RefreshOrganizationCertificate mocks base method
+func (m *MockRegistryClient) RefreshOrganizationCertificate(organizationID string) (events.Event, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RefreshOrganizationCertificate", organizationID)
+	ret0, _ := ret[0].(events.Event)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RefreshOrganizationCertificate indicates an expected call of RefreshOrganizationCertificate
+func (mr *MockRegistryClientMockRecorder) RefreshOrganizationCertificate(organizationID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshOrganizationCertificate", reflect.TypeOf((*MockRegistryClient)(nil).RefreshOrganizationCertificate), organizationID)
+}
+
+// Verify mocks base method
+func (m *MockRegistryClient) Verify(fix bool) ([]events.Event, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Verify", fix)
+	ret0, _ := ret[0].([]events.Event)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// Verify indicates an expected call of Verify
+func (mr *MockRegistryClientMockRecorder) Verify(fix interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockRegistryClient)(nil).Verify), fix)
+}

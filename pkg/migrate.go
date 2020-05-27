@@ -1,48 +1,94 @@
 package pkg
 
 import (
+	"errors"
+	"fmt"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	errors2 "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-// verifyAndMigrateRegistry verifies the data in the registry, migrating data whenever required (e.g. issue missing certificates).
-// When a failed verification cannot be migrated, an error is returned.
-func (r *Registry) verifyAndMigrateRegistry(config core.NutsConfigValues) {
-	r.logger().Info("Verifying registry integrity...")
+// verify verifies the data in the registry, migrating data whenever required (e.g. issue missing certificates) when autoFix=true.
+// The events that result from fixing tge data are returned.
+func (r *Registry) verify(config core.NutsConfigValues, autoFix bool) ([]events.Event, bool, error) {
+	r.logger().Infof("Verifying registry integrity (autofix issues=%v)...", autoFix)
+	resultingEvents := make([]events.Event, 0)
 	// Assert vendor is registered
 	identity := config.Identity()
 	vendor := r.Db.VendorByID(identity)
+	fixRequired := false
+	var event events.Event
+	var err error
 	if vendor == nil {
-		logrus.Warnf("Configured vendor (%s) is not registered, please register it using the 'register-vendor' CLI command.", identity)
+		err = fmt.Errorf("configured vendor (%s) is not registered, please register it using the 'register-vendor' CLI command", identity)
 	} else {
-		r.verifyAndMigrateVendorCertificates(vendor, identity)
+		if event, fixRequired, err = r.verifyVendorCertificate(vendor, identity, autoFix); event != nil {
+			resultingEvents = append(resultingEvents, event)
+		}
+		if err != nil {
+			return resultingEvents, fixRequired, err
+		}
 		for _, org := range r.Db.OrganizationsByVendorID(vendor.Identifier.String()) {
-			r.verifyAndMigrateOrganisation(org)
+			if event, fixRequired, err = r.verifyOrganisation(org, autoFix); event != nil {
+				resultingEvents = append(resultingEvents, event)
+			}
+			if err != nil {
+				return resultingEvents, fixRequired, err
+			}
 		}
 	}
-	r.logger().Info("Registry verification done.")
+	if fixRequired {
+		r.logger().Warn("Your registry data needs fixing/upgrading. Please run the following administrative command: `registry verify -f`")
+	} else {
+		if len(resultingEvents) > 0 {
+			r.logger().Infof("Registry data fixed/upgraded (%d events were emitted).", len(resultingEvents))
+		} else {
+			r.logger().Info("Registry verification done.")
+		}
+	}
+	return resultingEvents, fixRequired, err
 }
 
-func (r *Registry) verifyAndMigrateVendorCertificates(vendor *db.Vendor, identity string) {
+func (r *Registry) verifyVendorCertificate(vendor *db.Vendor, identity string, autoFix bool) (events.Event, bool, error) {
 	certificates := vendor.GetActiveCertificates()
 	if len(certificates) == 0 {
-		logrus.Info("No active certificates found for configured vendor, this will be auto-migrated in the next version.")
+		r.logger().Warn("No active certificates found for configured vendor.")
+		if autoFix {
+			r.logger().Info("Issuing certificate for vendor")
+			event, err := r.RefreshVendorCertificate()
+			if err != nil {
+				return nil, false, errors2.Wrap(err, "couldn't issue vendor certificate")
+			}
+			return event, false, nil
+		}
+		return nil, true, nil
 	} else {
 		if !r.crypto.KeyExistsFor(types.LegalEntity{URI: identity}) {
-			logrus.Error("Active certificates were found for configured vendor, but there's no private key available for cryptographic operations. Please recover your key material.")
+			return nil, false, errors.New("active certificates were found for configured vendor, but there's no private key available for cryptographic operations. Please recover your key material")
 		}
 	}
+	return nil, false, nil
 }
 
-func (r *Registry) verifyAndMigrateOrganisation(org *db.Organization) {
+func (r *Registry) verifyOrganisation(org *db.Organization, autoFix bool) (events.Event, bool, error) {
 	certificates := org.GetActiveCertificates()
 	if len(certificates) == 0 {
-		logrus.Infof("No active certificates found for organisation (id = %s), this will be auto-migrated in the next version.", org.Identifier)
+		logrus.Warnf("No active certificates found for organisation (id = %s).", org.Identifier)
+		if autoFix {
+			event, err := r.RefreshOrganizationCertificate(org.Identifier.String())
+			if err != nil {
+				return nil, false, errors2.Wrap(err, "couldn't issue organization certificate")
+			}
+			return event, false, nil
+		}
+		return nil, true, nil
 	} else {
 		if !r.crypto.KeyExistsFor(types.LegalEntity{URI: org.Identifier.String()}) {
-			logrus.Errorf("Active certificates were found for organisation (id = %s), but there's no private key available for cryptographic operations. Please recover your key material.", org.Identifier)
+			return nil, false, fmt.Errorf("active certificates were found for organisation (id = %s), but there's no private key available for cryptographic operations. Please recover your key material", org.Identifier)
 		}
 	}
+	return nil, false, nil
 }

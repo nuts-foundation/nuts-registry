@@ -56,6 +56,50 @@ func (hb HttpClient) client() ClientInterface {
 	return response
 }
 
+func (hb HttpClient) Verify(fix bool) ([]events.Event, bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
+	defer cancel()
+	response, err := hb.client().Verify(ctx, &VerifyParams{Fix: &fix})
+	if err != nil {
+		logrus.Error("Error while running verify: ", err)
+		return nil, false, err
+	}
+	if err := testResponseCode(http.StatusOK, response); err != nil {
+		return nil, false, err
+	}
+	responseData, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		logrus.Error("Error while parsing verify response: ", err)
+		return nil, false, err
+	}
+	verifyResponse := altVerifyResponse{}
+	if err := json.Unmarshal(responseData, &verifyResponse); err != nil {
+		logrus.Error("Error while unmarshalling verify response: ", err)
+		return nil, false, err
+	}
+	return verifyResponse.Events, verifyResponse.Fix, nil
+}
+
+func (hb HttpClient) RefreshVendorCertificate() (events.Event, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
+	defer cancel()
+	response, err := hb.client().RefreshVendorCertificate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return testAndParseEventResponse(response)
+}
+
+func (hb HttpClient) RefreshOrganizationCertificate(organizationID string) (events.Event, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
+	defer cancel()
+	response, err := hb.client().RefreshOrganizationCertificate(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	return testAndParseEventResponse(response)
+}
+
 // EndpointsByOrganization is the client Api implementation for getting all or certain types of endpoints for an organization
 func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpointType *string) ([]db.Endpoint, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
@@ -204,8 +248,8 @@ func (hb HttpClient) RegisterVendor(name string, domain string) (events.Event, e
 	defer cancel()
 
 	res, err := hb.client().RegisterVendor(ctx, RegisterVendorJSONRequestBody{
-		Name:       name,
-		Domain:     Domain(domain),
+		Name:   name,
+		Domain: Domain(domain),
 	})
 	if err != nil {
 		logrus.Error("error while registering vendor", err)

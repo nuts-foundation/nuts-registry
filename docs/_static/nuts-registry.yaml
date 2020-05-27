@@ -57,6 +57,20 @@ paths:
                 $ref: '#/components/schemas/Event'
         '400':
           description: "incorrect data"
+  /api/vendor/refresh-cert:
+    post:
+      summary: "Refreshes the vendor's certificate."
+      description: "New vendor CA certificate is issued using existing keys. If there are no keys, they're generated."
+      operationId: "refreshVendorCertificate"
+      tags:
+        - vendors
+      responses:
+        '200':
+          description: "Certificate has been refreshed"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
   /api/organization:
     post:
       summary: "Claim an organization for the current vendor (registers an organization under the vendor in the registry)."
@@ -126,6 +140,35 @@ paths:
           description: Unknown organization
           content:
             text/plain:
+              schema:
+                type: string
+  /api/organization/{id}/refresh-cert:
+    post:
+      summary: "Refreshes the organization's certificate."
+      description: "New organization certificate is issued using existing keys. If there are no keys, they're generated."
+      operationId: "refreshOrganizationCertificate"
+      tags:
+        - organizations
+      parameters:
+        - name: id
+          in: path
+          description: "URL encoded identifier"
+          required: true
+          example: "urn:oid:2.16.840.1.113883.2.4.6.1:00000007"
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Certificate has been refreshed"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: invalid request
+          content:
+            text/plain:
+              example: organization not found
               schema:
                 type: string
   /api/organization/{id}/endpoints:
@@ -240,6 +283,35 @@ paths:
                   value: "organization with id X does not have an endpoint of type Y"
               schema:
                 type: string
+  /api/admin/verify:
+    post:
+      summary: Verifies the registry data (owned by the vendor) and fixes where necessarry (e.g. issue certificates) if fix = true.
+      operationId: verify
+      tags:
+        - administration
+      parameters:
+        - name: fix
+          in: query
+          description: Wheter to fix data in the registry that's broken or requires upgrading
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fix:
+                    type: boolean
+                    description: if true, the data in the registry needs fixing/upgrading.
+                  events:
+                    type: array
+                    description: list of events that resulted from fixing the data, list may be empty
+                    items:
+                      $ref: '#/components/schemas/Event'
 components:
   schemas:
     Event:
