@@ -30,9 +30,13 @@ func (v SignatureValidator) validate(event Event, _ EventLookup) error {
 	} else {
 		// TODO: event.IssuedAt is not signed, what extra safety does it add checking it against the certificate validity?
 		// TODO: is the event signed by the expected entity (correct vendor/organization)?
-		_, err := v.verifier(event.Signature(), event.IssuedAt(), v.trustStore)
-		if err := err; err != nil {
-			return errors2.Wrapf(err, "event signature verification failed, it will not be processed (event = %v)", event.IssuedAt())
+		if event.Version() <= currentEventVersion {
+			_, err := v.verifier(event.Signature(), event.IssuedAt(), v.trustStore)
+			if err := err; err != nil {
+				return errors2.Wrapf(err, "event signature verification failed, it will not be processed (event = %v)", event.IssuedAt())
+			}
+		} else {
+			logrus.Warnf("Unsupported signature version (%d), unable to validate signature. This should be fixed in the future using canonicalization (event = %v).", event.Version(), event.IssuedAt())
 		}
 	}
 	return nil
