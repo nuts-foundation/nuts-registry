@@ -1,11 +1,14 @@
 package test
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"github.com/lestrrat-go/jwx/jws"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"math/big"
 	"time"
 )
@@ -59,4 +62,21 @@ func SelfSignCertificateFromCSR(csr x509.CertificateRequest, notBefore time.Time
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	csr.PublicKey = &key.PublicKey
 	return SignCertificateFromCSRWithKey(csr, notBefore, validityInDays, nil, key), key
+}
+
+// NoopJwsVerifier is a JwsVerifier that just parses the JWS without verifying the signatures
+var NoopJwsVerifier = func(signature []byte, signingTime time.Time, verifier cert.Verifier) ([]byte, error) {
+	msg, err := jws.Parse(bytes.NewReader(signature))
+	if err != nil {
+		return nil, err
+	}
+	return msg.Payload(), nil
+}
+
+var NoopCertificateVerifier cert.Verifier = &noopCertificateVerifier{}
+
+type noopCertificateVerifier struct {}
+
+func (n noopCertificateVerifier) Verify(certificate *x509.Certificate, t time.Time) error {
+	return nil
 }

@@ -289,10 +289,33 @@ func TestMarshalEvent(t *testing.T) {
 			if !assert.NoError(t, err) {
 				return
 			}
-			(actual.(*jsonEvent)).ThisEventRef = nil
+			eventAsJsonEvent := actual.(*jsonEvent)
+			eventAsJsonEvent.ThisEventRef = nil
+			eventAsJsonEvent.cachedData = nil
 			assert.Equal(t, event, actual)
 			assert.NotNil(t, event.PreviousRef())
 		})
+	})
+	t.Run("marshalling read event should return read event unchanged", func(t *testing.T) {
+		// We added some random whitespace and extra fields
+		expected := `{
+	"issuedAt": ` + toJSON(time.Unix(5000, 0).UTC()) + `,
+	"prev":		"010203",
+
+
+	"ref":		"f06ec8d10533e57c27d27936adff5ebbd66ec226",
+	"type":		"v1",
+	"version":	1,
+	"payload": 	{"Hello": "World"},
+	"extra-field": "some-value"
+}`
+		event, err := EventFromJSON([]byte(expected))
+		if !assert.NoError(t, err) {
+			return
+		}
+		marshalled := event.Marshal()
+		assert.JSONEq(t, expected, string(marshalled))
+		assert.Equal(t, expected, string(marshalled))
 	})
 }
 

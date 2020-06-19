@@ -21,9 +21,6 @@ package events
 
 import (
 	"crypto/rand"
-	"crypto/rsa"
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jws"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -273,24 +270,6 @@ func TestPublishEvents(t *testing.T) {
 		_, err = EventFromJSON(data)
 		assert.NoError(t, err)
 	})
-}
-
-func TestNoopJwsVerifier(t *testing.T) {
-	key, _ := rsa.GenerateKey(rand.Reader, 1024)
-	signature, err := jws.Sign([]byte{1, 2, 3}, jwa.RS256, key)
-	if !assert.NoError(t, err) {
-		return
-	}
-	payload, err := NoopJwsVerifier(signature, time.Time{}, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-	assert.NotNil(t, payload)
-}
-
-func Test_noopTrustStore(t *testing.T) {
-	assert.NoError(t, NoopTrustStore.Verify(nil, time.Now()))
-	NoopTrustStore.RegisterEventHandlers(nil)
 }
 
 func Test_readEvent(t *testing.T) {

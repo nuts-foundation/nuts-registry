@@ -20,11 +20,8 @@
 package events
 
 import (
-	"bytes"
-	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/lestrrat-go/jwx/jws"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	errors2 "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -82,27 +79,6 @@ type EventMatcher func(Event) bool
 // JwsVerifier defines a verification delegate for JWS'.
 type JwsVerifier func(signature []byte, signingTime time.Time, verifier cert.Verifier) ([]byte, error)
 
-// NoopJwsVerifier is a JwsVerifier that just parses the JWS without verifying the signatures
-var NoopJwsVerifier = func(signature []byte, signingTime time.Time, verifier cert.Verifier) ([]byte, error) {
-	msg, err := jws.Parse(bytes.NewReader(signature))
-	if err != nil {
-		return nil, err
-	}
-	return msg.Payload(), nil
-}
-
-// NoopTrustStore is a TrustStore that holds no state
-var NoopTrustStore = &noopTrustStore{}
-
-type noopTrustStore struct{}
-
-func (n noopTrustStore) Verify(*x509.Certificate, time.Time) error {
-	return nil
-}
-
-func (n noopTrustStore) RegisterEventHandlers(func(EventType, EventHandler)) {
-	// Nothing to do here
-}
 
 type diskEventSystem struct {
 	eventHandlers map[EventType][]EventHandler
