@@ -66,7 +66,7 @@ func (r *Registry) verifyVendorCertificate(vendor *db.Vendor, identity string, a
 		}
 		return nil, true, nil
 	} else {
-		if !r.crypto.KeyExistsFor(types.LegalEntity{URI: identity}) {
+		if !r.crypto.PrivateKeyExists(types.KeyForEntity(types.LegalEntity{URI: identity})) {
 			return nil, false, errors.New("active certificates were found for configured vendor, but there's no private key available for cryptographic operations. Please recover your key material")
 		}
 	}
@@ -86,7 +86,7 @@ func (r *Registry) verifyOrganisation(org *db.Organization, autoFix bool) (event
 		}
 		return nil, true, nil
 	} else {
-		if !r.crypto.KeyExistsFor(types.LegalEntity{URI: org.Identifier.String()}) {
+		if !r.crypto.PrivateKeyExists(types.KeyForEntity(types.LegalEntity{URI: org.Identifier.String()})) {
 			return nil, false, fmt.Errorf("active certificates were found for organisation (id = %s), but there's no private key available for cryptographic operations. Please recover your key material", org.Identifier)
 		}
 	}

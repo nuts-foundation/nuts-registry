@@ -25,7 +25,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"github.com/lestrrat-go/jwx/jwk"
-	"github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"testing"
 	"time"
@@ -136,8 +136,8 @@ func TestOrganization_CurrentPublicKey(t *testing.T) {
 		rsaKey, _ := rsa.GenerateKey(rand.Reader, 1024)
 		asn1cert := test.GenerateCertificateEx(time.Now(), 1, rsaKey)
 		expectedCert, _ := x509.ParseCertificate(asn1cert)
-		key, _ := pkg.CertificateToJWK(expectedCert)
-		jwkAsMap, _ := pkg.JwkToMap(key)
+		key, _ := cert.CertificateToJWK(expectedCert)
+		jwkAsMap, _ := cert.JwkToMap(key)
 		keyAsBytes, _ := json.Marshal(jwkAsMap)
 		err2 := json.Unmarshal(keyAsBytes, &jwkAsMap)
 		if !assert.NoError(t, err2) {
@@ -156,8 +156,8 @@ func TestOrganization_CurrentPublicKey(t *testing.T) {
 		rsaKey, _ := rsa.GenerateKey(rand.Reader, 1024)
 		asn1cert := test.GenerateCertificateEx(time.Now().AddDate(0, 0, -5), 1, rsaKey)
 		expectedCert, _ := x509.ParseCertificate(asn1cert)
-		key, _ := pkg.CertificateToJWK(expectedCert)
-		jwkAsMap, _ := pkg.JwkToMap(key)
+		key, _ := cert.CertificateToJWK(expectedCert)
+		jwkAsMap, _ := cert.JwkToMap(key)
 		keyAsBytes, _ := json.Marshal(jwkAsMap)
 		err2 := json.Unmarshal(keyAsBytes, &jwkAsMap)
 		if !assert.NoError(t, err2) {
@@ -229,10 +229,10 @@ func TestOrganization_HasKey(t *testing.T) {
 	})
 	t.Run("ok - no match: JWK without certificate", func(t *testing.T) {
 		key1AsJWK := generateJWK()
-		jwk1AsMap, _ := pkg.JwkToMap(key1AsJWK)
+		jwk1AsMap, _ := cert.JwkToMap(key1AsJWK)
 		jwk1AsMap["kty"] = "RSA"
 		key2AsJWK := generateJWK()
-		jwk2AsMap, _ := pkg.JwkToMap(key2AsJWK)
+		jwk2AsMap, _ := cert.JwkToMap(key2AsJWK)
 		jwk2AsMap["kty"] = "RSA"
 		o := Organization{Keys: []interface{}{jwk1AsMap}}
 		hasKey, err := o.HasKey(key2AsJWK, time.Now())
@@ -241,7 +241,7 @@ func TestOrganization_HasKey(t *testing.T) {
 	})
 	t.Run("ok - match: JWK without certificate", func(t *testing.T) {
 		keyAsJWK := generateJWK()
-		jwkAsMap, _ := pkg.JwkToMap(keyAsJWK)
+		jwkAsMap, _ := cert.JwkToMap(keyAsJWK)
 		jwkAsMap["kty"] = "RSA"
 		o := Organization{Keys: []interface{}{jwkAsMap}}
 		hasKey, err := o.HasKey(keyAsJWK, time.Now())
@@ -251,9 +251,9 @@ func TestOrganization_HasKey(t *testing.T) {
 	t.Run("ok - match: JWK with certificate", func(t *testing.T) {
 		k, _ := rsa.GenerateKey(rand.Reader, 2048)
 		asn1cert := test.GenerateCertificateEx(time.Now(), 2, k)
-		cert, _ := x509.ParseCertificate(asn1cert)
-		certAsJWK, _ := pkg.CertificateToJWK(cert)
-		jwkAsMap, _ := pkg.JwkToMap(certAsJWK)
+		certificate, _ := x509.ParseCertificate(asn1cert)
+		certAsJWK, _ := cert.CertificateToJWK(certificate)
+		jwkAsMap, _ := cert.JwkToMap(certAsJWK)
 		jwkAsMap["kty"] = "RSA"
 		o := Organization{Keys: []interface{}{jwkAsMap}}
 		hasKey, err := o.HasKey(certAsJWK, time.Now())
@@ -263,9 +263,9 @@ func TestOrganization_HasKey(t *testing.T) {
 	t.Run("ok - match: JWK with certificate, but expired", func(t *testing.T) {
 		k, _ := rsa.GenerateKey(rand.Reader, 2048)
 		asn1cert := test.GenerateCertificateEx(time.Now(), 2, k)
-		cert, _ := x509.ParseCertificate(asn1cert)
-		certAsJWK, _ := pkg.CertificateToJWK(cert)
-		jwkAsMap, _ := pkg.JwkToMap(certAsJWK)
+		certificate, _ := x509.ParseCertificate(asn1cert)
+		certAsJWK, _ := cert.CertificateToJWK(certificate)
+		jwkAsMap, _ := cert.JwkToMap(certAsJWK)
 		jwkAsMap["kty"] = "RSA"
 		o := Organization{Keys: []interface{}{jwkAsMap}}
 		hasKey, err := o.HasKey(certAsJWK, time.Now().AddDate(-1, 0, 0))
@@ -285,7 +285,7 @@ func TestOrganization_HasKey(t *testing.T) {
 func generatePEM() (jwk.Key, string) {
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	keyAsJWK, _ := jwk.New(key)
-	pem, _ := pkg.PublicKeyToPem(&key.PublicKey)
+	pem, _ := cert.PublicKeyToPem(&key.PublicKey)
 	return keyAsJWK, pem
 }
 

@@ -23,3 +23,5 @@ nuts-registry
 
 # MacOS
 .DS_Store
+
+pkg/truststore.pem
