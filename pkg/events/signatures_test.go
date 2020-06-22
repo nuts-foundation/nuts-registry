@@ -2,7 +2,7 @@ package events
 
 import (
 	"errors"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -22,7 +22,7 @@ func TestSignatureValidator_verify(t *testing.T) {
 		event.Sign(func(bytes2 []byte) (bytes []byte, err error) {
 			return bytes2, nil
 		})
-		verifier := func(signature []byte, signingTime time.Time, verifier crypto.CertificateVerifier) (bytes []byte, err error) {
+		verifier := func(signature []byte, signingTime time.Time, verifier cert.Verifier) (bytes []byte, err error) {
 			return signature, nil
 		}
 		err := NewSignatureValidator(verifier, NoopTrustStore).validate(event, nil)
@@ -37,7 +37,7 @@ func TestSignatureValidator_verify(t *testing.T) {
 		event.Sign(func(bytes2 []byte) (bytes []byte, err error) {
 			return bytes2, nil
 		})
-		verifier := func(signature []byte, signingTime time.Time, verifier crypto.CertificateVerifier) (bytes []byte, err error) {
+		verifier := func(signature []byte, signingTime time.Time, verifier cert.Verifier) (bytes []byte, err error) {
 			return nil, errors.New("failed")
 		}
 		err := NewSignatureValidator(verifier, NoopTrustStore).validate(event, nil)

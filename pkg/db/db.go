@@ -25,7 +25,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"github.com/lestrrat-go/jwx/jwk"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"time"
@@ -86,13 +85,13 @@ func (o Organization) KeysAsSet() (*jwk.Set, error) {
 	for _, key := range o.Keys {
 		maps = append(maps, key.(map[string]interface{}))
 	}
-	result, err := crypto.MapsToJwkSet(maps)
+	result, err := cert.MapsToJwkSet(maps)
 	if err != nil {
 		return nil, err
 	}
 	// Support deprecated PublicKey
 	if o.PublicKey != nil {
-		key, err := crypto.PemToPublicKey([]byte(*o.PublicKey))
+		key, err := cert.PemToPublicKey([]byte(*o.PublicKey))
 		if err != nil {
 			return nil, err
 		}
@@ -146,7 +145,7 @@ func (o Organization) CurrentPublicKey() (jwk.Key, error) {
 		// Organization has certificates, use those and ignore the rest
 		certs := o.GetActiveCertificates()
 		if len(certs) > 0 {
-			return crypto.CertificateToJWK(certs[0])
+			return cert.CertificateToJWK(certs[0])
 		}
 		return nil, errors.New("organization has no active certificates")
 	} else {

@@ -8,10 +8,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/jwk"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"github.com/nuts-foundation/nuts-crypto/pkg/storage"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-registry/pkg/cert"
+	certutil "github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/nuts-foundation/nuts-registry/test"
@@ -141,7 +142,7 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 		if !assert.Len(t, payload.OrgKeys, 1) {
 			return
 		}
-		jwk, err := crypto.MapToJwk(payload.OrgKeys[0].(map[string]interface{}))
+		jwk, err := cert.MapToJwk(payload.OrgKeys[0].(map[string]interface{}))
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -165,25 +166,24 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 		vendor, _ := cxt.registry.RegisterVendor("Test Vendor", domain.HealthcareDomain)
 		registerVendorEvent := domain.RegisterVendorEvent{}
 		vendor.Unmarshal(&registerVendorEvent)
-		vendorCertChain, _ := crypto.MapToX509CertChain(registerVendorEvent.Keys[0].(map[string]interface{}))
-		privKey, _ := cxt.registry.crypto.GetOpaquePrivateKey(types.LegalEntity{URI: vendorId})
+		vendorCertChain, _ := cert.MapToX509CertChain(registerVendorEvent.Keys[0].(map[string]interface{}))
+		privKey, _ := cxt.registry.crypto.GetPrivateKey(types.KeyForEntity(types.LegalEntity{URI: vendorId}))
 
 		orgName := t.Name()
 		org := types.LegalEntity{URI: uuid.New().String()}
+		orgKey := types.KeyForEntity(types.LegalEntity{URI: uuid.New().String()})
 		// "Out-of-Band" generate key material
-		err := cxt.registry.crypto.GenerateKeyPairFor(org)
-		key, _ := cxt.registry.crypto.PublicKeyInJWK(org)
-		pubKey, _ := key.Materialize()
+		pubKey, err := cxt.registry.crypto.GenerateKeyPair(orgKey)
 		if !assert.NoError(t, err) {
 			return
 		}
 		// Now "Out-of-Band"-sign a certificate with it using the vendor priv. key
-		csr, _ := cert.OrganisationCertificateRequest("Test Vendor", org.URI, orgName, "healthcare")
+		csr, _ := certutil.OrganisationCertificateRequest("Test Vendor", org.URI, orgName, "healthcare")
 		csr.PublicKey = pubKey
-		cert := test.SignCertificateFromCSRWithKey(csr, time.Now(), 2, vendorCertChain[0], privKey)
-		key.Set(jwk.X509CertChainKey, base64.StdEncoding.EncodeToString(cert.Raw))
+		certificate := test.SignCertificateFromCSRWithKey(csr, time.Now(), 2, vendorCertChain[0], privKey)
 		// Feed it to VendorClaim()
-		jwkAsMap, _ := crypto.JwkToMap(key)
+		jwkAsMap, _ := certToJwkMap(certificate, certutil.OrganisationCertificate)
+		jwkAsMap[jwk.X509CertChainKey] = base64.StdEncoding.EncodeToString(certificate.Raw)
 		event, err := cxt.registry.VendorClaim(org.URI, orgName, []interface{}{jwkAsMap})
 		if !assert.NoError(t, err) {
 			return
@@ -206,7 +206,7 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 		// No certificate means no signature
 		assert.Nil(t, event.Signature())
 		// A certificate couldn't have been issued
-		certChain, err := crypto.MapToX509CertChain(payload.OrgKeys[0].(map[string]interface{}))
+		certChain, err := cert.MapToX509CertChain(payload.OrgKeys[0].(map[string]interface{}))
 		assert.NoError(t, err)
 		assert.Nil(t, certChain)
 	})
@@ -246,7 +246,7 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 		defer cxt.close()
 		cxt.registry.RegisterVendor("Test Vendor", domain.HealthcareDomain)
 		entity := types.LegalEntity{URI: "org"}
-		err := cxt.registry.crypto.GenerateKeyPairFor(entity)
+		_, err := cxt.registry.crypto.GenerateKeyPair(types.KeyForEntity(entity))
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -281,12 +281,12 @@ func TestRegistryAdministration_RegisterVendor(t *testing.T) {
 		}
 		assert.NotNil(t, event)
 		// Verify CA Certificate issued
-		key, err := crypto.MapToJwk(registerVendorEvent.Keys[0].(map[string]interface{}))
+		key, err := cert.MapToJwk(registerVendorEvent.Keys[0].(map[string]interface{}))
 		if err != nil {
 			panic(err)
 		}
 		certType, _ := key.Get("ct")
-		assert.Equal(t, string(cert.VendorCACertificate), certType)
+		assert.Equal(t, string(certutil.VendorCACertificate), certType)
 		chain := key.X509CertChain()
 		if !assert.NotNil(t, chain) {
 			return
@@ -366,7 +366,7 @@ func TestCreateAndSubmitCSR(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		cxt.registry.crypto.GenerateKeyPairFor(entity)
+		cxt.registry.crypto.GenerateKeyPair(types.KeyForEntity(entity))
 		_, err := cxt.registry.createAndSubmitCSR(func() (x509.CertificateRequest, error) {
 			return x509.CertificateRequest{Subject: pkix.Name{CommonName: "Mosselman"}}, nil
 		}, entity, entity, crypto.CertificateProfile{})

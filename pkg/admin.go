@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-registry/pkg/cert"
+	certutil "github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	dom "github.com/nuts-foundation/nuts-registry/pkg/events/domain"
@@ -51,13 +52,13 @@ func (r *Registry) RegisterVendor(name string, domain string) (events.Event, err
 
 func (r *Registry) issueVendorCertificate(id string, name string, domain string) (map[string]interface{}, error) {
 	entity := types.LegalEntity{URI: id}
-	err := r.crypto.GenerateKeyPairFor(entity)
+	_, err := r.crypto.GenerateKeyPair(types.KeyForEntity(entity))
 	if err != nil {
 		return nil, err
 	}
 
 	certificate, err := r.createAndSubmitCSR(func() (x509.CertificateRequest, error) {
-		return cert.VendorCertificateRequest(id, name, "CA Intermediate", domain)
+		return certutil.VendorCertificateRequest(id, name, "CA Intermediate", domain)
 	}, entity, entity, crypto.CertificateProfile{
 		IsCA:         true,
 		NumDaysValid: vendorCACertificateDaysValid,
@@ -66,7 +67,7 @@ func (r *Registry) issueVendorCertificate(id string, name string, domain string)
 		return nil, err
 	}
 
-	jwkAsMap, err := certToJwkMap(certificate, cert.VendorCACertificate)
+	jwkAsMap, err := certToJwkMap(certificate, certutil.VendorCACertificate)
 	if err != nil {
 		return nil, errors2.Wrap(err, ErrJWKConstruction.Error())
 	}
@@ -162,7 +163,7 @@ func (r *Registry) issueOrganizationCertificate(vendor *db.Vendor, orgID string,
 		return nil, err
 	}
 	certificate, err := r.createAndSubmitCSR(func() (x509.CertificateRequest, error) {
-		return cert.OrganisationCertificateRequest(vendor.Name, orgID, orgName, vendor.Domain)
+		return certutil.OrganisationCertificateRequest(vendor.Name, orgID, orgName, vendor.Domain)
 	}, types.LegalEntity{URI: orgID}, types.LegalEntity{URI: vendor.Identifier.String()}, crypto.CertificateProfile{
 		IsCA:         true,
 		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageDataEncipherment,
@@ -172,7 +173,7 @@ func (r *Registry) issueOrganizationCertificate(vendor *db.Vendor, orgID string,
 		return nil, errors2.Wrap(err, ErrCertificateIssue.Error())
 	}
 
-	jwkAsMap, err := certToJwkMap(certificate, cert.OrganisationCertificate)
+	jwkAsMap, err := certToJwkMap(certificate, certutil.OrganisationCertificate)
 	if err != nil {
 		return nil, errors2.Wrap(err, ErrJWKConstruction.Error())
 	}
@@ -245,17 +246,18 @@ func (r *Registry) RegisterEndpoint(organizationID string, id string, url string
 
 func (r *Registry) loadOrGenerateKey(identifier string) (map[string]interface{}, error) {
 	entity := types.LegalEntity{URI: identifier}
-	if !r.crypto.KeyExistsFor(entity) {
+	key := types.KeyForEntity(entity)
+	if !r.crypto.PrivateKeyExists(key) {
 		logrus.Infof("No keys found for entity (id = %s), will generate a new key pair.", identifier)
-		if err := r.crypto.GenerateKeyPairFor(entity); err != nil {
+		if _, err := r.crypto.GenerateKeyPair(key); err != nil {
 			return nil, err
 		}
 	}
-	keyAsJwk, err := r.crypto.PublicKeyInJWK(entity)
+	keyAsJwk, err := r.crypto.GetPublicKeyAsJWK(key)
 	if err != nil {
 		return nil, err
 	}
-	return crypto.JwkToMap(keyAsJwk)
+	return cert.JwkToMap(keyAsJwk)
 }
 
 func (r *Registry) signAndPublishEvent(eventType events.EventType, payload interface{}, previousEvent events.Event, signer func([]byte, time.Time) ([]byte, error)) (events.Event, error) {
@@ -288,8 +290,9 @@ func (r *Registry) createAndSubmitCSR(csrTemplateFn func() (x509.CertificateRequ
 	if err != nil {
 		return nil, errors2.Wrap(err, "unable to create CSR template")
 	}
-
-	subjectPrivKey, err := r.crypto.GetOpaquePrivateKey(subject)
+	subjectKey := types.KeyForEntity(subject)
+	caKey := types.KeyForEntity(ca)
+	subjectPrivKey, err := r.crypto.GetPrivateKey(subjectKey)
 	if err != nil {
 		return nil, errors2.Wrapf(err, "unable to retrieve subject private key: %s", subject)
 	}
@@ -300,7 +303,7 @@ func (r *Registry) createAndSubmitCSR(csrTemplateFn func() (x509.CertificateRequ
 		return nil, errors2.Wrap(err, "unable to create CSR")
 	}
 
-	certASN1, err := r.crypto.SignCertificate(subject, ca, csr, profile)
+	certASN1, err := r.crypto.SignCertificate(subjectKey, caKey, csr, profile)
 	if err != nil {
 		return nil, errors2.Wrap(err, "error while signing certificate")
 	}
@@ -308,20 +311,20 @@ func (r *Registry) createAndSubmitCSR(csrTemplateFn func() (x509.CertificateRequ
 	return x509.ParseCertificate(certASN1)
 }
 
-func certToJwkMap(certificate *x509.Certificate, certType cert.CertificateType) (map[string]interface{}, error) {
-	key, _ := crypto.CertificateToJWK(certificate)
-	keyAsMap, _ := crypto.JwkToMap(key)
-	keyAsMap[cert.JwkCertificateType] = certType
+func certToJwkMap(certificate *x509.Certificate, certType certutil.CertificateType) (map[string]interface{}, error) {
+	key, _ := cert.CertificateToJWK(certificate)
+	keyAsMap, _ := cert.JwkToMap(key)
+	keyAsMap[certutil.JwkCertificateType] = certType
 	return keyAsMap, nil
 }
 
 func (r *Registry) signAsVendor(vendorId string, vendorName string, domain string, payload []byte, instant time.Time) ([]byte, error) {
 	logrus.Debug("Signing event as vendor")
-	csr, err := cert.VendorCertificateRequest(vendorId, vendorName, "", domain)
+	csr, err := certutil.VendorCertificateRequest(vendorId, vendorName, "", domain)
 	if err != nil {
 		return nil, errors2.Wrap(err, "unable to create CSR for JWS signing")
 	}
-	signature, err := r.crypto.JWSSignEphemeral(payload, types.LegalEntity{URI: vendorId}, csr, instant)
+	signature, err := r.crypto.SignJWSEphemeral(payload, types.KeyForEntity(types.LegalEntity{URI: vendorId}), csr, instant)
 	if err != nil {
 		return nil, errors2.Wrap(err, "unable to sign JWS")
 	}
@@ -343,11 +346,11 @@ func (r *Registry) signAsOrganization(orgID string, orgName string, payload []by
 	// should first make sure to have an active certificate.
 	if hasCerts {
 		logrus.Debug("Signing event as organization")
-		csr, err := cert.OrganisationCertificateRequest(vendor.Name, orgID, orgName, vendor.Domain)
+		csr, err := certutil.OrganisationCertificateRequest(vendor.Name, orgID, orgName, vendor.Domain)
 		if err != nil {
 			return nil, errors2.Wrap(err, "unable to create CSR for JWS signing")
 		}
-		signature, err = r.crypto.JWSSignEphemeral(payload, types.LegalEntity{URI: orgID}, csr, instant)
+		signature, err = r.crypto.SignJWSEphemeral(payload, types.KeyForEntity(types.LegalEntity{URI: orgID}), csr, instant)
 		if err != nil {
 			return nil, errors2.Wrap(err, "unable to sign JWS")
 		}

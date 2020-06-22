@@ -23,7 +23,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	errors2 "github.com/pkg/errors"
@@ -57,12 +57,12 @@ func (o org) toDb() Organization {
 	}
 	// Backwards compatibility for deprecated PublicKey property: fill with first RSA key we can find
 	for _, k := range o.OrgKeys {
-		keyAsJwk, _ := crypto.MapToJwk(k.(map[string]interface{}))
+		keyAsJwk, _ := cert.MapToJwk(k.(map[string]interface{}))
 		if keyAsJwk != nil {
 			matKey, _ := keyAsJwk.Materialize()
 			pubKey, ok := matKey.(*rsa.PublicKey)
 			if ok {
-				p, _ := crypto.PublicKeyToPem(pubKey)
+				p, _ := cert.PublicKeyToPem(pubKey)
 				result.PublicKey = &p
 			}
 		}

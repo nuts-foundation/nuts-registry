@@ -6,7 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"github.com/golang/mock/gomock"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/mock"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
@@ -203,8 +203,8 @@ func withMock(test func(t *testing.T, client *mock.MockRegistryClient)) func(t *
 func generateCertificate() map[string]interface{} {
 	privateKey, _ := rsa.GenerateKey(rand.Reader, 1024)
 	certAsBytes := test.GenerateCertificateEx(time.Now(), 1, privateKey)
-	cert, _ := x509.ParseCertificate(certAsBytes)
-	certAsJWK, _ := crypto.CertificateToJWK(cert)
-	certAsMap, _ := crypto.JwkToMap(certAsJWK)
+	certificate, _ := x509.ParseCertificate(certAsBytes)
+	certAsJWK, _ := cert.CertificateToJWK(certificate)
+	certAsMap, _ := cert.JwkToMap(certAsJWK)
 	return certAsMap
 }

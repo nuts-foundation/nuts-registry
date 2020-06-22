@@ -4,7 +4,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	cert2 "github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
@@ -63,7 +62,7 @@ func (r *RegisterVendorEvent) PostProcessUnmarshal(event events.Event) error {
 	if r.Domain == "" {
 		r.Domain = FallbackDomain
 	}
-	if err := crypto.ValidateJWK(r.Keys...); err != nil {
+	if err := cert.ValidateJWK(r.Keys...); err != nil {
 		return err
 	}
 	for _, key := range r.Keys {
@@ -121,7 +120,7 @@ type VendorClaimEvent struct {
 }
 
 func (v VendorClaimEvent) PostProcessUnmarshal(event events.Event) error {
-	if err := crypto.ValidateJWK(v.OrgKeys...); err != nil {
+	if err := cert.ValidateJWK(v.OrgKeys...); err != nil {
 		return err
 	}
 	for _, key := range v.OrgKeys {
@@ -181,7 +180,7 @@ func (t *trustStore) handleEvent(event events.Event, _ events.EventLookup) error
 			return err
 		}
 		for _, key := range payload.Keys {
-			chain, err := crypto.MapToX509CertChain(key.(map[string]interface{}))
+			chain, err := cert.MapToX509CertChain(key.(map[string]interface{}))
 			if err != nil {
 				return err
 			}
@@ -199,7 +198,7 @@ func (t *trustStore) handleEvent(event events.Event, _ events.EventLookup) error
 			return err
 		}
 		for _, key := range payload.OrgKeys {
-			chain, err := crypto.MapToX509CertChain(key.(map[string]interface{}))
+			chain, err := cert.MapToX509CertChain(key.(map[string]interface{}))
 			if err != nil {
 				return err
 			}

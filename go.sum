@@ -133,8 +133,11 @@ github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3Rllmb
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200415122250-e440a0f9bb89 h1:TOrB6GS3uyILPNiPHA+xF4Ef3HzuF4AVx/jZW+DvGRQ=
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200415122250-e440a0f9bb89/go.mod h1:7UXs0d9SFJBrSrG58HdvHaB/0Fu5bfst6EupbMiaQRk=
+github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200619120015-ef5d25a4e6bc h1:l06usmqiMw3HAd30Uth/jCuzzFSYbXwRRREfxsv2g7g=
+github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200619120015-ef5d25a4e6bc/go.mod h1:CmGoK5emSgqp6z7lG3nftMf0B5PcMTuV1IBDN6xwHcE=
 github.com/nuts-foundation/nuts-go-core v0.13.0 h1:kdmBClufcCZMKjeTyfLhxyLAtPMlk3U2049U1B7p/i4=
 github.com/nuts-foundation/nuts-go-core v0.13.0/go.mod h1:YVG736ZUyC0nHRozNUsbLPRnxQouCzoARpswWgPV55g=
+github.com/nuts-foundation/nuts-go-core v0.13.1-0.20200422143012-856bc0bf2098/go.mod h1:UMfANk1YRb+7p5GFLexfHIVCXxgSOE+wLGU6gjR6uv4=
 github.com/nuts-foundation/nuts-go-core v0.13.1-0.20200422145233-a9d171e8b054 h1:ZNYy4xJgkNwBSk7nHzPsaEumQvV5wBSXNqk11NgQsko=
 github.com/nuts-foundation/nuts-go-core v0.13.1-0.20200422145233-a9d171e8b054/go.mod h1:j37hQtlD9SGc0i5gaTXtJntO4ggCF6HyKTGsMQRsURM=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
