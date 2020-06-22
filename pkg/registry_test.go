@@ -69,13 +69,10 @@ func TestRegistry_Start(t *testing.T) {
 	configureIdleTimeout()
 	t.Run("Start with an incorrect configuration returns error", func(t *testing.T) {
 		registry := Registry{
-			Config: RegistryConfig{
-				Mode:     core.ServerEngineMode,
-				SyncMode: "unknown",
-				Datadir:  ".",
-			},
+			Config: DefaultRegistryConfig(),
 			Db: &db.MemoryDb{},
 		}
+		registry.Config.SyncMode = "unknown"
 
 		err := registry.Start()
 
@@ -91,13 +88,10 @@ func TestRegistry_Start(t *testing.T) {
 
 	t.Run("Starting sets the file watcher", func(t *testing.T) {
 		registry := Registry{
-			Config: RegistryConfig{
-				Mode:     core.ServerEngineMode,
-				SyncMode: "fs",
-				Datadir:  ".",
-			},
+			Config: DefaultRegistryConfig(),
 			Db: &db.MemoryDb{},
 		}
+		registry.Config.Datadir = "."
 
 		if err := registry.Start(); err != nil {
 			t.Errorf("Expected no error, got [%v]", err)
@@ -110,13 +104,10 @@ func TestRegistry_Start(t *testing.T) {
 
 	t.Run("Invalid datadir gives error on Start", func(t *testing.T) {
 		registry := Registry{
-			Config: RegistryConfig{
-				Mode:     core.ServerEngineMode,
-				SyncMode: "fs",
-				Datadir:  ":",
-			},
+			Config: DefaultRegistryConfig(),
 			Db: &db.MemoryDb{},
 		}
+		registry.Config.Datadir = ":"
 
 		err := registry.Start()
 
@@ -127,13 +118,10 @@ func TestRegistry_Start(t *testing.T) {
 
 	t.Run("Shutdown stops the file watcher", func(t *testing.T) {
 		registry := Registry{
-			Config: RegistryConfig{
-				Mode:     core.ServerEngineMode,
-				SyncMode: "fs",
-				Datadir:  ".",
-			},
+			Config: DefaultRegistryConfig(),
 			Db: &db.MemoryDb{},
 		}
+		registry.Config.Datadir = "."
 
 		if err := registry.Start(); err != nil {
 			t.Errorf("Expected no error, got [%v]", err)
@@ -150,14 +138,12 @@ func TestRegistry_Start(t *testing.T) {
 
 func TestRegistry_Configure(t *testing.T) {
 	configureIdleTimeout()
-	t.Run("Configure loads the BD", func(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
 		registry := Registry{
-			Config: RegistryConfig{
-				Mode:    core.ServerEngineMode,
-				Datadir: "../test_data/valid_files",
-			},
+			Config: DefaultRegistryConfig(),
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
+		registry.Config.Datadir = "../test_data/valid_files"
 
 		if err := registry.Configure(); err != nil {
 			t.Errorf("Expected no error, got [%v]", err)
@@ -167,31 +153,27 @@ func TestRegistry_Configure(t *testing.T) {
 			t.Error("Expected loaded organizations, got 0")
 		}
 	})
-	t.Run("error while configuring event system", func(t *testing.T) {
+	t.Run("error - configuring event system", func(t *testing.T) {
 		registry := Registry{
-			Config: RegistryConfig{
-				Mode:    core.ServerEngineMode,
-				Datadir: "///",
-			},
+			Config: DefaultRegistryConfig(),
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
+		registry.Config.Datadir = "///"
 		err := registry.Configure()
 		assert.Error(t, err)
 	})
 
-	t.Run("error while loading events", func(t *testing.T) {
+	t.Run("error - loading events", func(t *testing.T) {
 		repo, err := test.NewTestRepo(t.Name())
 		if !assert.NoError(t, err) {
 			return
 		}
 		defer repo.Cleanup()
 		registry := Registry{
-			Config: RegistryConfig{
-				Mode:    core.ServerEngineMode,
-				Datadir: repo.Directory,
-			},
+			Config: DefaultRegistryConfig(),
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
+		registry.Config.Datadir = repo.Directory
 		os.MkdirAll(filepath.Join(repo.Directory, "events"), os.ModePerm)
 		err = ioutil.WriteFile(filepath.Join(repo.Directory, "events/20200123091400001-RegisterOrganizationEvent.json"), []byte("this is a file"), os.ModePerm)
 		if !assert.NoError(t, err) {
@@ -199,6 +181,32 @@ func TestRegistry_Configure(t *testing.T) {
 		}
 		err = registry.Configure()
 		assert.Error(t, err)
+	})
+	t.Run("error - vendor CA certificate validity invalid", func(t *testing.T) {
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		defer repo.Cleanup()
+		registry := Registry{
+			Config: DefaultRegistryConfig(),
+		}
+		registry.Config.VendorCACertificateValidity = 0
+		err = registry.Configure()
+		assert.EqualError(t, err, "vendor CA certificate validity must be at least 1 day")
+	})
+	t.Run("error - organisation certificate validity invalid", func(t *testing.T) {
+		repo, err := test.NewTestRepo(t.Name())
+		if !assert.NoError(t, err) {
+			return
+		}
+		defer repo.Cleanup()
+		registry := Registry{
+			Config: DefaultRegistryConfig(),
+		}
+		registry.Config.OrganisationCertificateValidity = 0
+		err = registry.Configure()
+		assert.EqualError(t, err, "organisation certificate validity must be at least 1 day")
 	})
 }
 
@@ -217,16 +225,13 @@ func TestRegistry_FileUpdate(t *testing.T) {
 		}
 		defer repo.Cleanup()
 		registry := Registry{
-			Config: RegistryConfig{
-				Mode:     core.ServerEngineMode,
-				Datadir:  repo.Directory,
-				SyncMode: "fs",
-			},
+			Config: DefaultRegistryConfig(),
 			OnChange: func(registry *Registry) {
 				wg.Done()
 			},
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
+		registry.Config.Datadir = repo.Directory
 		defer registry.Shutdown()
 
 		if err := registry.Configure(); err != nil {
@@ -274,19 +279,16 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 		defer repo.Cleanup()
 
 		registry := Registry{
-			Config: RegistryConfig{
-				Mode:         core.ServerEngineMode,
-				Datadir:      repo.Directory,
-				SyncMode:     "github",
-				SyncAddress:  server.URL,
-				SyncInterval: 60,
-			},
+			Config: DefaultRegistryConfig(),
 			OnChange: func(registry *Registry) {
 				println("EVENT")
 				wg.Done()
 			},
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
+		registry.Config.Datadir = repo.Directory
+		registry.Config.SyncMode = "github"
+		registry.Config.SyncAddress = server.URL
 		defer registry.Shutdown()
 
 		if err := registry.Configure(); err != nil {
