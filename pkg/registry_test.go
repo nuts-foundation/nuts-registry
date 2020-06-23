@@ -141,7 +141,7 @@ func TestRegistry_Configure(t *testing.T) {
 	configureIdleTimeout()
 	t.Run("ok", func(t *testing.T) {
 		registry := Registry{
-			Config:      DefaultRegistryConfig(),
+			Config: DefaultRegistryConfig(),
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
 		registry.Config.Datadir = "../test_data/valid_files"
@@ -156,7 +156,7 @@ func TestRegistry_Configure(t *testing.T) {
 	})
 	t.Run("error - configuring event system", func(t *testing.T) {
 		registry := Registry{
-			Config:      DefaultRegistryConfig(),
+			Config: DefaultRegistryConfig(),
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
 		registry.Config.Datadir = "///"
