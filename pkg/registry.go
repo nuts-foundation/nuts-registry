@@ -132,10 +132,10 @@ func DefaultRegistryConfig() RegistryConfig {
 		SyncAddress:                     "https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master",
 		SyncInterval:                    30,
 		Datadir:                         "./data",
-		Address:                         "localhost:1323 ",
+		Address:                         "localhost:1323",
 		VendorCACertificateValidity:     1095,
 		OrganisationCertificateValidity: 365,
-		ClientTimeout:                   0,
+		ClientTimeout:                   10,
 	}
 }
 

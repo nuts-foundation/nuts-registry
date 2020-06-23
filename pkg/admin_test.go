@@ -452,15 +452,10 @@ func getLastUpdatedFile(dir string) string {
 func createRegistry(repo *test.TestRepo) *Registry {
 	core.NutsConfig().Load(&cobra.Command{})
 	registry := Registry{
-		Config: RegistryConfig{
-			Mode:                            core.ServerEngineMode,
-			Datadir:                         repo.Directory,
-			SyncMode:                        "fs",
-			OrganisationCertificateValidity: 365,
-			VendorCACertificateValidity:     1095,
-		},
+		Config: DefaultRegistryConfig(),
 		EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 	}
+	registry.Config.Datadir = repo.Directory
 	err := registry.Configure()
 	if err != nil {
 		panic(err)
