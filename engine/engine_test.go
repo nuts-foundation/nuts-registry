@@ -5,8 +5,12 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/mock"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
@@ -14,8 +18,6 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func TestRegisterVendor(t *testing.T) {
@@ -185,7 +187,17 @@ func Test_flagSet(t *testing.T) {
 }
 
 func TestNewRegistryEngine(t *testing.T) {
-	assert.NotNil(t, NewRegistryEngine())
+
+	t.Run("instance", func(t *testing.T) {
+		assert.NotNil(t, NewRegistryEngine())
+	})
+
+	t.Run("configuration", func(t *testing.T) {
+		e := NewRegistryEngine()
+		cfg := core.NutsConfig()
+		cfg.RegisterFlags(e.Cmd, e)
+		assert.NoError(t, cfg.InjectIntoEngine(e))
+	})
 }
 
 func withMock(test func(t *testing.T, client *mock.MockRegistryClient)) func(t *testing.T) {
