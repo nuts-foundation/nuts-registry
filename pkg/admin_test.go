@@ -409,7 +409,7 @@ func TestRegistry_signAsOrganization(t *testing.T) {
 			return
 		}
 		_, err = cxt.registry.signAsOrganization("orgId", "", []byte{1, 2, 3}, time.Now(), true)
-		assert.Equal(t, "unable to create CSR for JWS signing: missing organization name", err.Error(), )
+		assert.Equal(t, "unable to create CSR for JWS signing: missing organization name", err.Error())
 	})
 	t.Run("error - unable to sign JWS (CA key material missing)", func(t *testing.T) {
 		cxt := createTestContext(t)
@@ -452,14 +452,10 @@ func getLastUpdatedFile(dir string) string {
 func createRegistry(repo *test.TestRepo) *Registry {
 	core.NutsConfig().Load(&cobra.Command{})
 	registry := Registry{
-		Config: RegistryConfig{
-			Mode:                            core.ServerEngineMode,
-			Datadir:                         repo.Directory,
-			SyncMode:                        "fs",
-			OrganisationCertificateValidity: 365,
-		},
+		Config: DefaultRegistryConfig(),
 		EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 	}
+	registry.Config.Datadir = repo.Directory
 	err := registry.Configure()
 	if err != nil {
 		panic(err)

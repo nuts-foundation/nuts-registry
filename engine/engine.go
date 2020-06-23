@@ -20,6 +20,7 @@
 package engine
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -65,14 +66,16 @@ func NewRegistryEngine() *core.Engine {
 func flagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("registry", pflag.ContinueOnError)
 
-	flagSet.String(pkg.ConfDataDir, "./data", "Location of data files")
-	flagSet.String(pkg.ConfMode, "", "server or client, when client it uses the HttpClient")
-	flagSet.String(pkg.ConfAddress, "localhost:1323", "Interface and port for http server to bind to")
-	flagSet.String(pkg.ConfSyncMode, "fs", "The method for updating the data, 'fs' for a filesystem watch or 'github' for a periodic download from github")
-	flagSet.String(pkg.ConfSyncAddress, "https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master", "The remote url to download the latest registry data from github")
-	flagSet.Int(pkg.ConfSyncInterval, 30, "The interval in minutes between looking for updated registry files on github")
-	flagSet.Int(pkg.ConfOrganisationCertificateValidity, 365, "Number of days organisation certificates are valid, defaults to 1 year.")
-	flagSet.Int(pkg.ConfClientTimeout, 10, "Time-out for the client in seconds (e.g. when using the CLI).")
+	defs := pkg.DefaultRegistryConfig()
+	flagSet.String(pkg.ConfDataDir, defs.Datadir, fmt.Sprintf("Location of data files, default: %s", defs.Datadir))
+	flagSet.String(pkg.ConfMode, defs.Mode, fmt.Sprintf("server or client, when client it uses the HttpClient, default: %s", defs.Mode))
+	flagSet.String(pkg.ConfAddress, defs.Address, fmt.Sprintf("Interface and port for http server to bind to, default: %s", defs.Address))
+	flagSet.String(pkg.ConfSyncMode, defs.SyncMode, fmt.Sprintf("The method for updating the data, 'fs' for a filesystem watch or 'github' for a periodic download, default: %s", defs.SyncMode))
+	flagSet.String(pkg.ConfSyncAddress, defs.SyncAddress, fmt.Sprintf("The remote url to download the latest registry data from, default: %s", defs.SyncAddress))
+	flagSet.Int(pkg.ConfSyncInterval, defs.SyncInterval, fmt.Sprintf("The interval in minutes between looking for updated registry files on github, default: %d", defs.SyncInterval))
+	flagSet.Int(pkg.ConfVendorCACertificateValidity, defs.VendorCACertificateValidity, fmt.Sprintf("Number of days vendor CA certificates are valid, default: %d", defs.VendorCACertificateValidity))
+	flagSet.Int(pkg.ConfOrganisationCertificateValidity, defs.OrganisationCertificateValidity, fmt.Sprintf("Number of days organisation certificates are valid, default: %d", defs.OrganisationCertificateValidity))
+	flagSet.Int(pkg.ConfClientTimeout, defs.ClientTimeout, fmt.Sprintf("Time-out for the client in seconds (e.g. when using the CLI), default: %d", defs.ClientTimeout))
 
 	return flagSet
 }
