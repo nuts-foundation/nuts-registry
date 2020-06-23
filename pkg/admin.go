@@ -5,6 +5,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/google/uuid"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
@@ -16,7 +18,6 @@ import (
 	dom "github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	errors2 "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"time"
 )
 
 // ErrJWKConstruction indicates that a JWK couldn't be constructed

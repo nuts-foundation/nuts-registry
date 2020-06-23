@@ -25,6 +25,8 @@ import (
 	"os/signal"
 	"strings"
 
+	"time"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
@@ -38,7 +40,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"time"
 )
 
 // registryClientCreator is a variable to aid testability

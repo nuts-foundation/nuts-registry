@@ -24,13 +24,6 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
-	"github.com/fsnotify/fsnotify"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
-	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"os"
@@ -39,6 +32,14 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-registry/pkg/db"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
+	"github.com/sirupsen/logrus"
 )
 
 // ConfDataDir is the config name for specifiying the data location of the requiredFiles
@@ -63,7 +64,7 @@ const ConfSyncInterval = "syncInterval"
 const ConfOrganisationCertificateValidity = "organisationCertificateValidity"
 
 // ConfVendorCACertificateValidity is the config name for the number of days vendor CA certificates are valid
-const ConfVendorCACertificateValidity = "vendorCaCertificateValidity"
+const ConfVendorCACertificateValidity = "vendorCACertificateValidity"
 
 // ConfClientTimeout is the time-out for the client in seconds (e.g. when using the CLI).
 const ConfClientTimeout = "clientTimeout"

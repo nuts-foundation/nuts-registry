@@ -22,7 +22,6 @@
 package pkg
 
 import (
-	"github.com/spf13/cobra"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -31,6 +30,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/spf13/cobra"
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/gommon/random"
@@ -70,7 +71,7 @@ func TestRegistry_Start(t *testing.T) {
 	t.Run("Start with an incorrect configuration returns error", func(t *testing.T) {
 		registry := Registry{
 			Config: DefaultRegistryConfig(),
-			Db: &db.MemoryDb{},
+			Db:     &db.MemoryDb{},
 		}
 		registry.Config.SyncMode = "unknown"
 
@@ -89,7 +90,7 @@ func TestRegistry_Start(t *testing.T) {
 	t.Run("Starting sets the file watcher", func(t *testing.T) {
 		registry := Registry{
 			Config: DefaultRegistryConfig(),
-			Db: &db.MemoryDb{},
+			Db:     &db.MemoryDb{},
 		}
 		registry.Config.Datadir = "."
 
@@ -105,7 +106,7 @@ func TestRegistry_Start(t *testing.T) {
 	t.Run("Invalid datadir gives error on Start", func(t *testing.T) {
 		registry := Registry{
 			Config: DefaultRegistryConfig(),
-			Db: &db.MemoryDb{},
+			Db:     &db.MemoryDb{},
 		}
 		registry.Config.Datadir = ":"
 
@@ -119,7 +120,7 @@ func TestRegistry_Start(t *testing.T) {
 	t.Run("Shutdown stops the file watcher", func(t *testing.T) {
 		registry := Registry{
 			Config: DefaultRegistryConfig(),
-			Db: &db.MemoryDb{},
+			Db:     &db.MemoryDb{},
 		}
 		registry.Config.Datadir = "."
 
@@ -140,7 +141,7 @@ func TestRegistry_Configure(t *testing.T) {
 	configureIdleTimeout()
 	t.Run("ok", func(t *testing.T) {
 		registry := Registry{
-			Config: DefaultRegistryConfig(),
+			Config:      DefaultRegistryConfig(),
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
 		registry.Config.Datadir = "../test_data/valid_files"
@@ -155,7 +156,7 @@ func TestRegistry_Configure(t *testing.T) {
 	})
 	t.Run("error - configuring event system", func(t *testing.T) {
 		registry := Registry{
-			Config: DefaultRegistryConfig(),
+			Config:      DefaultRegistryConfig(),
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
 		registry.Config.Datadir = "///"
@@ -170,7 +171,7 @@ func TestRegistry_Configure(t *testing.T) {
 		}
 		defer repo.Cleanup()
 		registry := Registry{
-			Config: DefaultRegistryConfig(),
+			Config:      DefaultRegistryConfig(),
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
 		registry.Config.Datadir = repo.Directory
@@ -357,7 +358,7 @@ func TestRegistry_Verify(t *testing.T) {
 	defer mockCtrl.Finish()
 	t.Run("ok", func(t *testing.T) {
 		mockDb := mock.NewMockDb(mockCtrl)
-		mockDb.EXPECT().VendorByID(vendorId).Return(&db.Vendor{Identifier:vendorId})
+		mockDb.EXPECT().VendorByID(vendorId).Return(&db.Vendor{Identifier: vendorId})
 		mockDb.EXPECT().OrganizationsByVendorID(vendorId).Return(nil)
 		os.Setenv("NUTS_IDENTITY", vendorId)
 		core.NutsConfig().Load(&cobra.Command{})
@@ -368,4 +369,3 @@ func TestRegistry_Verify(t *testing.T) {
 		assert.Empty(t, evts)
 	})
 }
-
