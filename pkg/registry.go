@@ -22,6 +22,7 @@ package pkg
 import (
 	"archive/tar"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
@@ -60,6 +61,9 @@ const ConfSyncInterval = "syncInterval"
 
 // ConfOrganisationCertificateValidity is the config name for the number of days organisation certificates are valid
 const ConfOrganisationCertificateValidity = "organisationCertificateValidity"
+
+// ConfVendorCACertificateValidity is the config name for the number of days vendor CA certificates are valid
+const ConfVendorCACertificateValidity = "vendorCaCertificateValidity"
 
 // ConfClientTimeout is the time-out for the client in seconds (e.g. when using the CLI).
 const ConfClientTimeout = "clientTimeout"
@@ -121,6 +125,20 @@ type RegistryConfig struct {
 	ClientTimeout                   int
 }
 
+func DefaultRegistryConfig() RegistryConfig {
+	return RegistryConfig{
+		Mode:                            core.ServerEngineMode,
+		SyncMode:                        "fs",
+		SyncAddress:                     "https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master",
+		SyncInterval:                    30,
+		Datadir:                         "./data",
+		Address:                         "localhost:1323",
+		VendorCACertificateValidity:     1095,
+		OrganisationCertificateValidity: 365,
+		ClientTimeout:                   10,
+	}
+}
+
 // Registry holds the config and Db reference
 type Registry struct {
 	Config      RegistryConfig
@@ -144,6 +162,7 @@ func init() {
 func RegistryInstance() *Registry {
 	oneRegistry.Do(func() {
 		instance = &Registry{
+			Config:      DefaultRegistryConfig(),
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 			_logger:     logrus.StandardLogger().WithField("module", ModuleName),
 		}
@@ -161,6 +180,14 @@ func (r *Registry) Configure() error {
 		r.crypto = crypto.NewCryptoClient()
 		r.Config.Mode = cfg.GetEngineMode(r.Config.Mode)
 		if r.Config.Mode == core.ServerEngineMode {
+			if r.Config.VendorCACertificateValidity < 1 {
+				err = errors.New("vendor CA certificate validity must be at least 1 day")
+				return
+			}
+			if r.Config.OrganisationCertificateValidity < 1 {
+				err = errors.New("organisation certificate validity must be at least 1 day")
+				return
+			}
 			// Order of event processors:
 			// -  TrustStore; must be first since certificates might be self-signed, and thus be added to the truststore
 			//    before signature validation takes place.
