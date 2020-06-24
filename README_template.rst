@@ -27,3 +27,29 @@ Configuration
 
 .. include:: docs/pages/configuration/registry.rst
     :start-after: .. marker-for-readme
+
+Parameters
+==========
+
+The following configuration parameters are available for the registry:
+
+.. include:: README_options.rst
+
+As with all other properties for nuts-go, they can be set through yaml:
+
+.. sourcecode:: yaml
+
+    registry:
+       datadir: ./data
+
+as commandline property
+
+.. sourcecode:: shell
+
+    ./nuts --registry.datadir ./data
+
+Or by using environment variables
+
+.. sourcecode:: shell
+
+    NUTS_REGISTRY_DATADIR=./data ./nuts

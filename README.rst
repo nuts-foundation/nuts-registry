@@ -90,21 +90,23 @@ When using Github, the registry checks every ``syncInterval`` minutes if anythin
 The ``syncAddress`` must point to a tar.gz with the needed registry files included. Github has a nice URL for this.
 By default it uses the config in the master branch.
 
-The following configuration parameters are available for the registry.
+Parameters
+==========
 
-========================================  ====================================================================================================    ================================================================================
-Key                                       Default                                                                                                 Description
-========================================  ====================================================================================================    ================================================================================
-registry.datadir                          ./data                                                                                                  Location of data files
-registry.mode                             server                                                                                                  server or client, when client it uses the HttpClient
-registry.address                          localhost:1323                                                                                          Interface and port for http server to bind to
-registry.syncMode                         fs                                                                                                      ``fs`` or ``github``
-registry.syncInterval                     30                                                                                                      Interval in minutes to check for new registry data on github
-registry.syncAddress                      https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master                     The tar.gz to download from github
-registry.clientTimeout                    10                                                                                                      Time-out for the client in seconds (e.g. when using the CLI).
-registry.vendorCACertificateValidity      1095                                                                                                    Number of days vendor CA certificates are valid, defaults to 3 years.
-registry.organisationCertificateValidity  365                                                                                                     Number of days organisation certificates are valid, defaults to 1 year.
-========================================  ====================================================================================================    ================================================================================
+The following configuration parameters are available for the registry:
+
+===============================  ===================================================================================  ======================================================================================================================================================
+Key                              Default                                                                              Description
+===============================  ===================================================================================  ======================================================================================================================================================
+clientTimeout                    10                                                                                   Time-out for the client in seconds (e.g. when using the CLI), default: 10
+datadir                          ./data                                                                               Location of data files, default: ./data
+mode                             server                                                                               server or client, when client it uses the HttpClient, default: server
+organisationCertificateValidity  365                                                                                  Number of days organisation certificates are valid, default: 365
+syncAddress                      https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master  The remote url to download the latest registry data from, default: https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master
+syncInterval                     30                                                                                   The interval in minutes between looking for updated registry files on github, default: 30
+syncMode                         fs                                                                                   The method for updating the data, 'fs' for a filesystem watch or 'github' for a periodic download, default: fs
+vendorCACertificateValidity      1095                                                                                 Number of days vendor CA certificates are valid, default: 1095
+===============================  ===================================================================================  ======================================================================================================================================================
 
 As with all other properties for nuts-go, they can be set through yaml:
 
