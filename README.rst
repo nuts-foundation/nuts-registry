@@ -98,6 +98,7 @@ The following configuration parameters are available for the registry:
 ===============================  ===================================================================================  ======================================================================================================================================================
 Key                              Default                                                                              Description
 ===============================  ===================================================================================  ======================================================================================================================================================
+address                          localhost:1323                                                                       Interface and port for http server to bind to, default: localhost:1323
 clientTimeout                    10                                                                                   Time-out for the client in seconds (e.g. when using the CLI), default: 10
 datadir                          ./data                                                                               Location of data files, default: ./data
 mode                             server                                                                               server or client, when client it uses the HttpClient, default: server
