@@ -15,9 +15,9 @@ Distributed registry for storing and querying health care providers their vendor
     :target: https://codecov.io/gh/nuts-foundation/nuts-registry
     :alt: Code coverage
 
-.. image:: https://api.codacy.com/project/badge/Grade/919adb72a4564722851c7db0ccbec558
-    :target: https://www.codacy.com/app/nuts-foundation/nuts-registry
-    :alt: Code style
+.. image:: https://api.codeclimate.com/v1/badges/040468237c838c03ff7d/maintainability
+   :target: https://codeclimate.com/github/nuts-foundation/nuts-registry/maintainability
+   :alt: Maintainability
 
 The registry is written in Go and should be part of nuts-go as an engine.
 
@@ -93,7 +93,7 @@ By default it uses the config in the master branch.
 The following configuration parameters are available for the registry.
 
 ========================================  ====================================================================================================    ================================================================================
-Key                                       Default                 Description
+Key                                       Default                                                                                                 Description
 ========================================  ====================================================================================================    ================================================================================
 registry.datadir                          ./data                                                                                                  Location of data files
 registry.mode                             server                                                                                                  server or client, when client it uses the HttpClient
