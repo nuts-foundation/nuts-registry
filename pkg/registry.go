@@ -128,7 +128,6 @@ type RegistryConfig struct {
 
 func DefaultRegistryConfig() RegistryConfig {
 	return RegistryConfig{
-		Mode:                            core.ServerEngineMode,
 		SyncMode:                        "fs",
 		SyncAddress:                     "https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master",
 		SyncInterval:                    30,
@@ -163,9 +162,8 @@ func init() {
 func RegistryInstance() *Registry {
 	oneRegistry.Do(func() {
 		instance = &Registry{
-			Config:      DefaultRegistryConfig(),
-			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
-			_logger:     logrus.StandardLogger().WithField("module", ModuleName),
+			Config:  DefaultRegistryConfig(),
+			_logger: logrus.StandardLogger().WithField("module", ModuleName),
 		}
 	})
 
@@ -178,9 +176,10 @@ func (r *Registry) Configure() error {
 
 	r.configOnce.Do(func() {
 		cfg := core.NutsConfig()
-		r.crypto = crypto.NewCryptoClient()
 		r.Config.Mode = cfg.GetEngineMode(r.Config.Mode)
 		if r.Config.Mode == core.ServerEngineMode {
+			r.EventSystem = events.NewEventSystem(domain.GetEventTypes()...)
+			r.crypto = crypto.NewCryptoClient()
 			if r.Config.VendorCACertificateValidity < 1 {
 				err = errors.New("vendor CA certificate validity must be at least 1 day")
 				return
