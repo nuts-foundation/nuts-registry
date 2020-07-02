@@ -63,15 +63,21 @@ func TestRegistry_Instance(t *testing.T) {
 	registry1 := RegistryInstance()
 	registry2 := RegistryInstance()
 	assert.Same(t, registry1, registry2)
-	assert.NotNil(t, registry1.EventSystem)
+	assert.Equal(t, DefaultRegistryConfig(), registry1.Config, "Default registry instance should contain default config")
+	assert.Nil(t, registry1.EventSystem)
+	assert.Nil(t, registry1.crypto)
 }
 
 func TestRegistry_Start(t *testing.T) {
 	configureIdleTimeout()
 	t.Run("Start with an incorrect configuration returns error", func(t *testing.T) {
 		registry := Registry{
-			Config: DefaultRegistryConfig(),
-			Db:     &db.MemoryDb{},
+			Config: RegistryConfig{
+				Mode:     core.ServerEngineMode,
+				SyncMode: "unknown",
+				Datadir:  ".",
+			},
+			Db: &db.MemoryDb{},
 		}
 		registry.Config.SyncMode = "unknown"
 
@@ -89,8 +95,12 @@ func TestRegistry_Start(t *testing.T) {
 
 	t.Run("Starting sets the file watcher", func(t *testing.T) {
 		registry := Registry{
-			Config: DefaultRegistryConfig(),
-			Db:     &db.MemoryDb{},
+			Config: RegistryConfig{
+				Mode:     core.ServerEngineMode,
+				SyncMode: "fs",
+				Datadir:  ".",
+			},
+			Db: &db.MemoryDb{},
 		}
 		registry.Config.Datadir = "."
 
@@ -105,8 +115,12 @@ func TestRegistry_Start(t *testing.T) {
 
 	t.Run("Invalid datadir gives error on Start", func(t *testing.T) {
 		registry := Registry{
-			Config: DefaultRegistryConfig(),
-			Db:     &db.MemoryDb{},
+			Config: RegistryConfig{
+				Mode:     core.ServerEngineMode,
+				SyncMode: "fs",
+				Datadir:  ":",
+			},
+			Db: &db.MemoryDb{},
 		}
 		registry.Config.Datadir = ":"
 
@@ -119,8 +133,12 @@ func TestRegistry_Start(t *testing.T) {
 
 	t.Run("Shutdown stops the file watcher", func(t *testing.T) {
 		registry := Registry{
-			Config: DefaultRegistryConfig(),
-			Db:     &db.MemoryDb{},
+			Config: RegistryConfig{
+				Mode:     core.ServerEngineMode,
+				SyncMode: "fs",
+				Datadir:  ".",
+			},
+			Db: &db.MemoryDb{},
 		}
 		registry.Config.Datadir = "."
 
@@ -153,6 +171,21 @@ func TestRegistry_Configure(t *testing.T) {
 		if len(registry.Db.SearchOrganizations("")) == 0 {
 			t.Error("Expected loaded organizations, got 0")
 		}
+	})
+	t.Run("ok - client mode", func(t *testing.T) {
+		os.Setenv("NUTS_MODE", "cli")
+		defer os.Unsetenv("NUTS_MODE")
+		core.NutsConfig().Load(&cobra.Command{})
+		registry := Registry{
+			Config: DefaultRegistryConfig(),
+		}
+		err := registry.Configure()
+		if !assert.NoError(t, err) {
+			return
+		}
+		// Make sure engine services aren't initialized when running in client mode
+		assert.Nil(t, registry.EventSystem)
+		assert.Nil(t, registry.crypto)
 	})
 	t.Run("error - configuring event system", func(t *testing.T) {
 		registry := Registry{
