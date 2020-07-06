@@ -51,7 +51,7 @@ func (r *Registry) RegisterVendor(name string, domain string) (events.Event, err
 
 func (r *Registry) issueVendorCertificate(id string, name string, domain string) (map[string]interface{}, error) {
 	entity := types.LegalEntity{URI: id}
-	_, err := r.crypto.GenerateKeyPair(types.KeyForEntity(entity))
+	_, err := r.loadOrGenerateKey(id)
 	if err != nil {
 		return nil, err
 	}
