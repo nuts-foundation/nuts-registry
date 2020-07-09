@@ -20,8 +20,9 @@
 package engine
 
 import (
+	"crypto/x509"
 	"fmt"
-	"github.com/nuts-foundation/nuts-registry/pkg/types"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
@@ -136,48 +137,25 @@ func cmd() *cobra.Command {
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "register-vendor [name] [(optional, default=healthcare) domain]",
+		Use:   "register-vendor [vendor CA certificate PEM file]",
 		Short: "Registers a vendor",
-		Args:  cobra.RangeArgs(1, 2),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl := registryClientCreator()
-			var vendorDomain = types.FallbackDomain
-			if len(args) == 2 {
-				vendorDomain = args[1]
+			var certificate *x509.Certificate
+			if certificateBytes, err := ioutil.ReadFile(args[0]); err != nil {
+				return err
+			} else {
+				if certificate, err = cert.PemToX509(certificateBytes); err != nil {
+					return err
+				}
 			}
-			event, err := cl.RegisterVendor(args[0], vendorDomain)
+			event, err := cl.RegisterVendor(certificate)
 			if err != nil {
 				logrus.Errorf("Unable to register vendor: %v", err)
 				return err
 			}
 			logrus.Info("Vendor registered.")
-			logEventToConsole(event)
-			return nil
-		},
-	})
-
-	cmd.AddCommand(&cobra.Command{
-		Use:   "refresh-vendor-cert",
-		Short: "Issues a new vendor certificate using existing keys (or newly generated if none exist)",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cl := registryClientCreator()
-			event, err := cl.RefreshVendorCertificate()
-			if err != nil {
-				logrus.Errorf("Unable to refresh vendor certificate: %v", err)
-				return err
-			}
-			payload := domain.RegisterVendorEvent{}
-			err = event.Unmarshal(&payload)
-			if err != nil {
-				logrus.Error("Unable to parse event payload.", err)
-			}
-			certificates := cert.GetActiveCertificates(payload.Keys, time.Now())
-			if len(certificates) == 0 {
-				logrus.Error("Certificate refresh succeeded, but couldn't find any activate certificate.")
-			} else {
-				// GetActiveCertificates returns the certificate with the longest validity first.
-				logrus.Infof("Vendor certificate refreshed, new certificate is valid until %v", certificates[0].NotAfter)
-			}
 			logEventToConsole(event)
 			return nil
 		},

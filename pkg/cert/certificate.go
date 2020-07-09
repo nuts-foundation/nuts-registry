@@ -48,9 +48,11 @@ func (c NutsCertificate) GetDomain() (string, error) {
 func (c NutsCertificate) getPartyIDFromSAN(oid asn1.ObjectIdentifier) (core.PartyID, error) {
 	for _, extension := range c.Extensions {
 		if extension.Id.Equal(cert.OIDSubjectAltName) {
-			if value, err := cert.UnmarshalOtherSubjectAltName(oid, extension.Value); err != nil {
+			var rawValue asn1.RawValue
+			if _, err := asn1.Unmarshal(extension.Value, &rawValue); err != nil {
 				return core.PartyID{}, err
-			} else {
+			}
+			if value, _ := cert.UnmarshalOtherSubjectAltName(oid, extension.Value); value != "" {
 				return core.NewPartyID(oid.String(), value)
 			}
 		}

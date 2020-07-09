@@ -62,6 +62,7 @@ func SignCertificateFromCSRWithKey(csr x509.CertificateRequest, notBefore time.T
 		NotBefore:             notBefore,
 		NotAfter:              notBefore.AddDate(0, 0, validityInDays),
 		ExtraExtensions:       csr.ExtraExtensions,
+		EmailAddresses:        csr.EmailAddresses,
 		PublicKey:             csr.PublicKey,
 		IsCA:                  true,
 		BasicConstraintsValid: true,

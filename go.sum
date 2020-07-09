@@ -349,6 +349,8 @@ github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200723083224-176a23a70341/go.
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200727112845-9a496507fa95/go.mod h1:Mqfv0hXK3IS2SoOGFQ28vKQt+Ec7o9wONGXXt+uv/Xk=
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200728101517-f03168e6ddbd h1:ylHT1SAG1xnifMzBB42swOqcihT3M4PMFHDH55ex84g=
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200728101517-f03168e6ddbd/go.mod h1:Mqfv0hXK3IS2SoOGFQ28vKQt+Ec7o9wONGXXt+uv/Xk=
+github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200803081751-21fde7f898c1 h1:pUV9krWkbRN8cQQefkbD5hbHSQM4+pKLXRJRJvZLFMw=
+github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200803081751-21fde7f898c1/go.mod h1:Mqfv0hXK3IS2SoOGFQ28vKQt+Ec7o9wONGXXt+uv/Xk=
 github.com/nuts-foundation/nuts-go-core v0.14.1-0.20200624131634-75b5f59c0b8e h1:Ums7038f7Y0sOx/MnXIrLwFNbQPwpeGDU6K3feSXlSI=
 github.com/nuts-foundation/nuts-go-core v0.14.1-0.20200624131634-75b5f59c0b8e/go.mod h1:zn4htpIzJ9ap5HYF8l4enNsf75Bq83kK/+B1pd/kflU=
 github.com/nuts-foundation/nuts-go-core v0.14.1-0.20200728125536-8a1b46560e8a h1:N4cQlzSatE6lvPewRHj7NEKA90UPmBJh686axIAIzpE=
@@ -359,8 +361,6 @@ github.com/nuts-foundation/nuts-network v0.0.0-20200720113317-1d5ac0efab46 h1:C0
 github.com/nuts-foundation/nuts-network v0.0.0-20200720113317-1d5ac0efab46/go.mod h1:Wh57XyURuljCM7+W0zoWik0vzxNY8ou9hGlb2A1iedo=
 github.com/nuts-foundation/nuts-network v0.0.0-20200728065454-467ee003eb3b h1:hhvV/S9h49fdp4mTsa/oC4LOrxuyCQjv6i+MOuB6LJM=
 github.com/nuts-foundation/nuts-network v0.0.0-20200728065454-467ee003eb3b/go.mod h1:grbRsWgv5FyGzZRUgSa8+pLAH7UD1gYNHA8rXwf9+A8=
-github.com/nuts-foundation/nuts-network v0.0.0-20200728065555-0406dd3a9c56 h1:s+APjiE8m2hPsUzHSgdBSZZIJwvF3CxUMb4r5bnlVJw=
-github.com/nuts-foundation/nuts-network v0.0.0-20200728065555-0406dd3a9c56/go.mod h1:Wh57XyURuljCM7+W0zoWik0vzxNY8ou9hGlb2A1iedo=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=

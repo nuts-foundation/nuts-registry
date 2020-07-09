@@ -68,31 +68,6 @@ func TestOrganization_validate(t *testing.T) {
 	}
 }
 
-func TestVendor_validate(t *testing.T) {
-	type fields struct {
-		Identifier Identifier
-		Name       string
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		wantErr bool
-	}{
-		{name: "ok", fields: fields{Name: "hello"}, wantErr: false},
-		{name: "missing name", fields: fields{}, wantErr: true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			v := Vendor{
-				Name: tt.fields.Name,
-			}
-			if err := v.validate(); (err != nil) != tt.wantErr {
-				t.Errorf("validate() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func Test_nonEmptyString(t *testing.T) {
 	type args struct {
 		value string

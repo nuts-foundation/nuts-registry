@@ -25,10 +25,12 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/types"
+	"github.com/nuts-foundation/nuts-registry/test"
 	"net/url"
 	"strings"
 	"time"
@@ -40,7 +42,6 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
-	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 
 	"net/http"
@@ -626,18 +627,20 @@ func TestApiResource_RegisterVendor(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	privateKey, _ := rsa.GenerateKey(rand.Reader, 1024)
+	certificate := test.GenerateCertificateEx(time.Now(), 2, privateKey)
+	certificateAsPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certificate,
+	})
+
 	t.Run("register vendor", func(t *testing.T) {
 		t.Run("200", func(t *testing.T) {
 			var registryClient = mock.NewMockRegistryClient(mockCtrl)
 			e, wrapper := initMockEcho(registryClient)
-			registryClient.EXPECT().RegisterVendor("def", "xyz")
+			registryClient.EXPECT().RegisterVendor(gomock.Any())
 
-			b, _ := json.Marshal(Vendor{
-				Name:   "def",
-				Domain: "xyz",
-			})
-
-			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(certificateAsPEM))
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
 			c.SetPath("/api/vendors")
@@ -677,9 +680,7 @@ func TestApiResource_RegisterVendor(t *testing.T) {
 			var registryClient = mock.NewMockRegistryClient(mockCtrl)
 			e, wrapper := initMockEcho(registryClient)
 
-			b, _ := json.Marshal(Vendor{})
-
-			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader([]byte{1, 2, 3}))
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
 			c.SetPath("/api/vendors")
@@ -844,28 +845,6 @@ func TestApiResource_RefreshOrganizationCertificate(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
 			assert.Equal(t, ErrOrganizationNotFound.Error(), rec.Body.String())
-		})
-	})
-}
-
-func TestApiResource_RefreshVendorCertificate(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	t.Run("refresh vendor certificate", func(t *testing.T) {
-		t.Run("200", func(t *testing.T) {
-			var registryClient = mock.NewMockRegistryClient(mockCtrl)
-			e, wrapper := initMockEcho(registryClient)
-			registryClient.EXPECT().RefreshVendorCertificate()
-
-			req := httptest.NewRequest(echo.POST, "/", nil)
-			rec := httptest.NewRecorder()
-			c := e.NewContext(req, rec)
-			c.SetPath("/api/vendor/refresh-cert")
-
-			err := wrapper.RefreshVendorCertificate(c)
-			assert.NoError(t, err)
-			assert.Equal(t, http.StatusOK, rec.Code)
 		})
 	})
 }

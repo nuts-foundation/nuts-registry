@@ -20,6 +20,9 @@
 package api
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
@@ -149,12 +152,14 @@ func TestHttpClient_VendorClaim(t *testing.T) {
 }
 
 func TestHttpClient_RegisterVendor(t *testing.T) {
+	privateKey, _ := rsa.GenerateKey(rand.Reader, 1024)
+	certificateAsDER := test.GenerateCertificateEx(time.Now(), 2, privateKey)
+	certificate, _ := x509.ParseCertificate(certificateAsDER)
 	t.Run("ok", func(t *testing.T) {
 		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil)
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
-
-		vendor, err := c.RegisterVendor("name", "")
+		vendor, err := c.RegisterVendor(certificate)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -163,30 +168,7 @@ func TestHttpClient_RegisterVendor(t *testing.T) {
 	t.Run("error 500", func(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
-
-		event, err := c.RegisterVendor("name", "")
-		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
-		assert.Nil(t, event)
-	})
-}
-
-func TestHttpClient_RefreshVendorCertificate(t *testing.T) {
-	t.Run("ok", func(t *testing.T) {
-		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil)
-		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
-		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
-
-		event, err := c.RefreshVendorCertificate()
-		if !assert.NoError(t, err) {
-			return
-		}
-		assert.NotNil(t, event)
-	})
-	t.Run("error 500", func(t *testing.T) {
-		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
-		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
-
-		event, err := c.RefreshVendorCertificate()
+		event, err := c.RegisterVendor(certificate)
 		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
 	})

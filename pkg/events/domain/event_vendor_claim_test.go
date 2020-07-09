@@ -3,9 +3,11 @@ package domain
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
+	test2 "github.com/nuts-foundation/nuts-crypto/test"
 	cert2 "github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/types"
@@ -34,11 +36,24 @@ func TestVendorClaimEvent(t *testing.T) {
 }
 
 func TestVendorClaimEvent_PostProcessUnmarshal(t *testing.T) {
-	t.Run("ok", func(t *testing.T) {
-		csr, _ := cert2.OrganisationCertificateRequest("Vendor", test.OrganizationID("abc"), "Org", types.HealthcareDomain)
+	vendorID := test.VendorID("VendorID")
+	orgID := test.OrganizationID("abc")
+	t.Run("ok - signed by vendor signing certificate (>= 0.15)", func(t *testing.T) {
+		csr, _ := cert2.VendorCertificateRequest(vendorID, "Vendor Name", "", types.HealthcareDomain)
 		cert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
 		event := VendorClaimEvent{
-			OrganizationID: test.OrganizationID("abc"),
+			OrganizationID: orgID,
+			VendorID:       vendorID,
+			OrgKeys:        []interface{}{certToMap(cert)},
+		}
+		err := event.PostProcessUnmarshal(events.CreateEvent(VendorClaim, event, nil))
+		assert.NoError(t, err)
+	})
+	t.Run("ok - signed by organization certificate (<= 0.14)", func(t *testing.T) {
+		csr, _ := cert2.OrganisationCertificateRequest("Vendor", orgID, "Org", types.HealthcareDomain)
+		cert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
+		event := VendorClaimEvent{
+			OrganizationID: orgID,
 			OrgKeys:        []interface{}{certToMap(cert)},
 		}
 		err := event.PostProcessUnmarshal(events.CreateEvent(VendorClaim, event, nil))
@@ -50,21 +65,42 @@ func TestVendorClaimEvent_PostProcessUnmarshal(t *testing.T) {
 		jwkAsMap, _ := cert.JwkToMap(keyAsJwk)
 		jwkAsMap["kty"] = string(jwkAsMap["kty"].(jwa.KeyType))
 		event := VendorClaimEvent{
-			OrganizationID: test.OrganizationID("abc"),
+			OrganizationID: orgID,
 			OrgKeys:        []interface{}{jwkAsMap},
 		}
 		err := event.PostProcessUnmarshal(events.CreateEvent(VendorClaim, event, nil))
 		assert.NoError(t, err)
 	})
-	t.Run("error - certificate organization doesn't match", func(t *testing.T) {
-		csr, _ := cert2.OrganisationCertificateRequest("Vendor", test.OrganizationID("def"), "Org", types.HealthcareDomain)
+	t.Run("error - vendor ID in certificate doesn't match", func(t *testing.T) {
+		csr, _ := cert2.VendorCertificateRequest(test.VendorID("SomeOtherID"), "Some other vendor", "", types.HealthcareDomain)
 		cert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
 		event := VendorClaimEvent{
-			OrganizationID: test.OrganizationID("abc"),
+			OrganizationID: orgID,
+			VendorID:       vendorID,
 			OrgKeys:        []interface{}{certToMap(cert)},
 		}
 		err := event.PostProcessUnmarshal(events.CreateEvent(VendorClaim, event, nil))
-		assert.EqualError(t, err, "organization ID in certificate (urn:oid:2.16.840.1.113883.2.4.6.1:def) doesn't match event (urn:oid:2.16.840.1.113883.2.4.6.1:abc)")
+		assert.EqualError(t, err, "vendor ID validation failed: vendor ID in certificate (urn:oid:1.3.6.1.4.1.54851.4:SomeOtherID) doesn't match event (VendorID)")
+	})
+	t.Run("error - organization ID in certificate doesn't match", func(t *testing.T) {
+		csr, _ := cert2.OrganisationCertificateRequest("Vendor", test.OrganizationID("def"), "Org", types.HealthcareDomain)
+		cert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
+		event := VendorClaimEvent{
+			OrganizationID: orgID,
+			OrgKeys:        []interface{}{certToMap(cert)},
+		}
+		err := event.PostProcessUnmarshal(events.CreateEvent(VendorClaim, event, nil))
+		assert.EqualError(t, err, "organization ID validation failed: organization ID in certificate (urn:oid:2.16.840.1.113883.2.4.6.1:def) doesn't match event (urn:oid:2.16.840.1.113883.2.4.6.1:abc)")
+	})
+	t.Run("error - no vendor ID or organization ID in certificate", func(t *testing.T) {
+		privateKey, _ := rsa.GenerateKey(rand.Reader, 1024)
+		cert, _ := x509.ParseCertificate(test2.GenerateCertificate(time.Now(), 2, privateKey))
+		event := VendorClaimEvent{
+			OrganizationID: orgID,
+			OrgKeys:        []interface{}{certToMap(cert)},
+		}
+		err := event.PostProcessUnmarshal(events.CreateEvent(VendorClaim, event, nil))
+		assert.EqualError(t, err, "event should either be signed by organization or vendor signing certificate")
 	})
 }
 

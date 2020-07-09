@@ -134,16 +134,6 @@ type RegisterVendorEvent struct {
 	OrgKeys *[]JWK `json:"orgKeys,omitempty"`
 }
 
-// Vendor defines model for Vendor.
-type Vendor struct {
-
-	// Domain the entity operates in.
-	Domain Domain `json:"domain"`
-
-	// the well-known name for the vendor
-	Name string `json:"name"`
-}
-
 // VendorClaimEvent defines model for VendorClaimEvent.
 type VendorClaimEvent struct {
 
@@ -197,9 +187,6 @@ type SearchOrganizationsParams struct {
 // DeprecatedVendorClaimJSONBody defines parameters for DeprecatedVendorClaim.
 type DeprecatedVendorClaimJSONBody Organization
 
-// RegisterVendorJSONBody defines parameters for RegisterVendor.
-type RegisterVendorJSONBody Vendor
-
 // VendorClaimRequestBody defines body for VendorClaim for application/json ContentType.
 type VendorClaimJSONRequestBody VendorClaimJSONBody
 
@@ -208,9 +195,6 @@ type RegisterEndpointJSONRequestBody RegisterEndpointJSONBody
 
 // DeprecatedVendorClaimRequestBody defines body for DeprecatedVendorClaim for application/json ContentType.
 type DeprecatedVendorClaimJSONRequestBody DeprecatedVendorClaimJSONBody
-
-// RegisterVendorRequestBody defines body for RegisterVendor for application/json ContentType.
-type RegisterVendorJSONRequestBody RegisterVendorJSONBody
 
 // Getter for additional properties for EndpointProperties. Returns the specified
 // element and whether it was found
@@ -420,9 +404,6 @@ type ClientInterface interface {
 	// SearchOrganizations request
 	SearchOrganizations(ctx context.Context, params *SearchOrganizationsParams) (*http.Response, error)
 
-	// RefreshVendorCertificate request
-	RefreshVendorCertificate(ctx context.Context) (*http.Response, error)
-
 	// DeprecatedVendorClaim request  with any body
 	DeprecatedVendorClaimWithBody(ctx context.Context, id string, contentType string, body io.Reader) (*http.Response, error)
 
@@ -430,8 +411,6 @@ type ClientInterface interface {
 
 	// RegisterVendor request  with any body
 	RegisterVendorWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
-
-	RegisterVendor(ctx context.Context, body RegisterVendorJSONRequestBody) (*http.Response, error)
 }
 
 func (c *Client) Verify(ctx context.Context, params *VerifyParams) (*http.Response, error) {
@@ -599,21 +578,6 @@ func (c *Client) SearchOrganizations(ctx context.Context, params *SearchOrganiza
 	return c.Client.Do(req)
 }
 
-func (c *Client) RefreshVendorCertificate(ctx context.Context) (*http.Response, error) {
-	req, err := NewRefreshVendorCertificateRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
 func (c *Client) DeprecatedVendorClaimWithBody(ctx context.Context, id string, contentType string, body io.Reader) (*http.Response, error) {
 	req, err := NewDeprecatedVendorClaimRequestWithBody(c.Server, id, contentType, body)
 	if err != nil {
@@ -646,21 +610,6 @@ func (c *Client) DeprecatedVendorClaim(ctx context.Context, id string, body Depr
 
 func (c *Client) RegisterVendorWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
 	req, err := NewRegisterVendorRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) RegisterVendor(ctx context.Context, body RegisterVendorJSONRequestBody) (*http.Response, error) {
-	req, err := NewRegisterVendorRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1062,33 +1011,6 @@ func NewSearchOrganizationsRequest(server string, params *SearchOrganizationsPar
 	return req, nil
 }
 
-// NewRefreshVendorCertificateRequest generates requests for RefreshVendorCertificate
-func NewRefreshVendorCertificateRequest(server string) (*http.Request, error) {
-	var err error
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/api/vendor/refresh-cert")
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 // NewDeprecatedVendorClaimRequest calls the generic DeprecatedVendorClaim builder with application/json body
 func NewDeprecatedVendorClaimRequest(server string, id string, body DeprecatedVendorClaimJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -1133,17 +1055,6 @@ func NewDeprecatedVendorClaimRequestWithBody(server string, id string, contentTy
 
 	req.Header.Add("Content-Type", contentType)
 	return req, nil
-}
-
-// NewRegisterVendorRequest calls the generic RegisterVendor builder with application/json body
-func NewRegisterVendorRequest(server string, body RegisterVendorJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewRegisterVendorRequestWithBody(server, "application/json", bodyReader)
 }
 
 // NewRegisterVendorRequestWithBody generates requests for RegisterVendor with any type of body
@@ -1403,28 +1314,6 @@ func (r searchOrganizationsResponse) StatusCode() int {
 	return 0
 }
 
-type refreshVendorCertificateResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *Event
-}
-
-// Status returns HTTPResponse.Status
-func (r refreshVendorCertificateResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r refreshVendorCertificateResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type deprecatedVendorClaimResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -1566,15 +1455,6 @@ func (c *ClientWithResponses) SearchOrganizationsWithResponse(ctx context.Contex
 	return ParseSearchOrganizationsResponse(rsp)
 }
 
-// RefreshVendorCertificateWithResponse request returning *RefreshVendorCertificateResponse
-func (c *ClientWithResponses) RefreshVendorCertificateWithResponse(ctx context.Context) (*refreshVendorCertificateResponse, error) {
-	rsp, err := c.RefreshVendorCertificate(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRefreshVendorCertificateResponse(rsp)
-}
-
 // DeprecatedVendorClaimWithBodyWithResponse request with arbitrary body returning *DeprecatedVendorClaimResponse
 func (c *ClientWithResponses) DeprecatedVendorClaimWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader) (*deprecatedVendorClaimResponse, error) {
 	rsp, err := c.DeprecatedVendorClaimWithBody(ctx, id, contentType, body)
@@ -1595,14 +1475,6 @@ func (c *ClientWithResponses) DeprecatedVendorClaimWithResponse(ctx context.Cont
 // RegisterVendorWithBodyWithResponse request with arbitrary body returning *RegisterVendorResponse
 func (c *ClientWithResponses) RegisterVendorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*registerVendorResponse, error) {
 	rsp, err := c.RegisterVendorWithBody(ctx, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRegisterVendorResponse(rsp)
-}
-
-func (c *ClientWithResponses) RegisterVendorWithResponse(ctx context.Context, body RegisterVendorJSONRequestBody) (*registerVendorResponse, error) {
-	rsp, err := c.RegisterVendor(ctx, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1835,32 +1707,6 @@ func ParseSearchOrganizationsResponse(rsp *http.Response) (*searchOrganizationsR
 	return response, nil
 }
 
-// ParseRefreshVendorCertificateResponse parses an HTTP response from a RefreshVendorCertificateWithResponse call
-func ParseRefreshVendorCertificateResponse(rsp *http.Response) (*refreshVendorCertificateResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &refreshVendorCertificateResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Event
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseDeprecatedVendorClaimResponse parses an HTTP response from a DeprecatedVendorClaimWithResponse call
 func ParseDeprecatedVendorClaimResponse(rsp *http.Response) (*deprecatedVendorClaimResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
@@ -1942,13 +1788,10 @@ type ServerInterface interface {
 	// Search for organizations
 	// (GET /api/organizations)
 	SearchOrganizations(ctx echo.Context, params SearchOrganizationsParams) error
-	// Refreshes the vendor's certificate.
-	// (POST /api/vendor/refresh-cert)
-	RefreshVendorCertificate(ctx echo.Context) error
 	// Claim an organization for a vendor (registers an organization under a vendor in the registry).
 	// (POST /api/vendor/{id}/claim)
 	DeprecatedVendorClaim(ctx echo.Context, id string) error
-	// Adds a vendor to the registry
+	// Registers the vendor in the registry
 	// (POST /api/vendors)
 	RegisterVendor(ctx echo.Context) error
 }
@@ -2108,15 +1951,6 @@ func (w *ServerInterfaceWrapper) SearchOrganizations(ctx echo.Context) error {
 	return err
 }
 
-// RefreshVendorCertificate converts echo context to params.
-func (w *ServerInterfaceWrapper) RefreshVendorCertificate(ctx echo.Context) error {
-	var err error
-
-	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.RefreshVendorCertificate(ctx)
-	return err
-}
-
 // DeprecatedVendorClaim converts echo context to params.
 func (w *ServerInterfaceWrapper) DeprecatedVendorClaim(ctx echo.Context) error {
 	var err error
@@ -2173,7 +2007,6 @@ func RegisterHandlers(router EchoRouter, si ServerInterface) {
 	router.POST("/api/organization/:id/endpoints", wrapper.RegisterEndpoint)
 	router.POST("/api/organization/:id/refresh-cert", wrapper.RefreshOrganizationCertificate)
 	router.GET("/api/organizations", wrapper.SearchOrganizations)
-	router.POST("/api/vendor/refresh-cert", wrapper.RefreshVendorCertificate)
 	router.POST("/api/vendor/:id/claim", wrapper.DeprecatedVendorClaim)
 	router.POST("/api/vendors", wrapper.RegisterVendor)
 

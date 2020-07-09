@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"errors"
+	"net"
 	"syscall"
 	"testing"
 	"time"
@@ -23,33 +24,49 @@ import (
 
 func TestServer(t *testing.T) {
 	command := cmd()
-	command.SetArgs([]string{"server"})
-	go func() {
-		time.Sleep(time.Second)
-		syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-	}()
-	err := command.Execute()
-	assert.NoError(t, err)
+	t.Run("SIGINT stops server", func(t *testing.T) {
+		command.SetArgs([]string{"server"})
+		go func() {
+			println("Waiting for server to start...")
+			for ;; {
+				conn, _ := net.Dial("tcp", pkg.DefaultRegistryConfig().Address)
+				if conn != nil {
+					println("Started!")
+					conn.Close()
+					break
+				}
+				time.Sleep(time.Second)
+			}
+			syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+		}()
+		err := command.Execute()
+		assert.NoError(t, err)
+	})
 }
 
 func TestRegisterVendor(t *testing.T) {
 	command := cmd()
 	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		client.EXPECT().RegisterVendor("name", "domain").Return(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil), nil)
-		command.SetArgs([]string{"register-vendor", "name", "domain"})
+		client.EXPECT().RegisterVendor(gomock.Any()).Return(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil), nil)
+		command.SetArgs([]string{"register-vendor", "../test/certificate.pem"})
 		err := command.Execute()
 		assert.NoError(t, err)
 	}))
-	t.Run("ok - no domain (default fallback to 'healthcare')", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		client.EXPECT().RegisterVendor("name", "healthcare").Return(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil), nil)
-		command.SetArgs([]string{"register-vendor", "name"})
+	t.Run("error - file does not exist", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		command.SetArgs([]string{"register-vendor", "non-existent"})
 		err := command.Execute()
-		assert.NoError(t, err)
+		assert.EqualError(t, err, "open non-existent: no such file or directory")
 	}))
-	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		client.EXPECT().RegisterVendor(gomock.Any(), gomock.Any()).Return(nil, errors.New("failed"))
-		command.SetArgs([]string{"register-vendor", "name", "domain"})
-		command.Execute()
+	t.Run("error - invalid PEM", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		command.SetArgs([]string{"register-vendor", "../test/invalid.pem"})
+		err := command.Execute()
+		assert.EqualError(t, err, "found 28 rest bytes after decoding PEM: failed to decode PEM block containing certificate")
+	}))
+	t.Run("error - unable to register", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
+		client.EXPECT().RegisterVendor(gomock.Any()).Return(nil, errors.New("failed"))
+		command.SetArgs([]string{"register-vendor", "../test/certificate.pem"})
+		err := command.Execute()
+		assert.EqualError(t, err, "failed")
 	}))
 }
 
@@ -66,29 +83,6 @@ func TestVendorClaim(t *testing.T) {
 	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		client.EXPECT().VendorClaim(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("failed"))
 		command.SetArgs([]string{"vendor-claim", orgID.String(), "orgName"})
-		command.Execute()
-	}))
-}
-
-func TestRefreshVendorCertificate(t *testing.T) {
-	command := cmd()
-	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{Keys: []interface{}{generateCertificate()}}, nil)
-		client.EXPECT().RefreshVendorCertificate().Return(event, nil)
-		command.SetArgs([]string{"refresh-vendor-cert"})
-		err := command.Execute()
-		assert.NoError(t, err)
-	}))
-	t.Run("ok - no certs", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil)
-		client.EXPECT().RefreshVendorCertificate().Return(event, nil)
-		command.SetArgs([]string{"refresh-vendor-cert"})
-		err := command.Execute()
-		assert.NoError(t, err)
-	}))
-	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		client.EXPECT().RefreshVendorCertificate().Return(nil, errors.New("failed"))
-		command.SetArgs([]string{"refresh-vendor-cert"})
 		command.Execute()
 	}))
 }

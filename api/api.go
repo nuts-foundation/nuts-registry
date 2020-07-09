@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"net/http"
 	"net/url"
 	"strings"
@@ -104,14 +105,6 @@ func (apiResource ApiWrapper) RefreshOrganizationCertificate(ctx echo.Context, i
 	return ctx.JSON(http.StatusOK, event)
 }
 
-func (apiResource ApiWrapper) RefreshVendorCertificate(ctx echo.Context) error {
-	event, err := apiResource.R.RefreshVendorCertificate()
-	if err != nil {
-		return ctx.String(http.StatusInternalServerError, err.Error())
-	}
-	return ctx.JSON(http.StatusOK, event)
-}
-
 // RegisterEndpoint is the Api implementation for registering an endpoint.
 func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) error {
 	organizationID := tryParsePartyID(id, ctx)
@@ -172,18 +165,15 @@ func (apiResource ApiWrapper) RegisterVendor(ctx echo.Context) error {
 	if err != nil {
 		return err
 	}
-	v := Vendor{}
-	if err := json.Unmarshal(bytes, &v); err != nil {
+	if certificate, err := cert.PemToX509(bytes); err != nil {
 		return ctx.String(http.StatusBadRequest, err.Error())
+	} else {
+		event, err := apiResource.R.RegisterVendor(certificate)
+		if err != nil {
+			return ctx.String(http.StatusInternalServerError, err.Error())
+		}
+		return ctx.JSON(http.StatusOK, event)
 	}
-	if err := v.validate(); err != nil {
-		return ctx.String(http.StatusBadRequest, err.Error())
-	}
-	event, err := apiResource.R.RegisterVendor(v.Name, string(v.Domain))
-	if err != nil {
-		return ctx.String(http.StatusInternalServerError, err.Error())
-	}
-	return ctx.JSON(http.StatusOK, event)
 }
 
 // OrganizationById is the Api implementation for getting an organization based on its Id.

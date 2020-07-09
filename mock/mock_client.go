@@ -127,33 +127,18 @@ func (mr *MockRegistryClientMockRecorder) VendorClaim(orgID, orgName, orgKeys in
 }
 
 // RegisterVendor mocks base method
-func (m *MockRegistryClient) RegisterVendor(name, domain string) (events.Event, error) {
+func (m *MockRegistryClient) RegisterVendor(certificate *x509.Certificate) (events.Event, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RegisterVendor", name, domain)
+	ret := m.ctrl.Call(m, "RegisterVendor", certificate)
 	ret0, _ := ret[0].(events.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RegisterVendor indicates an expected call of RegisterVendor
-func (mr *MockRegistryClientMockRecorder) RegisterVendor(name, domain interface{}) *gomock.Call {
+func (mr *MockRegistryClientMockRecorder) RegisterVendor(certificate interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterVendor", reflect.TypeOf((*MockRegistryClient)(nil).RegisterVendor), name, domain)
-}
-
-// RefreshVendorCertificate mocks base method
-func (m *MockRegistryClient) RefreshVendorCertificate() (events.Event, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RefreshVendorCertificate")
-	ret0, _ := ret[0].(events.Event)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// RefreshVendorCertificate indicates an expected call of RefreshVendorCertificate
-func (mr *MockRegistryClientMockRecorder) RefreshVendorCertificate() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshVendorCertificate", reflect.TypeOf((*MockRegistryClient)(nil).RefreshVendorCertificate))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterVendor", reflect.TypeOf((*MockRegistryClient)(nil).RegisterVendor), certificate)
 }
 
 // RefreshOrganizationCertificate mocks base method
