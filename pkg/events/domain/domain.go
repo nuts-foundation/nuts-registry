@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-crypto/log"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	cert2 "github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
@@ -167,7 +168,9 @@ func (t trustStore) Verify(certificate *x509.Certificate, moment time.Time) erro
 	}
 	// Make sure that all certificates in the chain have the same domain
 	if err = verifyCertChainNutsDomain(chains[0]); err != nil {
-		return err
+		// TODO: Nuts Domain is in PoC state, should be made mandatory later
+		// https://github.com/nuts-foundation/nuts-registry/issues/120
+		log.Logger().Warnf("Couldn't validate Nuts domain: %v", err)
 	}
 	return nil
 }
