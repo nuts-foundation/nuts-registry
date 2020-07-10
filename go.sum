@@ -191,6 +191,8 @@ github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200619120015-ef5d25a4e6bc h1:
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200619120015-ef5d25a4e6bc/go.mod h1:CmGoK5emSgqp6z7lG3nftMf0B5PcMTuV1IBDN6xwHcE=
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200626080840-8c6366d0104b h1:sQz5SvJvAfbb8uv8V9tOrPzsNpJ1Xqy9r6+QimXUW64=
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200626080840-8c6366d0104b/go.mod h1:4gEuk13bfH8cbTO+BNqqLSj5LftPoSx/g2f2S5OskN0=
+github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200710131507-8f3cf7e71409 h1:9nPSD6GimvR7IKwfEiGf4oPJYtl+w1RQAWqH1dxymys=
+github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200710131507-8f3cf7e71409/go.mod h1:KSWwwrekQjuHMFk/HyckOyMSN134odVHESyDIV2PVig=
 github.com/nuts-foundation/nuts-crypto v0.14.0 h1:gXgZR0QwyBBdutmTercXiFx3foRuLxfmNickm98JX5U=
 github.com/nuts-foundation/nuts-crypto v0.14.0/go.mod h1:CtjEbMFRirswucR5s7353qcIF+QPHVLIsQ6vL4fNVAA=
 github.com/nuts-foundation/nuts-go-core v0.13.0 h1:kdmBClufcCZMKjeTyfLhxyLAtPMlk3U2049U1B7p/i4=
@@ -447,6 +449,7 @@ gopkg.in/yaml.v2 v2.2.4 h1:/eiJrUcujPVeJ3xlSWaiNi3uSVmDGBK1pDHUHAnao1I=
 gopkg.in/yaml.v2 v2.2.4/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.8 h1:obN1ZagJSUGI0Ek/LBmuj4SNLPfIny3KsKFopxRdj10=
 gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+gopkg.in/yaml.v2 v2.3.0 h1:clyUAQHOM3G0M3f5vQj7LuJrETvjVot3Z5el9nffUtU=
 gopkg.in/yaml.v2 v2.3.0/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c h1:dUUwHk2QECo/6vqA44rthZ8ie2QXMNeKRTHCNY2nXvo=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=

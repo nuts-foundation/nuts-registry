@@ -24,6 +24,7 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-crypto/client"
 	"io"
 	"net/http"
 	"os"
@@ -179,7 +180,7 @@ func (r *Registry) Configure() error {
 		r.Config.Mode = cfg.GetEngineMode(r.Config.Mode)
 		if r.Config.Mode == core.ServerEngineMode {
 			r.EventSystem = events.NewEventSystem(domain.GetEventTypes()...)
-			r.crypto = crypto.NewCryptoClient()
+			r.crypto = client.NewCryptoClient()
 			if r.Config.VendorCACertificateValidity < 1 {
 				err = errors.New("vendor CA certificate validity must be at least 1 day")
 				return
