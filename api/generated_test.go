@@ -91,6 +91,18 @@ func (e RestInterfaceStub) OrganizationById(ctx echo.Context, id string) error {
 	return err
 }
 
+func (e RestInterfaceStub) MTLSCAs(ctx echo.Context) error {
+	var err error
+
+	return err
+}
+
+func (e RestInterfaceStub) MTLSCertificates(ctx echo.Context) error {
+	var err error
+
+	return err
+}
+
 func TestServerInterfaceWrapper_EndpointsByOrganisationId(t *testing.T) {
 	t.Run("200", func(t *testing.T) {
 		e := echo.New()

@@ -71,6 +71,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Event'
+  /api/mtls/cas:
+    get:
+      summary: "Get a list of current active vendor CA's"
+      description: |
+        The list of CA's can be used as trusted certificates on a reverse proxy. The path to the root is also returned.
+        Using these means that you trust the Nuts certificate tree.
+      operationId: "mTLSCAs"
+      tags:
+        - mTLS
+      responses:
+        '200':
+          description: "list of active vendor CA's, may be empty"
+          content:
+            application/x-pem-file:
+              schema:
+                type: string
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CAListWithChain'
+  /api/mtls/certificates:
+    get:
+      summary: "Get a list of current active certificates that may be used to setup a mTLS connection"
+      description: |
+        The list of certificates can be used for an acceptance list on a reverse proxy. This is a list of published mTLS certificates in the registry.
+        It may have different roots which need to be configured on a reverse proxy.
+      operationId: "mTLSCertificates"
+      tags:
+        - mTLS
+      responses:
+        '200':
+          description: "list of active certificates, may be empty"
+          content:
+            application/x-pem-file:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
   /api/organization:
     post:
       summary: "Claim an organization for the current vendor (registers an organization under the vendor in the registry)."
@@ -314,6 +354,21 @@ paths:
                       $ref: '#/components/schemas/Event'
 components:
   schemas:
+    CAListWithChain:
+      required:
+        - chain
+        - CAList
+      properties:
+        chain:
+          type: array
+          description: list of certificates, roots first then intermediates, shared amongst all CA's. PEM encoded.
+          items:
+            type: string
+        CAList:
+          type: array
+          description: list of current active (or will be active) vendor CA's. PEM encoded
+          items:
+            type: string
     Event:
       properties:
         type:
