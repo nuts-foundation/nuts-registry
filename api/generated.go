@@ -29,16 +29,6 @@ type CAListWithChain struct {
 	Chain []string `json:"chain"`
 }
 
-// CertificateListWithChain defines model for CertificateListWithChain.
-type CertificateListWithChain struct {
-
-	// list of current active (or will be active) certificates for setting up a mTLS connection. PEM encoded
-	Certificates []string `json:"certificates"`
-
-	// list of certificates, roots first then intermediates, then all CA's. PEM encoded.
-	Chain []string `json:"chain"`
-}
-
 // Domain defines model for Domain.
 type Domain string
 
@@ -1340,7 +1330,7 @@ func (r MTLSCAsResponse) StatusCode() int {
 type MTLSCertificatesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *CertificateListWithChain
+	JSON200      *[]string
 }
 
 // Status returns HTTPResponse.Status
@@ -1769,7 +1759,7 @@ func ParseMTLSCertificatesResponse(rsp *http.Response) (*MTLSCertificatesRespons
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest CertificateListWithChain
+		var dest []string
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1985,7 +1975,7 @@ type ServerInterface interface {
 	// Find endpoints based on organisation identifiers and type of endpoint (optional)
 	// (GET /api/endpoints)
 	EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error
-	// Get a list of current active CA's
+	// Get a list of current active vendor CA's
 	// (GET /api/mtls/cas)
 	MTLSCAs(ctx echo.Context) error
 	// Get a list of current active certificates that may be used to setup a mTLS connection
