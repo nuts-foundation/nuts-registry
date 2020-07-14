@@ -23,9 +23,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"net/http"
 	"net/url"
+
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 
 	"io/ioutil"
 
@@ -261,4 +262,16 @@ func (apiResource ApiWrapper) SearchOrganizations(ctx echo.Context, params Searc
 	}
 
 	return ctx.JSON(http.StatusOK, result)
+}
+
+func (apiResource ApiWrapper) MTLSCAs(ctx echo.Context) error {
+	var err error
+
+	return err
+}
+
+func (apiResource ApiWrapper) MTLSCertificates(ctx echo.Context) error {
+	var err error
+
+	return err
 }
