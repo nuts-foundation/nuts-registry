@@ -8,4 +8,4 @@ Nuts Registry
    :caption: Contents:
    :glob:
 
-   pages/*
+   pages/**/*
