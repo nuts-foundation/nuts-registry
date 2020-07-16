@@ -3,14 +3,10 @@ package network
 import (
 	"github.com/labstack/gommon/log"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
-	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	network "github.com/nuts-foundation/nuts-network/pkg"
 	"github.com/nuts-foundation/nuts-network/pkg/model"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
-	errors2 "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"time"
 )
 
 const documentType = "nuts.registry-event"
@@ -26,6 +22,7 @@ type ambassador struct {
 	cryptoClient  crypto.Client
 }
 
+// NewAmbassador creates a new Ambassador. Don't forget to call RegisterEventHandlers afterwards.
 func NewAmbassador(networkClient network.NetworkClient, cryptoClient crypto.Client) Ambassador {
 	return &ambassador{
 		networkClient: networkClient,
@@ -33,35 +30,19 @@ func NewAmbassador(networkClient network.NetworkClient, cryptoClient crypto.Clie
 	}
 }
 
+// RegisterEventHandlers this event handler which is required for it to actually work.
 func (n *ambassador) RegisterEventHandlers(fn events.EventRegistrar, eventType []events.EventType) {
 	for _, eventType := range eventType {
 		fn(eventType, func(event events.Event, lookup events.EventLookup) error {
-			if event.Type() == domain.RegisterVendor {
-				if err := n.registerVendorCertificateInTrustStore(event); err != nil {
-					logrus.Errorf("Error while registering vendor certificates in the truststore (event=%s): %v", event.Ref(), err)
-				}
-			}
 			go n.sendEventToNetwork(event)
 			return nil
 		})
 	}
 }
 
-func (n *ambassador) registerVendorCertificateInTrustStore(event events.Event) error {
-	payload := domain.RegisterVendorEvent{}
-	if err := event.Unmarshal(&payload); err != nil {
-		return err
-	}
-	for _, trustedCert := range cert.GetActiveCertificates(payload.Keys, time.Now()) {
-		if err := n.cryptoClient.TrustStore().AddCertificate(trustedCert); err != nil {
-			return errors2.Wrapf(err, "can't add vendor certificate to truststore (subject=%s,serial=%d)", trustedCert.Subject.String(), trustedCert.SerialNumber)
-		}
-	}
-	return nil
-}
-
 func (n *ambassador) sendEventToNetwork(event events.Event) {
-	// TODO: Should we be able to put other vendor's events on the network?
+	// For now we just send every event to the network, event other node's events. They're signed so they can't be
+	// edited anyways and it assures the registry shadow copy on the network is populated ASAP.
 	eventData := event.Marshal()
 	hash := model.CalculateDocumentHash(documentType, event.IssuedAt(), eventData)
 	existingDocument, err := n.networkClient.GetDocument(hash)

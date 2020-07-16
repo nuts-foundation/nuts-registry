@@ -83,6 +83,7 @@ type Event interface {
 	Unmarshal(out interface{}) error
 	Marshal() []byte
 	Signature() []byte
+	SignatureDetails() SignatureDetails
 	Sign(signFn func([]byte) ([]byte, error)) error
 }
 
@@ -115,6 +116,10 @@ type jsonEvent struct {
 	EventPayload     interface{}      `json:"payload,omitempty"`
 	signatureDetails SignatureDetails `json:"-"`
 	cachedData       []byte
+}
+
+func (j jsonEvent) SignatureDetails() SignatureDetails {
+	return j.signatureDetails
 }
 
 func (j jsonEvent) Version() Version {

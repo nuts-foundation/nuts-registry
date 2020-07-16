@@ -197,7 +197,8 @@ func (r *Registry) Configure() error {
 			// -  TrustStore; must be first since certificates might be self-signed, and thus be added to the truststore
 			//    before signature validation takes place.
 			// -  Signature validator
-			// -  Database
+			// -  Database, (in memory) queryable view of the registry
+			// -  Network Ambassador, when all other processors succeeded the event is probably valid and can be broadcast.
 			domain.NewCertificateEventHandler(r.crypto.TrustStore()).RegisterEventHandlers(r.EventSystem.RegisterEventHandler)
 			signatureValidator := events.NewSignatureValidator(r.crypto.VerifyJWS, r.crypto.TrustStore())
 			signatureValidator.RegisterEventHandlers(r.EventSystem.RegisterEventHandler, domain.GetEventTypes())

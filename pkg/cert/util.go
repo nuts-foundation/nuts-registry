@@ -3,6 +3,7 @@ package cert
 import (
 	"crypto/x509"
 	"encoding/asn1"
+	"errors"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 )
 
@@ -32,6 +33,9 @@ func GetDomain(certificate *x509.Certificate) (string, error) {
 }
 
 func getOtherSubjectAltName(certificate *x509.Certificate, oid asn1.ObjectIdentifier) (string, error) {
+	if certificate == nil {
+		return "", errors.New("certificate is nil")
+	}
 	for _, extension := range certificate.Extensions {
 		if extension.Id.Equal(oidSubjectAltName) {
 			return cert.UnmarshalOtherSubjectAltName(oid, extension.Value)
