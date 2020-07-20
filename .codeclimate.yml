@@ -10,5 +10,6 @@ exclude_patterns:
   - "docs/"
   - "migrations/"
   - "**/*_test.go"
+  - "test/*"
   - "**/mock.go"
   - "**/generated.go"

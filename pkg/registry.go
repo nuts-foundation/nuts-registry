@@ -24,7 +24,16 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/nuts-foundation/nuts-crypto/client"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	core "github.com/nuts-foundation/nuts-go-core"
+	networkClient "github.com/nuts-foundation/nuts-network/client"
+	"github.com/nuts-foundation/nuts-registry/pkg/db"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
+	"github.com/nuts-foundation/nuts-registry/pkg/network"
+	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"os"
@@ -33,14 +42,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/fsnotify/fsnotify"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
-	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
-	"github.com/sirupsen/logrus"
 )
 
 // ConfDataDir is the config name for specifiying the data location of the requiredFiles
@@ -142,14 +143,15 @@ func DefaultRegistryConfig() RegistryConfig {
 
 // Registry holds the config and Db reference
 type Registry struct {
-	Config      RegistryConfig
-	Db          db.Db
-	EventSystem events.EventSystem
-	OnChange    func(registry *Registry)
-	crypto      crypto.Client
-	configOnce  sync.Once
-	_logger     *logrus.Entry
-	closers     []chan struct{}
+	Config            RegistryConfig
+	Db                db.Db
+	EventSystem       events.EventSystem
+	OnChange          func(registry *Registry)
+	crypto            crypto.Client
+	networkAmbassador network.Ambassador
+	configOnce        sync.Once
+	_logger           *logrus.Entry
+	closers           []chan struct{}
 }
 
 var instance *Registry
@@ -180,7 +182,9 @@ func (r *Registry) Configure() error {
 		r.Config.Mode = cfg.GetEngineMode(r.Config.Mode)
 		if r.Config.Mode == core.ServerEngineMode {
 			r.EventSystem = events.NewEventSystem(domain.GetEventTypes()...)
-			r.crypto = client.NewCryptoClient()
+			if r.crypto == nil {
+				r.crypto = client.NewCryptoClient()
+			}
 			if r.Config.VendorCACertificateValidity < 1 {
 				err = errors.New("vendor CA certificate validity must be at least 1 day")
 				return
@@ -193,13 +197,17 @@ func (r *Registry) Configure() error {
 			// -  TrustStore; must be first since certificates might be self-signed, and thus be added to the truststore
 			//    before signature validation takes place.
 			// -  Signature validator
-			// -  Database
-			trustStore := domain.NewTrustStore()
-			trustStore.RegisterEventHandlers(r.EventSystem.RegisterEventHandler)
-			signatureValidator := events.NewSignatureValidator(r.crypto.VerifyJWS, trustStore)
+			// -  Database, (in memory) queryable view of the registry
+			// -  Network Ambassador, when all other processors succeeded the event is probably valid and can be broadcast.
+			domain.NewCertificateEventHandler(r.crypto.TrustStore()).RegisterEventHandlers(r.EventSystem.RegisterEventHandler)
+			signatureValidator := events.NewSignatureValidator(r.crypto.VerifyJWS, r.crypto.TrustStore())
 			signatureValidator.RegisterEventHandlers(r.EventSystem.RegisterEventHandler, domain.GetEventTypes())
 			r.Db = db.New()
 			r.Db.RegisterEventHandlers(r.EventSystem.RegisterEventHandler)
+			if r.networkAmbassador == nil {
+				r.networkAmbassador = network.NewAmbassador(networkClient.NewNetworkClient(), r.crypto)
+			}
+			r.networkAmbassador.RegisterEventHandlers(r.EventSystem.RegisterEventHandler, domain.GetEventTypes())
 			if err = r.EventSystem.Configure(r.getEventsDir()); err != nil {
 				r.logger().WithError(err).Warn("Unable to configure event system")
 				return

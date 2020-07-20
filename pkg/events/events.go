@@ -83,6 +83,7 @@ type Event interface {
 	Unmarshal(out interface{}) error
 	Marshal() []byte
 	Signature() []byte
+	SignatureDetails() SignatureDetails
 	Sign(signFn func([]byte) ([]byte, error)) error
 }
 
@@ -114,6 +115,11 @@ type jsonEvent struct {
 	JWS              string           `json:"jws,omitempty"`
 	EventPayload     interface{}      `json:"payload,omitempty"`
 	signatureDetails SignatureDetails `json:"-"`
+	cachedData       []byte
+}
+
+func (j jsonEvent) SignatureDetails() SignatureDetails {
+	return j.signatureDetails
 }
 
 func (j jsonEvent) Version() Version {
@@ -174,6 +180,7 @@ func (j *jsonEvent) Sign(signFn func([]byte) ([]byte, error)) error {
 		return err
 	}
 	j.JWS = string(signature)
+	j.cachedData = nil // Reset cached data since we modified the event contents
 	return nil
 }
 
@@ -200,6 +207,7 @@ func EventFromJSON(data []byte) (Event, error) {
 	if err := json.Unmarshal(data, &e); err != nil {
 		return nil, err
 	}
+	e.cachedData = data
 	if err := validateEvent(e); err != nil {
 		return nil, err
 	}
@@ -278,10 +286,12 @@ func (j jsonEvent) Unmarshal(out interface{}) error {
 
 func (j jsonEvent) Marshal() []byte {
 	// Marshal a copy since Ref should be calculated
-	var e = j
-	e.ThisEventRef = e.Ref()
-	data, _ := json.MarshalIndent(e, "", "  ")
-	return data
+	if j.cachedData == nil {
+		var e = j
+		e.ThisEventRef = e.Ref()
+		j.cachedData, _ = json.MarshalIndent(e, "", "  ")
+	}
+	return j.cachedData
 }
 
 func (j jsonEvent) Signature() []byte {
