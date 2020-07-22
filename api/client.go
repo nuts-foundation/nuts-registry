@@ -293,6 +293,11 @@ func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, err
 	return &o, nil
 }
 
+// VendorCAs on the client is not implemented
+func (hb HttpClient) VendorCAs() [][]string {
+	return [][]string{{}}
+}
+
 func testResponseCode(expectedStatusCode int, response *http.Response) error {
 	if response.StatusCode != expectedStatusCode {
 		responseData, _ := ioutil.ReadAll(response.Body)

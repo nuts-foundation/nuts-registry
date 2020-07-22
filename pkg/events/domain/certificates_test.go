@@ -6,6 +6,9 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
@@ -13,10 +16,7 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
-
 
 func TestNewCertificateEventHandler(t *testing.T) {
 	ts := NewCertificateEventHandler(nil)
@@ -158,8 +158,16 @@ func certToMap(certificate *x509.Certificate) map[string]interface{} {
 	return keyAsMap
 }
 
-type memoryTrustStore struct{
+type memoryTrustStore struct {
 	certPool *x509.CertPool
+}
+
+func (n memoryTrustStore) GetRoots(t time.Time) []*x509.Certificate {
+	return nil
+}
+
+func (n memoryTrustStore) GetCertificates(i [][]*x509.Certificate, t time.Time, b bool) [][]*x509.Certificate {
+	return nil
 }
 
 func (n memoryTrustStore) Pool() *x509.CertPool {

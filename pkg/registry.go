@@ -22,8 +22,19 @@ package pkg
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/nuts-foundation/nuts-crypto/client"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
@@ -34,14 +45,6 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/nuts-foundation/nuts-registry/pkg/network"
 	"github.com/sirupsen/logrus"
-	"io"
-	"net/http"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
 )
 
 // ConfDataDir is the config name for specifiying the data location of the requiredFiles
@@ -113,6 +116,9 @@ type RegistryClient interface {
 	// If fix=true, data will be fixed/upgraded when necessary (e.g. issue certificates). Events resulting from fixing the data are returned.
 	// If the returned bool=true there's data to be fixed and Verify should be run with fix=true.
 	Verify(fix bool) ([]events.Event, bool, error)
+
+	// VendorCAs returns all registered vendors as list of chains, PEM encoded
+	VendorCAs() [][]string
 }
 
 // RegistryConfig holds the config
@@ -242,6 +248,40 @@ func (r *Registry) OrganizationById(id string) (*db.Organization, error) {
 
 func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
 	return r.Db.ReverseLookup(name)
+}
+
+func (r *Registry) VendorCAs() [][]string {
+	now := time.Now()
+
+	roots := r.crypto.TrustStore().GetRoots(now)
+	var rChains [][]*x509.Certificate
+	var chains [][]*x509.Certificate
+	var sChains [][]string
+
+	for _, r := range roots {
+		rChains = append(rChains, []*x509.Certificate{r})
+	}
+
+	intermediates := r.crypto.TrustStore().GetCertificates(rChains, now, true)
+	chains = r.crypto.TrustStore().GetCertificates(intermediates, now, true)
+
+	sChains = make([][]string, len(chains))
+	for i, ch := range chains {
+		sChains[i] = make([]string, len(ch))
+		for j, c := range ch {
+			sChains[i][len(ch)-j-1] = certificateToPEM(c)
+		}
+	}
+	return sChains
+}
+
+// todo will be available in nuts-crypto after merging nuts-crypto#69
+func certificateToPEM(certificate *x509.Certificate) string {
+	bytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certificate.Raw,
+	})
+	return string(bytes)
 }
 
 // Start initiates the routines for auto-updating the data

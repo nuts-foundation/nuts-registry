@@ -184,3 +184,17 @@ func (mr *MockRegistryClientMockRecorder) Verify(fix interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockRegistryClient)(nil).Verify), fix)
 }
+
+// VendorCAs mocks base method
+func (m *MockRegistryClient) VendorCAs() [][]string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VendorCAs")
+	ret0, _ := ret[0].([][]string)
+	return ret0
+}
+
+// VendorCAs indicates an expected call of VendorCAs
+func (mr *MockRegistryClientMockRecorder) VendorCAs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VendorCAs", reflect.TypeOf((*MockRegistryClient)(nil).VendorCAs))
+}

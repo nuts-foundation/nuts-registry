@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 
@@ -267,7 +268,76 @@ func (apiResource ApiWrapper) SearchOrganizations(ctx echo.Context, params Searc
 func (apiResource ApiWrapper) MTLSCAs(ctx echo.Context) error {
 	var err error
 
+	CAs := apiResource.R.VendorCAs()
+
+	acceptHeader := ctx.Request().Header.Get("Accept")
+	if "application/json" == acceptHeader {
+		result := cAsAsCAListWithChain(CAs)
+		ctx.JSON(http.StatusOK, &result)
+	} else { // otherwise application/x-pem-file
+		ctx.Response().Header().Set("Content-Type", "application/x-pem-file")
+		ctx.String(http.StatusOK, cAsAsSinglePEM(CAs))
+	}
+
 	return err
+}
+
+// cAsAsSinglePEM sorts the given string by depth
+func cAsAsSinglePEM(CAs [][]string) string {
+	var depthSet []map[string]bool
+	size := 0 // memory optimization
+	for _, ch := range CAs {
+		for j, c := range ch {
+			if len(depthSet) <= j {
+				depthSet = append(depthSet, map[string]bool{})
+			}
+			currentDepthSet := depthSet[j]
+			if !currentDepthSet[c] {
+				currentDepthSet[c] = true
+				size += len(c) + 1 // memory optimization (newline)
+			}
+		}
+	}
+	var result strings.Builder
+	result.Grow(size) // memory optimization
+	// now iterate per depth
+	for _, s := range depthSet {
+		for k, _ := range s {
+			result.WriteString(k)
+			result.WriteString("\n")
+		}
+	}
+	return result.String()
+}
+
+// cAsAsCAListWithChain separates the Vendor CA's from the rest of the chain
+func cAsAsCAListWithChain(CAs [][]string) CAListWithChain {
+	var depthSet []map[string]bool // set
+	var result CAListWithChain
+
+	for _, ch := range CAs {
+		for j, c := range ch {
+			if j == len(ch)-1 { // leaf, thus vendor CA
+				result.CAList = append(result.CAList, c)
+			} else {
+				if len(depthSet) <= j {
+					depthSet = append(depthSet, map[string]bool{})
+				}
+				currentDepthSet := depthSet[j]
+				if !currentDepthSet[c] {
+					currentDepthSet[c] = true
+				}
+			}
+		}
+	}
+	// now iterate per depth for root/intermediates
+	for _, s := range depthSet {
+		for k, _ := range s {
+			result.Chain = append(result.Chain, k)
+		}
+	}
+
+	return result
 }
 
 func (apiResource ApiWrapper) MTLSCertificates(ctx echo.Context) error {

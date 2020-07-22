@@ -22,6 +22,10 @@
 package pkg
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -31,10 +35,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"github.com/spf13/cobra"
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/gommon/random"
+	cryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/mock"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
@@ -400,5 +406,90 @@ func TestRegistry_Verify(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, fix)
 		assert.Empty(t, evts)
+	})
+}
+
+func TestRegistry_VendorCAs(t *testing.T) {
+	pk1, _ := rsa.GenerateKey(rand.Reader, 1024)
+	pk2, _ := rsa.GenerateKey(rand.Reader, 1024)
+	pk3, _ := rsa.GenerateKey(rand.Reader, 1024)
+	certBytes := test.GenerateCertificateEx(time.Now().AddDate(0, 0, -1), 2, pk1)
+	root, _ := x509.ParseCertificate(certBytes)
+	certBytes = test.GenerateCertificateCA("Intermediate CA", root, pk2, pk1)
+	ca, _ := x509.ParseCertificate(certBytes)
+	certBytes = test.GenerateCertificateCA("Vendor CA 1", ca, pk3, pk2)
+	vca1, _ := x509.ParseCertificate(certBytes)
+	certBytes = test.GenerateCertificateCA("Vendor CA 2", ca, pk3, pk2)
+	vca2, _ := x509.ParseCertificate(certBytes)
+
+	t.Run("returns empty slice when truststore is empty", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		repo, _ := test.NewTestRepo(t.Name())
+		defer repo.Cleanup()
+
+		trustStore, err := cert.NewTrustStore(fmt.Sprintf("%s/truststore.pem", repo.Directory))
+		assert.NoError(t, err)
+
+		cMock := cryptoMock.NewMockClient(mockCtrl)
+		cMock.EXPECT().TrustStore().AnyTimes().Return(trustStore)
+		cas := (&Registry{crypto: cMock}).VendorCAs()
+		assert.Len(t, cas, 0)
+	})
+
+	t.Run("returns empty slice when truststore only contains a root", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		repo, _ := test.NewTestRepo(t.Name())
+		defer repo.Cleanup()
+
+		trustStore, err := cert.NewTrustStore(fmt.Sprintf("%s/truststore.pem", repo.Directory))
+		assert.NoError(t, err)
+		trustStore.AddCertificate(root)
+
+		cMock := cryptoMock.NewMockClient(mockCtrl)
+		cMock.EXPECT().TrustStore().AnyTimes().Return(trustStore)
+		cas := (&Registry{crypto: cMock}).VendorCAs()
+		assert.Len(t, cas, 0)
+	})
+
+	t.Run("returns empty slice when truststore only contains a root and 1 intermediate", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		repo, _ := test.NewTestRepo(t.Name())
+		defer repo.Cleanup()
+
+		trustStore, err := cert.NewTrustStore(fmt.Sprintf("%s/truststore.pem", repo.Directory))
+		assert.NoError(t, err)
+		trustStore.AddCertificate(root)
+		trustStore.AddCertificate(ca)
+
+		cMock := cryptoMock.NewMockClient(mockCtrl)
+		cMock.EXPECT().TrustStore().AnyTimes().Return(trustStore)
+		cas := (&Registry{crypto: cMock}).VendorCAs()
+		assert.Len(t, cas, 0)
+	})
+
+	t.Run("returns 2 chains when truststore contains a root, an intermediate and 2 vendor CAs", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		repo, _ := test.NewTestRepo(t.Name())
+		defer repo.Cleanup()
+
+		trustStore, err := cert.NewTrustStore(fmt.Sprintf("%s/truststore.pem", repo.Directory))
+		assert.NoError(t, err)
+		trustStore.AddCertificate(root)
+		trustStore.AddCertificate(ca)
+		trustStore.AddCertificate(vca1)
+		trustStore.AddCertificate(vca2)
+
+		cMock := cryptoMock.NewMockClient(mockCtrl)
+		cMock.EXPECT().TrustStore().AnyTimes().Return(trustStore)
+		cas := (&Registry{crypto: cMock}).VendorCAs()
+		assert.Len(t, cas, 2)
+		assert.Len(t, cas[0], 3)
+		assert.Len(t, cas[1], 3)
+		assert.NotEqual(t, cas[0][2], cas[1][2])
+		assert.Equal(t, cas[0][0], cas[1][0])
 	})
 }

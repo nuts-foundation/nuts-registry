@@ -23,6 +23,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -937,6 +938,56 @@ func TestApiResource_RegisterEndpoint(t *testing.T) {
 				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
 			}
 		})
+	})
+}
+
+func TestApiResource_MTLSCAs(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	root := "-----BEGIN CERTIFICATE-----\nroot\n-----END CERTIFICATE-----"
+	ca := "-----BEGIN CERTIFICATE-----\nintermediate\n-----END CERTIFICATE-----"
+	vca1 := "-----BEGIN CERTIFICATE-----\nvendor 1\n-----END CERTIFICATE-----"
+	vca2 := "-----BEGIN CERTIFICATE-----\nvendor 2\n-----END CERTIFICATE-----"
+	combined := fmt.Sprintf("%s\n%s\n%s\n%s\n", root, ca, vca1, vca2)
+
+	t.Run("ok - http status 200 - single pem", func(t *testing.T) {
+		var registryClient = mock.NewMockRegistryClient(mockCtrl)
+		e, wrapper := initMockEcho(registryClient)
+		registryClient.EXPECT().VendorCAs().Return([][]string{{root, ca, vca1}, {root, ca, vca2}})
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/mtls/cas")
+
+		err := wrapper.MTLSCAs(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, combined, rec.Body.String())
+		assert.Equal(t, "application/x-pem-file", rec.Result().Header.Get("Content-Type"))
+	})
+
+	t.Run("ok - http status 200 - json", func(t *testing.T) {
+		var registryClient = mock.NewMockRegistryClient(mockCtrl)
+		e, wrapper := initMockEcho(registryClient)
+		registryClient.EXPECT().VendorCAs().Return([][]string{{root, ca, vca1}, {root, ca, vca2}})
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		req.Header.Set("Accept", "application/json")
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/mtls/cas")
+
+		err := wrapper.MTLSCAs(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		cAListWithChain := CAListWithChain{}
+		json.Unmarshal(rec.Body.Bytes(), &cAListWithChain)
+		assert.Len(t, cAListWithChain.Chain, 2)
+		assert.Equal(t, root, cAListWithChain.Chain[0])
+		assert.Len(t, cAListWithChain.CAList, 2)
 	})
 }
 
