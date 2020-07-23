@@ -949,7 +949,7 @@ func TestApiResource_MTLSCAs(t *testing.T) {
 	ca := "-----BEGIN CERTIFICATE-----\nintermediate\n-----END CERTIFICATE-----"
 	vca1 := "-----BEGIN CERTIFICATE-----\nvendor 1\n-----END CERTIFICATE-----"
 	vca2 := "-----BEGIN CERTIFICATE-----\nvendor 2\n-----END CERTIFICATE-----"
-	combined := fmt.Sprintf("%s\n%s\n%s\n%s\n", root, ca, vca1, vca2)
+	combined := fmt.Sprintf("%s\n%s\n", root, ca)
 
 	t.Run("ok - http status 200 - single pem", func(t *testing.T) {
 		var registryClient = mock.NewMockRegistryClient(mockCtrl)
@@ -964,7 +964,10 @@ func TestApiResource_MTLSCAs(t *testing.T) {
 		err := wrapper.MTLSCAs(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, combined, rec.Body.String())
+		body := rec.Body.String()
+		assert.Equal(t, 0, strings.Index(body, combined))
+		assert.True(t, strings.Contains(body, vca1))
+		assert.True(t, strings.Contains(body, vca2))
 		assert.Equal(t, "application/x-pem-file", rec.Result().Header.Get("Content-Type"))
 	})
 
