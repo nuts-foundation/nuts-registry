@@ -344,6 +344,8 @@ github.com/neo4j/neo4j-go-driver v1.7.4/go.mod h1:aPO0vVr+WnhEJne+FgFjfsjzAnssPF
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200710131507-8f3cf7e71409/go.mod h1:KSWwwrekQjuHMFk/HyckOyMSN134odVHESyDIV2PVig=
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200721105241-90e452e194ca h1:whfz54Q1pI5r6gCvJq57FdM9KpDZ+iBwH5xbuIEetYE=
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200721105241-90e452e194ca/go.mod h1:Mqfv0hXK3IS2SoOGFQ28vKQt+Ec7o9wONGXXt+uv/Xk=
+github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200723083224-176a23a70341 h1:PbFNgU5kzNqru7cc0OQTmk4Ujtl0Pyl/14tZi+ghUoA=
+github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200723083224-176a23a70341/go.mod h1:Mqfv0hXK3IS2SoOGFQ28vKQt+Ec7o9wONGXXt+uv/Xk=
 github.com/nuts-foundation/nuts-go-core v0.14.1-0.20200624131634-75b5f59c0b8e h1:Ums7038f7Y0sOx/MnXIrLwFNbQPwpeGDU6K3feSXlSI=
 github.com/nuts-foundation/nuts-go-core v0.14.1-0.20200624131634-75b5f59c0b8e/go.mod h1:zn4htpIzJ9ap5HYF8l4enNsf75Bq83kK/+B1pd/kflU=
 github.com/nuts-foundation/nuts-network v0.0.0-20200720113317-1d5ac0efab46 h1:C0skmxCPnNIHIxKenJ/JyHWgGIZK0T9s10n5R4g+mIo=
