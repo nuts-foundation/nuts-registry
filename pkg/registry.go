@@ -23,7 +23,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -117,8 +116,8 @@ type RegistryClient interface {
 	// If the returned bool=true there's data to be fixed and Verify should be run with fix=true.
 	Verify(fix bool) ([]events.Event, bool, error)
 
-	// VendorCAs returns all registered vendors as list of chains, PEM encoded
-	VendorCAs() [][]string
+	// VendorCAs returns all registered vendors as list of chains, PEM encoded. The first entry in a chain will be the leaf and the last one the root.
+	VendorCAs() [][]*x509.Certificate
 }
 
 // RegistryConfig holds the config
@@ -250,38 +249,18 @@ func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
 	return r.Db.ReverseLookup(name)
 }
 
-func (r *Registry) VendorCAs() [][]string {
+func (r *Registry) VendorCAs() [][]*x509.Certificate {
 	now := time.Now()
 
 	roots := r.crypto.TrustStore().GetRoots(now)
-	var rChains [][]*x509.Certificate
-	var chains [][]*x509.Certificate
-	var sChains [][]string
+	var rootChains [][]*x509.Certificate
 
 	for _, r := range roots {
-		rChains = append(rChains, []*x509.Certificate{r})
+		rootChains = append(rootChains, []*x509.Certificate{r})
 	}
 
-	intermediates := r.crypto.TrustStore().GetCertificates(rChains, now, true)
-	chains = r.crypto.TrustStore().GetCertificates(intermediates, now, true)
-
-	sChains = make([][]string, len(chains))
-	for i, ch := range chains {
-		sChains[i] = make([]string, len(ch))
-		for j, c := range ch {
-			sChains[i][len(ch)-j-1] = certificateToPEM(c)
-		}
-	}
-	return sChains
-}
-
-// todo will be available in nuts-crypto after merging nuts-crypto#69
-func certificateToPEM(certificate *x509.Certificate) string {
-	bytes := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: certificate.Raw,
-	})
-	return string(bytes)
+	intermediates := r.crypto.TrustStore().GetCertificates(rootChains, now, true)
+	return r.crypto.TrustStore().GetCertificates(intermediates, now, true)
 }
 
 // Start initiates the routines for auto-updating the data

@@ -489,7 +489,7 @@ func TestRegistry_VendorCAs(t *testing.T) {
 		assert.Len(t, cas, 2)
 		assert.Len(t, cas[0], 3)
 		assert.Len(t, cas[1], 3)
-		assert.NotEqual(t, cas[0][2], cas[1][2])
-		assert.Equal(t, cas[0][0], cas[1][0])
+		assert.NotEqual(t, cas[0][0], cas[1][0])
+		assert.Equal(t, cas[0][2], cas[1][2])
 	})
 }

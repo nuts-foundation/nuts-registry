@@ -20,7 +20,9 @@
 package api
 
 import (
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/http"
@@ -266,78 +268,90 @@ func (apiResource ApiWrapper) SearchOrganizations(ctx echo.Context, params Searc
 }
 
 func (apiResource ApiWrapper) MTLSCAs(ctx echo.Context) error {
-	var err error
-
 	CAs := apiResource.R.VendorCAs()
 
 	acceptHeader := ctx.Request().Header.Get("Accept")
 	if "application/json" == acceptHeader {
-		result := cAsAsCAListWithChain(CAs)
+		result := toCAListWithChain(CAs)
 		ctx.JSON(http.StatusOK, &result)
 	} else { // otherwise application/x-pem-file
 		ctx.Response().Header().Set("Content-Type", "application/x-pem-file")
-		ctx.String(http.StatusOK, cAsAsSinglePEM(CAs))
+		ctx.String(http.StatusOK, toSinglePEM(CAs))
 	}
 
-	return err
+	return nil
 }
 
-// cAsAsSinglePEM sorts the given string by depth
-func cAsAsSinglePEM(CAs [][]string) string {
+// toSinglePEM transforms the list of chains to a single PEM file removing all duplicate entries
+func toSinglePEM(CAs [][]*x509.Certificate) string {
 	var depthSet []map[string]bool
 	size := 0 // memory optimization
-	for _, ch := range CAs {
-		for j, c := range ch {
-			if len(depthSet) <= j {
+	for _, chain := range CAs {
+		for i, cert := range chain {
+			if len(depthSet) <= i {
 				depthSet = append(depthSet, map[string]bool{})
 			}
-			currentDepthSet := depthSet[j]
-			if !currentDepthSet[c] {
-				currentDepthSet[c] = true
-				size += len(c) + 1 // memory optimization (newline)
+			currentDepthSet := depthSet[i]
+			pem := certificateToPEM(cert)
+			if !currentDepthSet[pem] {
+				currentDepthSet[pem] = true
+				size += len(pem) + 1 // memory optimization (newline)
 			}
 		}
 	}
 	var result strings.Builder
 	result.Grow(size) // memory optimization
 	// now iterate per depth
-	for _, s := range depthSet {
-		for k, _ := range s {
-			result.WriteString(k)
+	for i, _ := range depthSet {
+		// reverse order for correct pem ordering
+		set := depthSet[len(depthSet)-i-1]
+		for pem, _ := range set {
+			result.WriteString(pem)
 			result.WriteString("\n")
 		}
 	}
 	return result.String()
 }
 
-// cAsAsCAListWithChain separates the Vendor CA's from the rest of the chain
-func cAsAsCAListWithChain(CAs [][]string) CAListWithChain {
+// toCAListWithChain transforms a list of certificate chains to a list of certificates and removes all double root and intermediate entries.
+func toCAListWithChain(CAs [][]*x509.Certificate) CAListWithChain {
 	var depthSet []map[string]bool // set
 	var result CAListWithChain
 
-	for _, ch := range CAs {
-		for j, c := range ch {
-			if j == len(ch)-1 { // leaf, thus vendor CA
-				result.CAList = append(result.CAList, c)
+	for _, chain := range CAs {
+		for j, cert := range chain {
+			pem := certificateToPEM(cert)
+			if j == 0 { // leaf, thus vendor CA
+				result.CAList = append(result.CAList, pem)
 			} else {
 				if len(depthSet) <= j {
 					depthSet = append(depthSet, map[string]bool{})
 				}
-				currentDepthSet := depthSet[j]
-				if !currentDepthSet[c] {
-					currentDepthSet[c] = true
+				currentDepthSet := depthSet[j-1]
+				if !currentDepthSet[pem] {
+					currentDepthSet[pem] = true
 				}
 			}
 		}
 	}
-	// now iterate per depth for root/intermediates
-	for _, s := range depthSet {
-		for k, _ := range s {
-			result.Chain = append(result.Chain, k)
+	// now iterate per depth for root/intermediates and reverse order
+	for i, _ := range depthSet {
+		set := depthSet[len(depthSet)-i-1]
+		for pem, _ := range set {
+			result.Chain = append(result.Chain, pem)
 		}
 	}
 
 	return result
+}
+
+// todo will be available in nuts-crypto after merging nuts-crypto#69
+func certificateToPEM(certificate *x509.Certificate) string {
+	bytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certificate.Raw,
+	})
+	return string(bytes)
 }
 
 func (apiResource ApiWrapper) MTLSCertificates(ctx echo.Context) error {

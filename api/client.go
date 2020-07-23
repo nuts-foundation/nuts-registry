@@ -21,6 +21,7 @@ package api
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -294,8 +295,8 @@ func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, err
 }
 
 // VendorCAs on the client is not implemented
-func (hb HttpClient) VendorCAs() [][]string {
-	return [][]string{{}}
+func (hb HttpClient) VendorCAs() [][]*x509.Certificate {
+	return [][]*x509.Certificate{{}}
 }
 
 func testResponseCode(expectedStatusCode int, response *http.Response) error {

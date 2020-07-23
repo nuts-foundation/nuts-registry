@@ -5,6 +5,7 @@
 package mock
 
 import (
+	x509 "crypto/x509"
 	gomock "github.com/golang/mock/gomock"
 	db "github.com/nuts-foundation/nuts-registry/pkg/db"
 	events "github.com/nuts-foundation/nuts-registry/pkg/events"
@@ -186,10 +187,10 @@ func (mr *MockRegistryClientMockRecorder) Verify(fix interface{}) *gomock.Call {
 }
 
 // VendorCAs mocks base method
-func (m *MockRegistryClient) VendorCAs() [][]string {
+func (m *MockRegistryClient) VendorCAs() [][]*x509.Certificate {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VendorCAs")
-	ret0, _ := ret[0].([][]string)
+	ret0, _ := ret[0].([][]*x509.Certificate)
 	return ret0
 }
 
