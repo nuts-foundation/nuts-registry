@@ -13,3 +13,4 @@ exclude_patterns:
   - "test/*"
   - "**/mock.go"
   - "**/generated.go"
+  - "mock/*"
