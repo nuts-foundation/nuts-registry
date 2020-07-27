@@ -22,8 +22,18 @@ package pkg
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/nuts-foundation/nuts-crypto/client"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
@@ -34,14 +44,6 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/nuts-foundation/nuts-registry/pkg/network"
 	"github.com/sirupsen/logrus"
-	"io"
-	"net/http"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
 )
 
 // ConfDataDir is the config name for specifiying the data location of the requiredFiles
@@ -113,6 +115,9 @@ type RegistryClient interface {
 	// If fix=true, data will be fixed/upgraded when necessary (e.g. issue certificates). Events resulting from fixing the data are returned.
 	// If the returned bool=true there's data to be fixed and Verify should be run with fix=true.
 	Verify(fix bool) ([]events.Event, bool, error)
+
+	// VendorCAs returns all registered vendors as list of chains, PEM encoded. The first entry in a chain will be the leaf and the last one the root.
+	VendorCAs() [][]*x509.Certificate
 }
 
 // RegistryConfig holds the config
@@ -242,6 +247,20 @@ func (r *Registry) OrganizationById(id string) (*db.Organization, error) {
 
 func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
 	return r.Db.ReverseLookup(name)
+}
+
+func (r *Registry) VendorCAs() [][]*x509.Certificate {
+	now := time.Now()
+
+	roots := r.crypto.TrustStore().GetRoots(now)
+	var rootChains [][]*x509.Certificate
+
+	for _, r := range roots {
+		rootChains = append(rootChains, []*x509.Certificate{r})
+	}
+
+	intermediates := r.crypto.TrustStore().GetCertificates(rootChains, now, true)
+	return r.crypto.TrustStore().GetCertificates(intermediates, now, true)
 }
 
 // Start initiates the routines for auto-updating the data

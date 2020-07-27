@@ -20,11 +20,14 @@
 package api
 
 import (
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 
@@ -265,9 +268,90 @@ func (apiResource ApiWrapper) SearchOrganizations(ctx echo.Context, params Searc
 }
 
 func (apiResource ApiWrapper) MTLSCAs(ctx echo.Context) error {
-	var err error
+	CAs := apiResource.R.VendorCAs()
 
-	return err
+	acceptHeader := ctx.Request().Header.Get("Accept")
+	if "application/json" == acceptHeader {
+		result := toCAListWithChain(CAs)
+		ctx.JSON(http.StatusOK, &result)
+	} else { // otherwise application/x-pem-file
+		ctx.Response().Header().Set("Content-Type", "application/x-pem-file")
+		ctx.String(http.StatusOK, toSinglePEM(CAs))
+	}
+
+	return nil
+}
+
+// toSinglePEM transforms the list of chains to a single PEM file removing all duplicate entries
+func toSinglePEM(CAs [][]*x509.Certificate) string {
+	var depthSet []map[string]bool
+	size := 0 // memory optimization
+	for _, chain := range CAs {
+		for i, cert := range chain {
+			if len(depthSet) <= i {
+				depthSet = append(depthSet, map[string]bool{})
+			}
+			currentDepthSet := depthSet[i]
+			pem := certificateToPEM(cert)
+			if !currentDepthSet[pem] {
+				currentDepthSet[pem] = true
+				size += len(pem) + 1 // memory optimization (newline)
+			}
+		}
+	}
+	var result strings.Builder
+	result.Grow(size) // memory optimization
+	// now iterate per depth
+	for i, _ := range depthSet {
+		// reverse order for correct pem ordering
+		set := depthSet[len(depthSet)-i-1]
+		for pem, _ := range set {
+			result.WriteString(pem)
+			result.WriteString("\n")
+		}
+	}
+	return result.String()
+}
+
+// toCAListWithChain transforms a list of certificate chains to a list of certificates and removes all double root and intermediate entries.
+func toCAListWithChain(CAs [][]*x509.Certificate) CAListWithChain {
+	var depthSet []map[string]bool // set
+	var result CAListWithChain
+
+	for _, chain := range CAs {
+		for j, cert := range chain {
+			pem := certificateToPEM(cert)
+			if j == 0 { // leaf, thus vendor CA
+				result.CAList = append(result.CAList, pem)
+			} else {
+				if len(depthSet) <= j {
+					depthSet = append(depthSet, map[string]bool{})
+				}
+				currentDepthSet := depthSet[j-1]
+				if !currentDepthSet[pem] {
+					currentDepthSet[pem] = true
+				}
+			}
+		}
+	}
+	// now iterate per depth for root/intermediates and reverse order
+	for i, _ := range depthSet {
+		set := depthSet[len(depthSet)-i-1]
+		for pem, _ := range set {
+			result.Chain = append(result.Chain, pem)
+		}
+	}
+
+	return result
+}
+
+// todo will be available in nuts-crypto after merging nuts-crypto#69
+func certificateToPEM(certificate *x509.Certificate) string {
+	bytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certificate.Raw,
+	})
+	return string(bytes)
 }
 
 func (apiResource ApiWrapper) MTLSCertificates(ctx echo.Context) error {

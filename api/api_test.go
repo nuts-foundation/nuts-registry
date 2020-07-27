@@ -21,10 +21,15 @@ package api
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
@@ -33,6 +38,7 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
+	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 
 	"net/http"
@@ -937,6 +943,66 @@ func TestApiResource_RegisterEndpoint(t *testing.T) {
 				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
 			}
 		})
+	})
+}
+
+func TestApiResource_MTLSCAs(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pk1, _ := rsa.GenerateKey(rand.Reader, 1024)
+	pk2, _ := rsa.GenerateKey(rand.Reader, 1024)
+	pk3, _ := rsa.GenerateKey(rand.Reader, 1024)
+	certBytes := test.GenerateCertificateEx(time.Now().AddDate(0, 0, -1), 2, pk1)
+	root, _ := x509.ParseCertificate(certBytes)
+	certBytes = test.GenerateCertificateCA("Intermediate CA", root, pk2, pk1)
+	ca, _ := x509.ParseCertificate(certBytes)
+	certBytes = test.GenerateCertificateCA("Vendor CA 1", ca, pk3, pk2)
+	vca1, _ := x509.ParseCertificate(certBytes)
+	certBytes = test.GenerateCertificateCA("Vendor CA 2", ca, pk3, pk2)
+	vca2, _ := x509.ParseCertificate(certBytes)
+	combined := fmt.Sprintf("%s\n%s\n", certificateToPEM(root), certificateToPEM(ca))
+
+	t.Run("ok - http status 200 - single pem", func(t *testing.T) {
+		var registryClient = mock.NewMockRegistryClient(mockCtrl)
+		e, wrapper := initMockEcho(registryClient)
+		registryClient.EXPECT().VendorCAs().Return([][]*x509.Certificate{{vca1, ca, root}, {vca2, ca, root}})
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/mtls/cas")
+
+		err := wrapper.MTLSCAs(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		body := rec.Body.String()
+		assert.Equal(t, 0, strings.Index(body, combined))
+		assert.True(t, strings.Contains(body, certificateToPEM(vca1)))
+		assert.True(t, strings.Contains(body, certificateToPEM(vca2)))
+		assert.Equal(t, "application/x-pem-file", rec.Result().Header.Get("Content-Type"))
+	})
+
+	t.Run("ok - http status 200 - json", func(t *testing.T) {
+		var registryClient = mock.NewMockRegistryClient(mockCtrl)
+		e, wrapper := initMockEcho(registryClient)
+		registryClient.EXPECT().VendorCAs().Return([][]*x509.Certificate{{vca1, ca, root}, {vca2, ca, root}})
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		req.Header.Set("Accept", "application/json")
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/mtls/cas")
+
+		err := wrapper.MTLSCAs(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		cAListWithChain := CAListWithChain{}
+		json.Unmarshal(rec.Body.Bytes(), &cAListWithChain)
+		assert.Len(t, cAListWithChain.Chain, 2)
+		assert.Equal(t, certificateToPEM(root), cAListWithChain.Chain[0])
+		assert.Len(t, cAListWithChain.CAList, 2)
 	})
 }
 

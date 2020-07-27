@@ -7,10 +7,11 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"github.com/lestrrat-go/jwx/jws"
-	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"math/big"
 	"time"
+
+	"github.com/lestrrat-go/jwx/jws"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 )
 
 func GenerateCertificateEx(notBefore time.Time, validityInDays int, privKey *rsa.PrivateKey) []byte {
@@ -22,10 +23,31 @@ func GenerateCertificateEx(notBefore time.Time, validityInDays int, privKey *rsa
 		PublicKey:             privKey.PublicKey,
 		NotBefore:             notBefore,
 		NotAfter:              notBefore.AddDate(0, 0, validityInDays),
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
+		IsCA:                  true,
 	}
 	data, err := x509.CreateCertificate(rand.Reader, &template, &template, privKey.Public(), privKey)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
+func GenerateCertificateCA(name string, signer *x509.Certificate, privKey *rsa.PrivateKey, signerKey *rsa.PrivateKey) []byte {
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: name,
+		},
+		PublicKey:             privKey.PublicKey,
+		NotBefore:             time.Now().AddDate(0, 0, -1),
+		NotAfter:              time.Now().AddDate(0, 0, 1),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	data, err := x509.CreateCertificate(rand.Reader, &template, signer, privKey.Public(), signerKey)
 	if err != nil {
 		panic(err)
 	}
@@ -75,7 +97,7 @@ var NoopJwsVerifier = func(signature []byte, signingTime time.Time, verifier cer
 
 var NoopCertificateVerifier cert.Verifier = &noopCertificateVerifier{}
 
-type noopCertificateVerifier struct {}
+type noopCertificateVerifier struct{}
 
 func (n noopCertificateVerifier) Verify(certificate *x509.Certificate, t time.Time) error {
 	return nil
