@@ -24,6 +24,7 @@ import (
 	"errors"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
+	"github.com/nuts-foundation/nuts-registry/test"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -49,7 +50,7 @@ func TestHttpClient_OrganizationById(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusNotFound, responseData: genericError})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		_, err := c.OrganizationById("id")
+		_, err := c.OrganizationById(test.OrganizationID("id"))
 
 		assert.EqualError(t, err, "registry returned HTTP 404 (expected: 200), response: error reason", "error")
 	})
@@ -59,7 +60,7 @@ func TestHttpClient_OrganizationById(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: org})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		res, err := c.OrganizationById("id")
+		res, err := c.OrganizationById(test.OrganizationID("id"))
 
 		if err != nil {
 			t.Errorf("Expected no error, got [%v]", err)
@@ -131,7 +132,7 @@ func TestHttpClient_VendorClaim(t *testing.T) {
 		key := map[string]interface{}{
 			"e": 12345,
 		}
-		event, err := c.VendorClaim( "orgID", "name", []interface{}{key})
+		event, err := c.VendorClaim(test.OrganizationID("orgID"), "name", []interface{}{key})
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -141,7 +142,7 @@ func TestHttpClient_VendorClaim(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		event, err := c.VendorClaim("orgID", "name", []interface{}{})
+		event, err := c.VendorClaim(test.OrganizationID("orgID"), "name", []interface{}{})
 		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
 	})
@@ -197,7 +198,7 @@ func TestHttpClient_RefreshOrganizationCertificate(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		event, err := c.RefreshOrganizationCertificate("1234")
+		event, err := c.RefreshOrganizationCertificate(test.OrganizationID("1234"))
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -207,7 +208,7 @@ func TestHttpClient_RefreshOrganizationCertificate(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		event, err := c.RefreshOrganizationCertificate("1234")
+		event, err := c.RefreshOrganizationCertificate(test.OrganizationID("1234"))
 		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
 	})
@@ -219,7 +220,7 @@ func TestHttpClient_RegisterEndpoint(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: event.Marshal()})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		event, err := c.RegisterEndpoint("orgId", "id", "url", "type", "status", map[string]string{"foo": "bar"})
+		event, err := c.RegisterEndpoint(test.OrganizationID("orgId"), "id", "url", "type", "status", map[string]string{"foo": "bar"})
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -229,7 +230,7 @@ func TestHttpClient_RegisterEndpoint(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusInternalServerError, responseData: []byte{}})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		event, err := c.RegisterEndpoint("orgId", "id", "url", "type", "status", nil)
+		event, err := c.RegisterEndpoint(test.OrganizationID("orgId"), "id", "url", "type", "status", nil)
 		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
 	})
@@ -276,7 +277,7 @@ func TestHttpClient_EndpointsByOrganizationAndType(t *testing.T) {
 		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: eps})
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 
-		res, err := c.EndpointsByOrganizationAndType("entity", nil)
+		res, err := c.EndpointsByOrganizationAndType(test.OrganizationID("entity"), nil)
 
 		if err != nil {
 			t.Errorf("Expected no error, got [%s]", err.Error())

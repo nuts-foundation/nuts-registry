@@ -77,6 +77,8 @@ func TestRegistry_Instance(t *testing.T) {
 func TestRegistry_Start(t *testing.T) {
 	configureIdleTimeout()
 	t.Run("Start with an incorrect configuration returns error", func(t *testing.T) {
+		os.Setenv("NUTS_IDENTITY", test.VendorID("foobar").String())
+		core.NutsConfig().Load(&cobra.Command{})
 		registry := Registry{
 			Config: RegistryConfig{
 				Mode:     core.ServerEngineMode,
@@ -357,8 +359,9 @@ func TestRegistry_EndpointsByOrganizationAndType(t *testing.T) {
 	defer mockCtrl.Finish()
 	t.Run("ok", func(t *testing.T) {
 		mockDb := mock.NewMockDb(mockCtrl)
-		mockDb.EXPECT().FindEndpointsByOrganizationAndType("id", nil)
-		(&Registry{Db: mockDb}).EndpointsByOrganizationAndType("id", nil)
+		orgID := test.OrganizationID("id")
+		mockDb.EXPECT().FindEndpointsByOrganizationAndType(orgID, nil)
+		(&Registry{Db: mockDb}).EndpointsByOrganizationAndType(orgID, nil)
 	})
 }
 
@@ -377,8 +380,9 @@ func TestRegistry_OrganizationById(t *testing.T) {
 	defer mockCtrl.Finish()
 	t.Run("ok", func(t *testing.T) {
 		mockDb := mock.NewMockDb(mockCtrl)
-		mockDb.EXPECT().OrganizationById("id")
-		(&Registry{Db: mockDb}).OrganizationById("id")
+		orgID := test.OrganizationID("id")
+		mockDb.EXPECT().OrganizationById(orgID)
+		(&Registry{Db: mockDb}).OrganizationById(orgID)
 	})
 }
 
@@ -387,8 +391,9 @@ func TestRegistry_ReverseLookup(t *testing.T) {
 	defer mockCtrl.Finish()
 	t.Run("ok", func(t *testing.T) {
 		mockDb := mock.NewMockDb(mockCtrl)
-		mockDb.EXPECT().ReverseLookup("id")
-		(&Registry{Db: mockDb}).ReverseLookup("id")
+		orgID := test.OrganizationID("id")
+		mockDb.EXPECT().ReverseLookup(orgID.String())
+		(&Registry{Db: mockDb}).ReverseLookup(orgID.String())
 	})
 }
 
@@ -399,7 +404,7 @@ func TestRegistry_Verify(t *testing.T) {
 		mockDb := mock.NewMockDb(mockCtrl)
 		mockDb.EXPECT().VendorByID(vendorId).Return(&db.Vendor{Identifier: vendorId})
 		mockDb.EXPECT().OrganizationsByVendorID(vendorId).Return(nil)
-		os.Setenv("NUTS_IDENTITY", vendorId)
+		os.Setenv("NUTS_IDENTITY", vendorId.String())
 		core.NutsConfig().Load(&cobra.Command{})
 		defer os.Unsetenv("NUTS_IDENTITY")
 		evts, fix, err := (&Registry{Db: mockDb}).Verify(false)

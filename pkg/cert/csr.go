@@ -5,6 +5,7 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
+	core "github.com/nuts-foundation/nuts-go-core"
 )
 
 // VendorCertificateRequest creates a CertificateRequest template for issuing a vendor certificate.
@@ -13,8 +14,8 @@ import (
 //   qualifier:     (optional) Qualifier for the certificate, which will be postfixed to Subject.CommonName
 //   domain:        Domain the vendor operates in, e.g. "healthcare"
 //   env:           (optional) Environment for the certificate, e.g. "Test" or "Dev", which will be postfixed to Subject.CommonName
-func VendorCertificateRequest(vendorID string, vendorName string, qualifier string, domain string) (x509.CertificateRequest, error) {
-	if vendorID == "" {
+func VendorCertificateRequest(vendorID core.PartyID, vendorName string, qualifier string, domain string) (x509.CertificateRequest, error) {
+	if vendorID.IsZero() {
 		return x509.CertificateRequest{}, errors.New("missing vendor identifier")
 	}
 	if vendorName == "" {
@@ -23,19 +24,19 @@ func VendorCertificateRequest(vendorID string, vendorName string, qualifier stri
 	if domain == "" {
 		return x509.CertificateRequest{}, errors.New("missing domain")
 	}
-	subjectAltName, err := cert.MarshalOtherSubjectAltName(oidNutsVendor, vendorID)
+	subjectAltName, err := cert.MarshalOtherSubjectAltName(cert.OIDNutsVendor, vendorID.Value())
 	if err != nil {
 		return x509.CertificateRequest{}, err
 	}
 	extensions := []pkix.Extension{
-		{Id: oidSubjectAltName, Critical: false, Value: subjectAltName},
+		{Id: cert.OIDSubjectAltName, Critical: false, Value: subjectAltName},
 	}
 
 	domainData, err := cert.MarshalNutsDomain(domain)
 	if err != nil {
 		return x509.CertificateRequest{}, err
 	}
-	extensions = append(extensions, pkix.Extension{Id: oidNutsDomain, Critical: false, Value: domainData})
+	extensions = append(extensions, pkix.Extension{Id: cert.OIDNutsDomain, Critical: false, Value: domainData})
 
 	commonName := vendorName
 	if qualifier != "" {
@@ -56,29 +57,29 @@ func VendorCertificateRequest(vendorID string, vendorName string, qualifier stri
 
 // OrganisationCertificateRequest creates a CertificateRequest template for issuing an organisation. The certificate
 // should be issued by the vendor CA. Parameters 'domain' and 'env' are optional.
-func OrganisationCertificateRequest(vendorName string, organisationID string, organisationName string, domain string) (x509.CertificateRequest, error) {
+func OrganisationCertificateRequest(vendorName string, organisationID core.PartyID, organisationName string, domain string) (x509.CertificateRequest, error) {
 	if vendorName == "" {
 		return x509.CertificateRequest{}, errors.New("missing vendor name")
 	}
-	if organisationID == "" {
+	if organisationID.IsZero() {
 		return x509.CertificateRequest{}, errors.New("missing organization identifier")
 	}
 	if organisationName == "" {
 		return x509.CertificateRequest{}, errors.New("missing organization name")
 	}
-	subjectAltName, err := cert.MarshalOtherSubjectAltName(oidAgbCode, organisationID)
+	subjectAltName, err := cert.MarshalOtherSubjectAltName(OIDAGBCode, organisationID.Value())
 	if err != nil {
 		return x509.CertificateRequest{}, err
 	}
 	extensions := []pkix.Extension{
-		{Id: oidSubjectAltName, Critical: false, Value: subjectAltName},
+		{Id: cert.OIDSubjectAltName, Critical: false, Value: subjectAltName},
 	}
 	if domain != "" {
 		domainData, err := cert.MarshalNutsDomain(domain)
 		if err != nil {
 			return x509.CertificateRequest{}, err
 		}
-		extensions = append(extensions, pkix.Extension{Id: oidNutsDomain, Critical: false, Value: domainData})
+		extensions = append(extensions, pkix.Extension{Id: cert.OIDNutsDomain, Critical: false, Value: domainData})
 	}
 	commonName := organisationName
 	return x509.CertificateRequest{

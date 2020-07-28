@@ -10,12 +10,13 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
-	"github.com/nuts-foundation/nuts-crypto/pkg/types"
+	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
 	certutil "github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/nuts-foundation/nuts-registry/pkg/network"
+	"github.com/nuts-foundation/nuts-registry/pkg/types"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -27,8 +28,13 @@ import (
 	"time"
 )
 
-const vendorId = "urn:oid:1.3.6.1.4.1.54851.4:4"
+var vendorId core.PartyID
+
 const vendorName = "Test Vendor"
+
+func init() {
+	vendorId = test.VendorID("4")
+}
 
 func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 	var payload = domain.RegisterEndpointEvent{}
@@ -38,14 +44,14 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event, _ events.EventLookup) error {
 			return e.Unmarshal(&payload)
 		})
-		cxt.registry.RegisterVendor("vendor", domain.HealthcareDomain)
-		cxt.registry.VendorClaim("orgId", "org", nil)
-		event, err := cxt.registry.RegisterEndpoint("orgId", "endpointId", "url", "type", "status", map[string]string{"foo": "bar"})
+		cxt.registry.RegisterVendor("vendor", types.HealthcareDomain)
+		cxt.registry.VendorClaim(test.OrganizationID("orgId"), "org", nil)
+		event, err := cxt.registry.RegisterEndpoint(test.OrganizationID("orgId"), "endpointId", "url", "type", "status", map[string]string{"foo": "bar"})
 		if !assert.NoError(t, err) {
 			return
 		}
 		assert.NotNil(t, event.Signature())
-		assert.Equal(t, "orgId", string(payload.Organization))
+		assert.Equal(t, test.OrganizationID("orgId"), payload.Organization)
 		assert.Equal(t, "endpointId", string(payload.Identifier))
 		assert.Equal(t, "url", payload.URL)
 		assert.Equal(t, "type", payload.EndpointType)
@@ -58,17 +64,17 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event, _ events.EventLookup) error {
 			return e.Unmarshal(&payload)
 		})
-		cxt.registry.RegisterVendor("vendor", domain.HealthcareDomain)
-		cxt.registry.VendorClaim("orgId", "org", nil)
-		cxt.registry.RegisterEndpoint("orgId", "endpointId", "url", "type", "status", map[string]string{"foo": "bar"})
+		cxt.registry.RegisterVendor("vendor", types.HealthcareDomain)
+		cxt.registry.VendorClaim(test.OrganizationID("orgId"), "org", nil)
+		cxt.registry.RegisterEndpoint(test.OrganizationID("orgId"), "endpointId", "url", "type", "status", map[string]string{"foo": "bar"})
 		// Now update endpoint
-		event, err := cxt.registry.RegisterEndpoint("orgId", "endpointId", "url-updated", "type-updated", "status-updated", map[string]string{"foo": "bar-updated"})
+		event, err := cxt.registry.RegisterEndpoint(test.OrganizationID("orgId"), "endpointId", "url-updated", "type-updated", "status-updated", map[string]string{"foo": "bar-updated"})
 		if !assert.NoError(t, err) {
 			return
 		}
 		assert.NotNil(t, event)
 		assert.False(t, event.PreviousRef().IsZero())
-		assert.Equal(t, "orgId", string(payload.Organization))
+		assert.Equal(t, test.OrganizationID("orgId"), payload.Organization)
 		assert.Equal(t, "endpointId", string(payload.Identifier))
 		assert.Equal(t, "url-updated", payload.URL)
 		assert.Equal(t, "type-updated", payload.EndpointType)
@@ -81,9 +87,9 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 		cxt.registry.EventSystem.RegisterEventHandler(domain.RegisterEndpoint, func(e events.Event, _ events.EventLookup) error {
 			return e.Unmarshal(&payload)
 		})
-		cxt.registry.RegisterVendor("vendor", domain.HealthcareDomain)
-		cxt.registry.VendorClaim("orgId", "org", nil)
-		event, err := cxt.registry.RegisterEndpoint("orgId", "", "url", "type", "status", map[string]string{"foo": "bar"})
+		cxt.registry.RegisterVendor("vendor", types.HealthcareDomain)
+		cxt.registry.VendorClaim(test.OrganizationID("orgId"), "org", nil)
+		event, err := cxt.registry.RegisterEndpoint(test.OrganizationID("orgId"), "", "url", "type", "status", map[string]string{"foo": "bar"})
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -100,8 +106,8 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 			Identifier: vendorId,
 			Name:       vendorName,
 		}, nil))
-		cxt.registry.VendorClaim("orgId", "org", nil)
-		event, err := cxt.registry.RegisterEndpoint("orgId", "", "url", "type", "status", map[string]string{"foo": "bar"})
+		cxt.registry.VendorClaim(test.OrganizationID("orgId"), "org", nil)
+		event, err := cxt.registry.RegisterEndpoint(test.OrganizationID("orgId"), "", "url", "type", "status", map[string]string{"foo": "bar"})
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -110,7 +116,7 @@ func TestRegistryAdministration_RegisterEndpoint(t *testing.T) {
 	t.Run("error - org not found", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		endpoint, err := cxt.registry.RegisterEndpoint("orgId", "", "url", "type", "status", map[string]string{"foo": "bar"})
+		endpoint, err := cxt.registry.RegisterEndpoint(test.OrganizationID("orgId"), "", "url", "type", "status", map[string]string{"foo": "bar"})
 		assert.Nil(t, endpoint)
 		assert.Error(t, err)
 	})
@@ -126,19 +132,19 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 	t.Run("ok - keys generated by crypto", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		_, err := cxt.registry.RegisterVendor(vendorName, domain.HealthcareDomain)
+		_, err := cxt.registry.RegisterVendor(vendorName, types.HealthcareDomain)
 		if err != nil {
 			panic(err)
 		}
 		registerEventHandler(cxt.registry)
 
-		event, err := cxt.registry.VendorClaim(t.Name(), "orgName", nil)
+		event, err := cxt.registry.VendorClaim(test.OrganizationID(t.Name()), "orgName", nil)
 		if !assert.NoError(t, err) {
 			return
 		}
 		assert.NotNil(t, event.Signature())
-		assert.Equal(t, vendorId, string(payload.VendorIdentifier))
-		assert.Equal(t, t.Name(), string(payload.OrgIdentifier))
+		assert.Equal(t, vendorId, payload.VendorID)
+		assert.Equal(t, test.OrganizationID(t.Name()), payload.OrganizationID)
 		assert.Equal(t, "orgName", payload.OrgName)
 		if !assert.Len(t, payload.OrgKeys, 1) {
 			return
@@ -165,28 +171,28 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
 		// Register a vendor 'the normal way', where nuts-crypto issues the private key + certificate.
-		vendor, _ := cxt.registry.RegisterVendor(vendorName, domain.HealthcareDomain)
+		vendor, _ := cxt.registry.RegisterVendor(vendorName, types.HealthcareDomain)
 		registerVendorEvent := domain.RegisterVendorEvent{}
 		vendor.Unmarshal(&registerVendorEvent)
 		vendorCertChain, _ := cert.MapToX509CertChain(registerVendorEvent.Keys[0].(map[string]interface{}))
-		vendorPrivKey, _ := cxt.registry.crypto.GetPrivateKey(types.KeyForEntity(types.LegalEntity{URI: vendorId}))
+		vendorPrivKey, _ := cxt.registry.crypto.GetPrivateKey(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: vendorId.String()}))
 
 		orgName := "Test Organization"
-		org := types.LegalEntity{URI: uuid.New().String()}
-		orgKey := types.KeyForEntity(org)
+		org := test.OrganizationID(uuid.New().String())
+		orgKey := cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: org.String()})
 		// "Out-of-Band" generate key material
 		orgPubKey, err := cxt.registry.crypto.GenerateKeyPair(orgKey)
 		if !assert.NoError(t, err) {
 			return
 		}
 		// Now "Out-of-Band"-sign a certificate with it using the vendor priv. key
-		csr, _ := certutil.OrganisationCertificateRequest(vendorName, org.URI, orgName, "healthcare")
+		csr, _ := certutil.OrganisationCertificateRequest(vendorName, org, orgName, "healthcare")
 		csr.PublicKey = orgPubKey
 		orgCertificate := test.SignCertificateFromCSRWithKey(csr, time.Now(), 2, vendorCertChain[0], vendorPrivKey)
 		// Feed it to VendorClaim()
 		jwkAsMap, _ := certToJwkMap(orgCertificate, certutil.OrganisationCertificate)
 		jwkAsMap[jwk.X509CertChainKey] = base64.StdEncoding.EncodeToString(orgCertificate.Raw)
-		event, err := cxt.registry.VendorClaim(org.URI, orgName, []interface{}{jwkAsMap})
+		event, err := cxt.registry.VendorClaim(org, orgName, []interface{}{jwkAsMap})
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -200,8 +206,8 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 			Identifier: vendorId,
 			Name:       vendorName,
 		}, nil))
-		org := types.LegalEntity{URI: t.Name()}
-		event, err := cxt.registry.VendorClaim(org.URI, "orgName", nil)
+		org := test.OrganizationID(t.Name())
+		event, err := cxt.registry.VendorClaim(org, "orgName", nil)
 		assert.NoError(t, err)
 		assert.NoError(t, event.Unmarshal(&payload))
 		assert.Len(t, payload.OrgKeys, 1)
@@ -216,19 +222,19 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 	t.Run("error - vendor not found", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		_, err := cxt.registry.VendorClaim(t.Name(), "orgName", nil)
+		_, err := cxt.registry.VendorClaim(test.OrganizationID(t.Name()), "orgName", nil)
 		assert.Contains(t, err.Error(), "vendor not found")
 	})
 
 	t.Run("error - vendor has no keys", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		_, err := cxt.registry.RegisterVendor("Test Vendor Without Certificate", domain.HealthcareDomain)
+		_, err := cxt.registry.RegisterVendor("Test Vendor Without Certificate", types.HealthcareDomain)
 		if !assert.NoError(t, err) {
 			return
 		}
 		cxt.empty()
-		_, err = cxt.registry.VendorClaim("org", "orgName", nil)
+		_, err = cxt.registry.VendorClaim(test.OrganizationID("org"), "orgName", nil)
 		assert.Contains(t, err.Error(), crypto.ErrUnknownCA.Error())
 		assert.Contains(t, err.Error(), ErrCertificateIssue.Error())
 	})
@@ -242,22 +248,22 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 		defer func() {
 			c.Config.Keysize = defaultKeySize
 		}()
-		_, err := cxt.registry.VendorClaim("org", "orgName", nil)
+		_, err := cxt.registry.VendorClaim(test.OrganizationID("org"), "orgName", nil)
 		assert.Error(t, err)
 	})
 
 	t.Run("error - unable to load existing key", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		cxt.registry.RegisterVendor(vendorName, domain.HealthcareDomain)
-		entity := types.LegalEntity{URI: "org"}
-		_, err := cxt.registry.crypto.GenerateKeyPair(types.KeyForEntity(entity))
+		cxt.registry.RegisterVendor(vendorName, types.HealthcareDomain)
+		org := test.OrganizationID("org")
+		_, err := cxt.registry.crypto.GenerateKeyPair(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: org.String()}))
 		if !assert.NoError(t, err) {
 			return
 		}
 		f := getLastUpdatedFile(filepath.Join(cxt.repo.Directory, "crypto"))
 		ioutil.WriteFile(f, []byte("this is not a private key"), os.ModePerm)
-		_, err = cxt.registry.VendorClaim(entity.URI, "orgName", nil)
+		_, err = cxt.registry.VendorClaim(org, "orgName", nil)
 		assert.EqualError(t, err, "malformed PEM block")
 	})
 }
@@ -316,13 +322,13 @@ func TestRegistryAdministration_RefreshVendorCertificate(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		cxt.registry.RegisterVendor(vendorName, domain.HealthcareDomain)
-		publicKeyBeforeRefresh, _ := cxt.registry.crypto.GetPublicKeyAsPEM(types.KeyForEntity(types.LegalEntity{cxt.identity}))
+		cxt.registry.RegisterVendor(vendorName, types.HealthcareDomain)
+		publicKeyBeforeRefresh, _ := cxt.registry.crypto.GetPublicKeyAsPEM(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{cxt.identity.String()}))
 		event, err := cxt.registry.RefreshVendorCertificate()
 		if !assert.NoError(t, err) {
 			return
 		}
-		publicKeyAfterRefresh, _ := cxt.registry.crypto.GetPublicKeyAsPEM(types.KeyForEntity(types.LegalEntity{cxt.identity}))
+		publicKeyAfterRefresh, _ := cxt.registry.crypto.GetPublicKeyAsPEM(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{cxt.identity.String()}))
 		assert.NotNil(t, event.Signature())
 		vendor := cxt.registry.Db.VendorByID(vendorId)
 		assert.Len(t, vendor.Keys, 2)
@@ -339,20 +345,21 @@ func TestRegistryAdministration_RefreshVendorCertificate(t *testing.T) {
 }
 
 func TestRegistryAdministration_RefreshOrganizationCertificate(t *testing.T) {
-	const orgId = "123"
+	var org = test.OrganizationID("123")
+	var orgEntity = cryptoTypes.LegalEntity{URI: org.String()}
 	t.Run("ok", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		cxt.registry.RegisterVendor(vendorName, domain.HealthcareDomain)
-		cxt.registry.VendorClaim(orgId, "Test Org", nil)
-		publicKeyBeforeRefresh, _ := cxt.registry.crypto.GetPublicKeyAsPEM(types.KeyForEntity(types.LegalEntity{orgId}))
-		event, err := cxt.registry.RefreshOrganizationCertificate(orgId)
+		cxt.registry.RegisterVendor(vendorName, types.HealthcareDomain)
+		cxt.registry.VendorClaim(org, "Test Org", nil)
+		publicKeyBeforeRefresh, _ := cxt.registry.crypto.GetPublicKeyAsPEM(cryptoTypes.KeyForEntity(orgEntity))
+		event, err := cxt.registry.RefreshOrganizationCertificate(org)
 		if !assert.NoError(t, err) {
 			return
 		}
-		publicKeyAfterRefresh, _ := cxt.registry.crypto.GetPublicKeyAsPEM(types.KeyForEntity(types.LegalEntity{orgId}))
+		publicKeyAfterRefresh, _ := cxt.registry.crypto.GetPublicKeyAsPEM(cryptoTypes.KeyForEntity(orgEntity))
 		assert.NotNil(t, event.Signature())
-		org, _ := cxt.registry.Db.OrganizationById(orgId)
+		org, _ := cxt.registry.Db.OrganizationById(org)
 		assert.Len(t, org.Keys, 2)
 		assert.NotNil(t, publicKeyBeforeRefresh)
 		assert.Equal(t, publicKeyBeforeRefresh, publicKeyAfterRefresh, "refresh certificate should not generate a new key pair")
@@ -360,27 +367,27 @@ func TestRegistryAdministration_RefreshOrganizationCertificate(t *testing.T) {
 	t.Run("error - vendor not found", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		event, err := cxt.registry.RefreshOrganizationCertificate(orgId)
+		event, err := cxt.registry.RefreshOrganizationCertificate(org)
 		assert.Nil(t, event)
 		assert.EqualError(t, err, "vendor not found (id=urn:oid:1.3.6.1.4.1.54851.4:4)")
 	})
 	t.Run("error - organization not found", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		cxt.registry.RegisterVendor(vendorName, domain.HealthcareDomain)
-		event, err := cxt.registry.RefreshOrganizationCertificate(orgId)
+		cxt.registry.RegisterVendor(vendorName, types.HealthcareDomain)
+		event, err := cxt.registry.RefreshOrganizationCertificate(org)
 		assert.Nil(t, event)
 		assert.EqualError(t, err, "organization not found")
 	})
 }
 
 func TestCreateAndSubmitCSR(t *testing.T) {
-	entity := types.LegalEntity{URI: "foo"}
+	entity := cryptoTypes.LegalEntity{URI: "foo"}
 
 	t.Run("ok", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		cxt.registry.crypto.GenerateKeyPair(types.KeyForEntity(entity))
+		cxt.registry.crypto.GenerateKeyPair(cryptoTypes.KeyForEntity(entity))
 		_, err := cxt.registry.createAndSubmitCSR(func() (x509.CertificateRequest, error) {
 			return x509.CertificateRequest{Subject: pkix.Name{CommonName: "Mosselman"}}, nil
 		}, entity, entity, crypto.CertificateProfile{})
@@ -397,7 +404,7 @@ func TestCreateAndSubmitCSR(t *testing.T) {
 	t.Run("error - key pair unavailable", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		unknownEntity := types.LegalEntity{URI: "unknown"}
+		unknownEntity := cryptoTypes.LegalEntity{URI: "unknown"}
 		_, err := cxt.registry.createAndSubmitCSR(func() (x509.CertificateRequest, error) {
 			return x509.CertificateRequest{Subject: pkix.Name{CommonName: "Mosselman"}}, nil
 		}, unknownEntity, unknownEntity, crypto.CertificateProfile{})
@@ -422,7 +429,7 @@ func TestRegistry_signAsOrganization(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		_, err = cxt.registry.signAsOrganization("orgId", "", []byte{1, 2, 3}, time.Now(), true)
+		_, err = cxt.registry.signAsOrganization(test.OrganizationID("orgId"), "", []byte{1, 2, 3}, time.Now(), true)
 		assert.Equal(t, "unable to create CSR for JWS signing: missing organization name", err.Error())
 	})
 	t.Run("error - unable to sign JWS (CA key material missing)", func(t *testing.T) {
@@ -432,13 +439,13 @@ func TestRegistry_signAsOrganization(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		_, err = cxt.registry.signAsOrganization("orgId", "Foobar", nil, time.Now(), true)
+		_, err = cxt.registry.signAsOrganization(test.OrganizationID("orgId"), "Foobar", nil, time.Now(), true)
 		assert.Contains(t, err.Error(), "unable to sign JWS: unknown CA")
 	})
 	t.Run("error - vendor not found", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		_, err := cxt.registry.signAsOrganization("orgId", "Foobar", nil, time.Now(), true)
+		_, err := cxt.registry.signAsOrganization(test.OrganizationID("orgId"), "Foobar", nil, time.Now(), true)
 		assert.Contains(t, err.Error(), "vendor not found (id=urn:oid:1.3.6.1.4.1.54851.4:4)")
 	})
 }
@@ -487,7 +494,7 @@ func createRegistry(repo *test.TestRepo) *Registry {
 }
 
 type testContext struct {
-	identity string
+	identity          core.PartyID
 	registry          *Registry
 	networkAmbassador *network.MockAmbassador
 	mockCtrl          *gomock.Controller
@@ -508,14 +515,14 @@ func (cxt *testContext) close() {
 }
 
 func createTestContext(t *testing.T) testContext {
-	os.Setenv("NUTS_IDENTITY", vendorId)
+	os.Setenv("NUTS_IDENTITY", vendorId.String())
 	repo, err := test.NewTestRepo(t.Name())
 	if err != nil {
 		panic(err)
 	}
 	mockCtrl := gomock.NewController(t)
 	context := testContext{
-		identity: vendorId,
+		identity:          vendorId,
 		registry:          createRegistry(repo),
 		mockCtrl:          mockCtrl,
 		networkAmbassador: network.NewMockAmbassador(mockCtrl),

@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
+	core "github.com/nuts-foundation/nuts-go-core"
 	cert2 "github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	errors2 "github.com/pkg/errors"
@@ -14,9 +15,9 @@ const VendorClaim events.EventType = "VendorClaimEvent"
 
 // VendorClaimEvent event
 type VendorClaimEvent struct {
-	VendorIdentifier Identifier `json:"vendorIdentifier"`
-	OrgIdentifier    Identifier `json:"orgIdentifier"`
-	OrgName          string     `json:"orgName"`
+	VendorID       core.PartyID `json:"vendorIdentifier"`
+	OrganizationID core.PartyID `json:"orgIdentifier"`
+	OrgName        string       `json:"orgName"`
 	// OrgKeys is a list of JWKs which are used to
 	// 1. encrypt data to be decrypted by the organization,
 	// 2. sign consent JWTs,
@@ -33,12 +34,12 @@ func (v VendorClaimEvent) PostProcessUnmarshal(event events.Event) error {
 	for _, key := range v.OrgKeys {
 		if certificate := cert.GetCertificate(key); certificate != nil {
 			var err error
-			var organizationId string
-			if organizationId, err = cert2.GetOrganizationSubjectAltName(certificate); err != nil {
+			var organizationId core.PartyID
+			if organizationId, err = cert2.NewNutsCertificate(certificate).GetOrganizationID(); err != nil {
 				return errors2.Wrap(err, "unable to unmarshal organization ID from certificate")
 			}
-			if string(v.OrgIdentifier) != organizationId {
-				return fmt.Errorf("organization ID in certificate (%s) doesn't match event (%s)", organizationId, v.OrgIdentifier)
+			if v.OrganizationID != organizationId {
+				return fmt.Errorf("organization ID in certificate (%s) doesn't match event (%s)", organizationId, v.OrganizationID)
 			}
 		}
 	}
@@ -47,13 +48,13 @@ func (v VendorClaimEvent) PostProcessUnmarshal(event events.Event) error {
 
 // OrganizationEventMatcher returns an EventMatcher which matches the VendorClaimEvent which registered the organization
 // with the specified ID for the specified vendor (also by ID).
-func OrganizationEventMatcher(vendorID string, organizationID string) events.EventMatcher {
+func OrganizationEventMatcher(vendorID core.PartyID, organizationID core.PartyID) events.EventMatcher {
 	return func(event events.Event) bool {
 		if event.Type() != VendorClaim {
 			return false
 		}
 		var payload = VendorClaimEvent{}
 		_ = event.Unmarshal(&payload)
-		return Identifier(vendorID) == payload.VendorIdentifier && Identifier(organizationID) == payload.OrgIdentifier
+		return vendorID == payload.VendorID && organizationID == payload.OrganizationID
 	}
 }

@@ -1,7 +1,7 @@
 {
   "type": "VendorClaimEvent",
   "payload": {
-    "vendorIdentifier": "08013836",
+    "vendorIdentifier": "urn:oid:1.2.3:08013836",
     "orgName": "Zorggroep Nuts 2",
     "orgIdentifier": "urn:oid:2.16.840.1.113883.2.4.6.1:00000001",
     "orgKeys": [

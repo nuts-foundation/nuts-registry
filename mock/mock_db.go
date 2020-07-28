@@ -6,6 +6,7 @@ package mock
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	core "github.com/nuts-foundation/nuts-go-core"
 	db "github.com/nuts-foundation/nuts-registry/pkg/db"
 	events "github.com/nuts-foundation/nuts-registry/pkg/events"
 	reflect "reflect"
@@ -47,18 +48,18 @@ func (mr *MockDbMockRecorder) RegisterEventHandlers(fn interface{}) *gomock.Call
 }
 
 // FindEndpointsByOrganizationAndType mocks base method
-func (m *MockDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error) {
+func (m *MockDb) FindEndpointsByOrganizationAndType(organizationID core.PartyID, endpointType *string) ([]db.Endpoint, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FindEndpointsByOrganizationAndType", organizationIdentifier, endpointType)
+	ret := m.ctrl.Call(m, "FindEndpointsByOrganizationAndType", organizationID, endpointType)
 	ret0, _ := ret[0].([]db.Endpoint)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // FindEndpointsByOrganizationAndType indicates an expected call of FindEndpointsByOrganizationAndType
-func (mr *MockDbMockRecorder) FindEndpointsByOrganizationAndType(organizationIdentifier, endpointType interface{}) *gomock.Call {
+func (mr *MockDbMockRecorder) FindEndpointsByOrganizationAndType(organizationID, endpointType interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindEndpointsByOrganizationAndType", reflect.TypeOf((*MockDb)(nil).FindEndpointsByOrganizationAndType), organizationIdentifier, endpointType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindEndpointsByOrganizationAndType", reflect.TypeOf((*MockDb)(nil).FindEndpointsByOrganizationAndType), organizationID, endpointType)
 }
 
 // SearchOrganizations mocks base method
@@ -76,7 +77,7 @@ func (mr *MockDbMockRecorder) SearchOrganizations(query interface{}) *gomock.Cal
 }
 
 // OrganizationById mocks base method
-func (m *MockDb) OrganizationById(id string) (*db.Organization, error) {
+func (m *MockDb) OrganizationById(id core.PartyID) (*db.Organization, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "OrganizationById", id)
 	ret0, _ := ret[0].(*db.Organization)
@@ -91,7 +92,7 @@ func (mr *MockDbMockRecorder) OrganizationById(id interface{}) *gomock.Call {
 }
 
 // VendorByID mocks base method
-func (m *MockDb) VendorByID(id string) *db.Vendor {
+func (m *MockDb) VendorByID(id core.PartyID) *db.Vendor {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VendorByID", id)
 	ret0, _ := ret[0].(*db.Vendor)
@@ -105,7 +106,7 @@ func (mr *MockDbMockRecorder) VendorByID(id interface{}) *gomock.Call {
 }
 
 // OrganizationsByVendorID mocks base method
-func (m *MockDb) OrganizationsByVendorID(id string) []*db.Organization {
+func (m *MockDb) OrganizationsByVendorID(id core.PartyID) []*db.Organization {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "OrganizationsByVendorID", id)
 	ret0, _ := ret[0].([]*db.Organization)

@@ -26,12 +26,12 @@ func TestNewCertificateEventHandler(t *testing.T) {
 func Test_CertificateEventHandler_HandleEvent(t *testing.T) {
 	t.Run("ok - register vendor", func(t *testing.T) {
 		handler := NewCertificateEventHandler(memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)
-		csr, _ := cert2.VendorCertificateRequest("vendorId", "vendorName", "CA", "healthcare")
+		csr, _ := cert2.VendorCertificateRequest(test.VendorID("vendorId"), "vendorName", "CA", "healthcare")
 		certificate, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 1)
 		key, _ := cert.CertificateToJWK(certificate)
 		jwkAsMap, _ := cert.JwkToMap(key)
 		event := RegisterVendorEvent{
-			Identifier: Identifier("vendorId"),
+			Identifier: test.VendorID("vendorId"),
 			Keys:       []interface{}{jwkAsMap},
 		}
 		err := handler.handleEvent(events.CreateEvent(RegisterVendor, event, nil), nil)
@@ -57,17 +57,19 @@ func Test_CertificateEventHandler_HandleEvent(t *testing.T) {
 	})
 	t.Run("ok - vendor claim", func(t *testing.T) {
 		handler := NewCertificateEventHandler(memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)
-		caCsr, _ := cert2.VendorCertificateRequest("vendorId", "vendorName", "CA", "healthcare")
+		caCsr, _ := cert2.VendorCertificateRequest(test.VendorID("vendorId"), "vendorName", "CA", "healthcare")
 		caCert, caKey := test.SelfSignCertificateFromCSR(caCsr, time.Now(), 1)
 		handler.trustStore.AddCertificate(caCert)
 
-		csr, _ := cert2.VendorCertificateRequest("vendorId", "vendorName", "CA", "healthcare")
+		orgID := test.OrganizationID("orgID")
+		csr, _ := cert2.OrganisationCertificateRequest("vendorName", orgID, "orgName", "healthcare")
 		csr.PublicKey = &caKey.PublicKey // strange but ok for this test
 		certificate := test.SignCertificateFromCSRWithKey(csr, time.Now(), 1, caCert, caKey)
 
 		key, _ := cert.CertificateToJWK(certificate)
 		jwkAsMap, _ := cert.JwkToMap(key)
 		event := VendorClaimEvent{
+			OrganizationID: orgID,
 			OrgKeys: []interface{}{jwkAsMap},
 		}
 		err := handler.handleEvent(events.CreateEvent(VendorClaim, event, nil), nil)
@@ -108,7 +110,7 @@ func Test_CertificateEventHandler_RegisterEventHandlers(t *testing.T) {
 
 func Test_CertificateEventHandler_Verify(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		csr, _ := cert2.VendorCertificateRequest("vendorId", "vendorName", "CA", "healthcare")
+		csr, _ := cert2.VendorCertificateRequest(test.VendorID("vendorId"), "vendorName", "CA", "healthcare")
 		caCert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
 		eventHandler := NewCertificateEventHandler(memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)
 		eventHandler.trustStore.AddCertificate(caCert)
@@ -119,9 +121,9 @@ func Test_CertificateEventHandler_Verify(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("error - incorrect domain", func(t *testing.T) {
-		caCsr, _ := cert2.VendorCertificateRequest("vendorId", "vendorName", "CA", "healthcare")
+		caCsr, _ := cert2.VendorCertificateRequest(test.VendorID("vendorId"), "vendorName", "CA", "healthcare")
 		caCert, caPrivKey := test.SelfSignCertificateFromCSR(caCsr, time.Now(), 2)
-		csr, _ := cert2.VendorCertificateRequest("vendorId", "vendorName", "", "somethingelse")
+		csr, _ := cert2.VendorCertificateRequest(test.VendorID("vendorId"), "vendorName", "", "somethingelse")
 		csr.PublicKey = &caPrivKey.PublicKey
 		cert := test.SignCertificateFromCSRWithKey(csr, time.Now(), 2, caCert, caPrivKey)
 		handler := NewCertificateEventHandler(memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)

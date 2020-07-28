@@ -294,7 +294,3 @@ func generateJWK() jwk.Key {
 	jw, _ := jwk.New(k)
 	return jw
 }
-
-func TestIdentifier_String(t *testing.T) {
-	assert.Equal(t, "test", Identifier("test").String())
-}

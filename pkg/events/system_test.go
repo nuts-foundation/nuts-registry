@@ -278,7 +278,7 @@ func Test_readEvent(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		assert.Equal(t, "5e3afa352f26033bd62ac8d6843ccae0f5334296", event.Ref().String())
+		assert.Equal(t, "90824e95c6f6be1cbf82bdad5260161be889c0aa", event.Ref().String())
 	})
 	t.Run("v1", func(t *testing.T) {
 		// From v1 on event contains issuedAt which should be used instead of the file name

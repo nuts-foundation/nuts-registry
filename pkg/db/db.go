@@ -26,7 +26,9 @@ import (
 	"errors"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/pkg/types"
 	"time"
 )
 
@@ -36,29 +38,21 @@ const StatusActive = "active"
 // Endpoint defines component schema for Endpoint.
 type Endpoint struct {
 	URL          string            `json:"URL"`
-	Organization Identifier        `json:"organization"`
+	Organization core.PartyID      `json:"organization"`
 	EndpointType string            `json:"endpointType"`
-	Identifier   Identifier        `json:"identifier"`
+	Identifier   types.EndpointID  `json:"identifier"`
 	Status       string            `json:"status"`
 	Properties   map[string]string `json:"properties,omitempty"`
 }
 
-// Identifier defines component schema for Identifier.
-type Identifier string
-
-// String converts an identifier to string
-func (i Identifier) String() string {
-	return string(i)
-}
-
 // Organization defines component schema for Organization.
 type Organization struct {
-	Identifier Identifier    `json:"identifier"`
-	Name       string        `json:"name"`
+	Identifier core.PartyID `json:"identifier"`
+	Name       string       `json:"name"`
 	// Deprecated: use Keys or helper functions to retrieve the current key in use by the organization
-	PublicKey  *string       `json:"publicKey,omitempty"`
-	Keys       []interface{} `json:"keys,omitempty"`
-	Endpoints  []Endpoint
+	PublicKey *string       `json:"publicKey,omitempty"`
+	Keys      []interface{} `json:"keys,omitempty"`
+	Endpoints []Endpoint
 }
 
 func (o Organization) GetActiveCertificates() []*x509.Certificate {
@@ -67,7 +61,7 @@ func (o Organization) GetActiveCertificates() []*x509.Certificate {
 
 // Vendor defines component schema for Vendor.
 type Vendor struct {
-	Identifier Identifier    `json:"identifier"`
+	Identifier core.PartyID  `json:"identifier"`
 	Name       string        `json:"name"`
 	Domain     string        `json:"domain,omitempty"`
 	Keys       []interface{} `json:"keys,omitempty"`
@@ -161,10 +155,10 @@ func (o Organization) CurrentPublicKey() (jwk.Key, error) {
 
 type Db interface {
 	RegisterEventHandlers(fn events.EventRegistrar)
-	FindEndpointsByOrganizationAndType(organizationID string, endpointType *string) ([]Endpoint, error)
+	FindEndpointsByOrganizationAndType(organizationID core.PartyID, endpointType *string) ([]Endpoint, error)
 	SearchOrganizations(query string) []Organization
-	OrganizationById(id string) (*Organization, error)
-	VendorByID(id string) *Vendor
-	OrganizationsByVendorID(id string) []*Organization
+	OrganizationById(id core.PartyID) (*Organization, error)
+	VendorByID(id core.PartyID) *Vendor
+	OrganizationsByVendorID(id core.PartyID) []*Organization
 	ReverseLookup(name string) (*Organization, error)
 }

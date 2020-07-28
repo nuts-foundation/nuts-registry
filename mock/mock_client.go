@@ -7,6 +7,7 @@ package mock
 import (
 	x509 "crypto/x509"
 	gomock "github.com/golang/mock/gomock"
+	core "github.com/nuts-foundation/nuts-go-core"
 	db "github.com/nuts-foundation/nuts-registry/pkg/db"
 	events "github.com/nuts-foundation/nuts-registry/pkg/events"
 	reflect "reflect"
@@ -36,7 +37,7 @@ func (m *MockRegistryClient) EXPECT() *MockRegistryClientMockRecorder {
 }
 
 // EndpointsByOrganizationAndType mocks base method
-func (m *MockRegistryClient) EndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error) {
+func (m *MockRegistryClient) EndpointsByOrganizationAndType(organizationIdentifier core.PartyID, endpointType *string) ([]db.Endpoint, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EndpointsByOrganizationAndType", organizationIdentifier, endpointType)
 	ret0, _ := ret[0].([]db.Endpoint)
@@ -66,7 +67,7 @@ func (mr *MockRegistryClientMockRecorder) SearchOrganizations(query interface{})
 }
 
 // OrganizationById mocks base method
-func (m *MockRegistryClient) OrganizationById(id string) (*db.Organization, error) {
+func (m *MockRegistryClient) OrganizationById(id core.PartyID) (*db.Organization, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "OrganizationById", id)
 	ret0, _ := ret[0].(*db.Organization)
@@ -96,7 +97,7 @@ func (mr *MockRegistryClientMockRecorder) ReverseLookup(name interface{}) *gomoc
 }
 
 // RegisterEndpoint mocks base method
-func (m *MockRegistryClient) RegisterEndpoint(organizationID, id, url, endpointType, status string, properties map[string]string) (events.Event, error) {
+func (m *MockRegistryClient) RegisterEndpoint(organizationID core.PartyID, id, url, endpointType, status string, properties map[string]string) (events.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RegisterEndpoint", organizationID, id, url, endpointType, status, properties)
 	ret0, _ := ret[0].(events.Event)
@@ -111,7 +112,7 @@ func (mr *MockRegistryClientMockRecorder) RegisterEndpoint(organizationID, id, u
 }
 
 // VendorClaim mocks base method
-func (m *MockRegistryClient) VendorClaim(orgID, orgName string, orgKeys []interface{}) (events.Event, error) {
+func (m *MockRegistryClient) VendorClaim(orgID core.PartyID, orgName string, orgKeys []interface{}) (events.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VendorClaim", orgID, orgName, orgKeys)
 	ret0, _ := ret[0].(events.Event)
@@ -156,7 +157,7 @@ func (mr *MockRegistryClientMockRecorder) RefreshVendorCertificate() *gomock.Cal
 }
 
 // RefreshOrganizationCertificate mocks base method
-func (m *MockRegistryClient) RefreshOrganizationCertificate(organizationID string) (events.Event, error) {
+func (m *MockRegistryClient) RefreshOrganizationCertificate(organizationID core.PartyID) (events.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RefreshOrganizationCertificate", organizationID)
 	ret0, _ := ret[0].(events.Event)

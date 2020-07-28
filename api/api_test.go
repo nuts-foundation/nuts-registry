@@ -27,6 +27,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-registry/pkg/types"
 	"net/url"
 	"strings"
 	"time"
@@ -64,11 +66,11 @@ type MockDb struct {
 	endpointsError error
 }
 
-func (mdb *MockDb) OrganizationsByVendorID(id string) []*db.Organization {
+func (mdb *MockDb) OrganizationsByVendorID(id core.PartyID) []*db.Organization {
 	panic("implement me")
 }
 
-func (mdb *MockDb) VendorByID(id string) *db.Vendor {
+func (mdb *MockDb) VendorByID(id core.PartyID) *db.Vendor {
 	panic("implement me")
 }
 
@@ -76,7 +78,7 @@ func (mdb *MockDb) RegisterEventHandlers(fn events.EventRegistrar) {
 
 }
 
-func (mdb *MockDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error) {
+func (mdb *MockDb) FindEndpointsByOrganizationAndType(organizationIdentifier core.PartyID, endpointType *string) ([]db.Endpoint, error) {
 	if mdb.endpointsError != nil {
 		return nil, mdb.endpointsError
 	}
@@ -84,7 +86,7 @@ func (mdb *MockDb) FindEndpointsByOrganizationAndType(organizationIdentifier str
 	// only return relevant EP's
 	eps := []db.Endpoint{}
 	for _, u := range mdb.endpoints {
-		if string(u.Organization) == organizationIdentifier {
+		if u.Organization == organizationIdentifier {
 			eps = append(eps, u)
 		}
 	}
@@ -103,7 +105,7 @@ func (mdb *MockDb) ReverseLookup(name string) (*db.Organization, error) {
 	return nil, db.ErrOrganizationNotFound
 }
 
-func (mdb *MockDb) OrganizationById(id string) (*db.Organization, error) {
+func (mdb *MockDb) OrganizationById(id core.PartyID) (*db.Organization, error) {
 	if len(mdb.organizations) > 0 {
 		return &mdb.organizations[0], nil
 	}
@@ -113,21 +115,21 @@ func (mdb *MockDb) OrganizationById(id string) (*db.Organization, error) {
 
 var endpoints = []db.Endpoint{
 	{
-		Organization: db.Identifier("urn:nuts:system:value"),
-		Identifier:   db.Identifier("urn:nuts:system:value"),
+		Organization: test.OrganizationID("value"),
+		Identifier:   types.EndpointID("urn:nuts:system:value"),
 		EndpointType: "type#value",
 	},
 }
 
 var multiEndpoints = []db.Endpoint{
 	{
-		Organization: db.Identifier("urn:nuts:system:value"),
-		Identifier:   db.Identifier("urn:nuts:system:value"),
+		Organization: test.OrganizationID("value"),
+		Identifier:   types.EndpointID("urn:nuts:system:value"),
 		EndpointType: "type#value",
 	},
 	{
-		Organization: db.Identifier("urn:nuts:system:value2"),
-		Identifier:   db.Identifier("urn:nuts:system:value2"),
+		Organization: test.OrganizationID("value2"),
+		Identifier:   types.EndpointID("urn:nuts:system:value2"),
 		EndpointType: "type#value",
 	},
 }
@@ -135,11 +137,11 @@ var multiEndpoints = []db.Endpoint{
 var key = map[string]interface{}{"kty": "EC"}
 var organizations = []db.Organization{
 	{
-		Identifier: db.Identifier("urn:nuts:system:value"),
+		Identifier: test.OrganizationID("value"),
 		Name:       "test",
 	},
 	{
-		Identifier: db.Identifier("urn:nuts:hidden"),
+		Identifier: test.OrganizationID("hidden"),
 		Name:       "hidden",
 		Keys: []interface{}{
 			key,
@@ -217,7 +219,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{endpoints: endpoints})
 
 		q := make(url.Values)
-		q.Set("orgIds", "urn:nuts:system:value")
+		q.Set("orgIds", test.OrganizationID("value").String())
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
 		rec := httptest.NewRecorder()
@@ -236,26 +238,21 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 
 		var result []Endpoint
 		result, err = deserializeEndpoints(rec.Body)
-
-		if err != nil {
-			t.Errorf("Got err during deserialization: %s", err.Error())
+		if !assert.NoError(t, err) {
+			return
 		}
-
-		if len(result) != 1 {
-			t.Errorf("Got result size: %d, want 1", len(result))
+		if !assert.Len(t, result, 1) {
+			return
 		}
-
-		if result[0].Identifier.String() != "urn:nuts:system:value" {
-			t.Errorf("Got result with Identifier: [%s], want [urn:nuts:system:value]", result[0].Identifier.String())
-		}
+		assert.Equal(t, string(endpoints[0].Identifier), result[0].Identifier.String())
 	})
 
 	t.Run("200", func(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{endpoints: multiEndpoints})
 
 		q := make(url.Values)
-		q.Set("orgIds", "urn:nuts:system:value")
-		q.Add("orgIds", "urn:nuts:system:value2")
+		q.Set("orgIds", test.OrganizationID("value").String())
+		q.Add("orgIds", test.OrganizationID("value2").String())
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
 		rec := httptest.NewRecorder()
@@ -276,7 +273,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{endpoints: endpoints})
 
 		q := make(url.Values)
-		q.Set("orgIds", "urn:nuts:system:value")
+		q.Set("orgIds", test.OrganizationID("value").String())
 		q.Set("type", "type#value")
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
@@ -314,7 +311,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{endpoints: endpoints})
 
 		q := make(url.Values)
-		q.Set("orgIds", "1")
+		q.Set("orgIds", test.OrganizationID("1").String())
 		q.Set("type", "otherType#value")
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
@@ -348,7 +345,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{})
 
 		q := make(url.Values)
-		q.Set("orgIds", "1")
+		q.Set("orgIds", test.OrganizationID("1").String())
 		q.Set("type", "otherType#value")
 		q.Set("strict", "true")
 
@@ -367,14 +364,14 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		var responseText = ""
 		err = json.Unmarshal(rec.Body.Bytes(), &responseText)
 		assert.NoError(t, err)
-		assert.Equal(t, "organization with id 1 does not have an endpoint of type otherType#value", responseText)
+		assert.Equal(t, "organization with id urn:oid:2.16.840.1.113883.2.4.6.1:1 does not have an endpoint of type otherType#value", responseText)
 	})
 
 	t.Run("by Id 200 empty result", func(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{})
 
 		q := make(url.Values)
-		q.Set("orgIds", "1")
+		q.Set("orgIds", test.OrganizationID("1").String())
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
 		rec := httptest.NewRecorder()
@@ -407,7 +404,7 @@ func TestApiResource_EndpointsByOrganisationId(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{endpointsError: newTestError("error")})
 
 		q := make(url.Values)
-		q.Set("orgIds", "1")
+		q.Set("orgIds", test.OrganizationID("1").String())
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
 		rec := httptest.NewRecorder()
@@ -442,7 +439,7 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{organizations: organizations})
 
 		q := make(url.Values)
-		q.Set("query", "urn:nuts:system:value")
+		q.Set("query", test.OrganizationID("value").String())
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
 		rec := httptest.NewRecorder()
@@ -458,7 +455,7 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 
 			assert.Nil(t, err)
 			assert.Equal(t, 2, len(result))
-			assert.Equal(t, "urn:nuts:system:value", result[0].Identifier.String())
+			assert.Equal(t, test.OrganizationID("value").String(), result[0].Identifier.String())
 		}
 	})
 
@@ -466,7 +463,7 @@ func TestApiResource_SearchOrganizations(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{})
 
 		q := make(url.Values)
-		q.Set("query", "urn:nuts:system:value")
+		q.Set("query", test.OrganizationID("value").String())
 
 		req := httptest.NewRequest(echo.GET, "/?"+q.Encode(), nil)
 		rec := httptest.NewRecorder()
@@ -538,7 +535,7 @@ func TestApiResource_OrganizationById(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.SetPath("/api/organization/:id")
 		c.SetParamNames("id")
-		c.SetParamValues("https%3A//system%23value")
+		c.SetParamValues("urn:oid:1.2.3:value")
 
 		err := wrapper.OrganizationById(c)
 
@@ -550,8 +547,8 @@ func TestApiResource_OrganizationById(t *testing.T) {
 			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
 		}
 	})
-	t.Run("200", func(t *testing.T) {
-		e, wrapper := initEcho(&MockDb{organizations: organizations})
+	t.Run("400 invalid PartyID", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{organizations: []db.Organization{}})
 
 		req := httptest.NewRequest(echo.GET, "/", nil)
 		rec := httptest.NewRecorder()
@@ -561,28 +558,34 @@ func TestApiResource_OrganizationById(t *testing.T) {
 		c.SetParamValues("https%3A//system%23value")
 
 		err := wrapper.OrganizationById(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+	t.Run("200", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{organizations: organizations})
 
-		if err != nil {
-			t.Errorf("Got err during call: %s", err.Error())
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/organization/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("urn:oid:1.2.3:value")
+
+		err := wrapper.OrganizationById(c)
+		if !assert.NoError(t, err) {
+			return
 		}
-
-		if rec.Code != http.StatusOK {
-			t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
+		if !assert.Equal(t, http.StatusOK, rec.Code) {
+			return
 		}
-
 		result, err := deserializeOrganization(rec.Body)
-
-		if err != nil {
-			t.Errorf("Got err during deserialization: %s", err.Error())
+		if !assert.NoError(t, err) {
+			return
 		}
-
-		if result == nil {
-			t.Error("Got nil from deserialization")
+		if !assert.NotNil(t, result) {
+			return
 		}
-
-		if result.Name != "test" {
-			t.Errorf("Got result with Name: [%s], want [test]", result.Name)
-		}
+		assert.Equal(t, "test", result.Name)
 	})
 }
 
@@ -699,13 +702,14 @@ func TestApiResource_VendorClaim(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	t.Run("vendor claim", func(t *testing.T) {
+		orgID := test.OrganizationID("abc")
 		t.Run("deprecated still works", func(t *testing.T) {
 			var registryClient = mock.NewMockRegistryClient(mockCtrl)
 			e, wrapper := initMockEcho(registryClient)
-			registryClient.EXPECT().VendorClaim("abc", "def", gomock.Any())
+			registryClient.EXPECT().VendorClaim(orgID, "def", gomock.Any())
 
 			b, _ := json.Marshal(Organization{
-				Identifier: "abc",
+				Identifier: Identifier(orgID.String()),
 				Name:       "def",
 				Keys:       &[]JWK{{AdditionalProperties: map[string]interface{}{}}},
 			})
@@ -718,22 +722,15 @@ func TestApiResource_VendorClaim(t *testing.T) {
 			c.SetParamValues("1")
 
 			err := wrapper.DeprecatedVendorClaim(c)
-
-			if err != nil {
-				t.Errorf("Got err during call: %s", err.Error())
-			}
-
-			if rec.Code != http.StatusOK {
-				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, rec.Code)
 		})
 		t.Run("204", func(t *testing.T) {
 			var registryClient = mock.NewMockRegistryClient(mockCtrl)
 			e, wrapper := initMockEcho(registryClient)
-			registryClient.EXPECT().VendorClaim("abc", "def", gomock.Any())
-
+			registryClient.EXPECT().VendorClaim(orgID, "def", gomock.Any())
 			b, _ := json.Marshal(Organization{
-				Identifier: "abc",
+				Identifier: Identifier(orgID.String()),
 				Name:       "def",
 				Keys:       &[]JWK{{AdditionalProperties: map[string]interface{}{}}},
 			})
@@ -744,14 +741,8 @@ func TestApiResource_VendorClaim(t *testing.T) {
 			c.SetPath("/api/organization")
 
 			err := wrapper.VendorClaim(c)
-
-			if err != nil {
-				t.Errorf("Got err during call: %s", err.Error())
-			}
-
-			if rec.Code != http.StatusOK {
-				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, rec.Code)
 		})
 
 		t.Run("400 - Invalid JSON", func(t *testing.T) {
@@ -806,14 +797,15 @@ func TestApiResource_RefreshOrganizationCertificate(t *testing.T) {
 		t.Run("200", func(t *testing.T) {
 			var registryClient = mock.NewMockRegistryClient(mockCtrl)
 			e, wrapper := initMockEcho(registryClient)
-			registryClient.EXPECT().RefreshOrganizationCertificate(gomock.Eq("1234"))
+			orgID := test.OrganizationID("1234")
+			registryClient.EXPECT().RefreshOrganizationCertificate(orgID)
 
 			req := httptest.NewRequest(echo.POST, "/", nil)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
 			c.SetPath("/api/organization/:id/refresh-cert")
 			c.SetParamNames("id")
-			c.SetParamValues("1234")
+			c.SetParamValues(orgID.String())
 
 			err := wrapper.RefreshOrganizationCertificate(c)
 			assert.NoError(t, err)
@@ -822,14 +814,15 @@ func TestApiResource_RefreshOrganizationCertificate(t *testing.T) {
 		t.Run("400", func(t *testing.T) {
 			var registryClient = mock.NewMockRegistryClient(mockCtrl)
 			e, wrapper := initMockEcho(registryClient)
-			registryClient.EXPECT().RefreshOrganizationCertificate(gomock.Eq("1234")).Return(nil, ErrOrganizationNotFound)
+			orgID := test.OrganizationID("1234")
+			registryClient.EXPECT().RefreshOrganizationCertificate(orgID).Return(nil, ErrOrganizationNotFound)
 
 			req := httptest.NewRequest(echo.POST, "/", nil)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
 			c.SetPath("/api/organization/:id/refresh-cert")
 			c.SetParamNames("id")
-			c.SetParamValues("1234")
+			c.SetParamValues(orgID.String())
 
 			err := wrapper.RefreshOrganizationCertificate(c)
 			assert.NoError(t, err)
@@ -869,7 +862,8 @@ func TestApiResource_RegisterEndpoint(t *testing.T) {
 		t.Run("204", func(t *testing.T) {
 			var registryClient = mock.NewMockRegistryClient(mockCtrl)
 			e, wrapper := initMockEcho(registryClient)
-			registryClient.EXPECT().RegisterEndpoint("1", "", "foo:bar", "fhir", "", map[string]string{"key": "value"})
+			orgID := test.OrganizationID("1234")
+			registryClient.EXPECT().RegisterEndpoint(orgID, "", "foo:bar", "fhir", "", map[string]string{"key": "value"})
 
 			props := map[string]string{}
 			props["key"] = "value"
@@ -885,17 +879,11 @@ func TestApiResource_RegisterEndpoint(t *testing.T) {
 			c := e.NewContext(req, rec)
 			c.SetPath("/api/organization/:id/endpoints")
 			c.SetParamNames("id")
-			c.SetParamValues("1")
+			c.SetParamValues(orgID.String())
 
 			err := wrapper.RegisterEndpoint(c)
-
-			if err != nil {
-				t.Errorf("Got err during call: %s", err.Error())
-			}
-
-			if rec.Code != http.StatusOK {
-				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusOK)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, rec.Code)
 		})
 
 		t.Run("400 - Invalid JSON", func(t *testing.T) {

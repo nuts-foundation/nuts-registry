@@ -17,7 +17,7 @@ func (r *Registry) verify(config core.NutsConfigValues, autoFix bool) ([]events.
 	r.logger().Infof("Verifying registry integrity (autofix issues=%v)...", autoFix)
 	resultingEvents := make([]events.Event, 0)
 	// Assert vendor is registered
-	identity := config.Identity()
+	identity := config.VendorID()
 	vendor := r.Db.VendorByID(identity)
 	fixRequired := false
 	var event events.Event
@@ -31,7 +31,7 @@ func (r *Registry) verify(config core.NutsConfigValues, autoFix bool) ([]events.
 		if err != nil {
 			return resultingEvents, fixRequired, err
 		}
-		for _, org := range r.Db.OrganizationsByVendorID(vendor.Identifier.String()) {
+		for _, org := range r.Db.OrganizationsByVendorID(vendor.Identifier) {
 			if event, fixRequired, err = r.verifyOrganisation(org, autoFix); event != nil {
 				resultingEvents = append(resultingEvents, event)
 			}
@@ -52,7 +52,7 @@ func (r *Registry) verify(config core.NutsConfigValues, autoFix bool) ([]events.
 	return resultingEvents, fixRequired, err
 }
 
-func (r *Registry) verifyVendorCertificate(vendor *db.Vendor, identity string, autoFix bool) (events.Event, bool, error) {
+func (r *Registry) verifyVendorCertificate(vendor *db.Vendor, identity core.PartyID, autoFix bool) (events.Event, bool, error) {
 	certificates := vendor.GetActiveCertificates()
 	if len(certificates) == 0 {
 		r.logger().Warn("No active certificates found for configured vendor.")
@@ -66,7 +66,7 @@ func (r *Registry) verifyVendorCertificate(vendor *db.Vendor, identity string, a
 		}
 		return nil, true, nil
 	} else {
-		if !r.crypto.PrivateKeyExists(types.KeyForEntity(types.LegalEntity{URI: identity})) {
+		if !r.crypto.PrivateKeyExists(types.KeyForEntity(types.LegalEntity{URI: identity.String()})) {
 			return nil, false, errors.New("active certificates were found for configured vendor, but there's no private key available for cryptographic operations. Please recover your key material")
 		}
 	}
@@ -78,7 +78,7 @@ func (r *Registry) verifyOrganisation(org *db.Organization, autoFix bool) (event
 	if len(certificates) == 0 {
 		logrus.Warnf("No active certificates found for organisation (id = %s).", org.Identifier)
 		if autoFix {
-			event, err := r.RefreshOrganizationCertificate(org.Identifier.String())
+			event, err := r.RefreshOrganizationCertificate(org.Identifier)
 			if err != nil {
 				return nil, false, errors2.Wrap(err, "couldn't issue organization certificate")
 			}
