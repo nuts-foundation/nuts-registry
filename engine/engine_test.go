@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"errors"
+	"syscall"
 	"testing"
 	"time"
 
@@ -19,6 +20,17 @@ import (
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestServer(t *testing.T) {
+	command := cmd()
+	command.SetArgs([]string{"server"})
+	go func() {
+		time.Sleep(time.Second)
+		syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+	}()
+	err := command.Execute()
+	assert.NoError(t, err)
+}
 
 func TestRegisterVendor(t *testing.T) {
 	command := cmd()
