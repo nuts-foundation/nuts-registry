@@ -83,22 +83,22 @@ var ReloadRegistryIdleTimeout time.Duration
 // RegistryClient is the interface to be implemented by any remote or local client
 type RegistryClient interface {
 	// EndpointsByOrganization returns all registered endpoints for an organization
-	EndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error)
+	EndpointsByOrganizationAndType(organizationIdentifier core.PartyID, endpointType *string) ([]db.Endpoint, error)
 
 	// SearchOrganizations searches the registry for any Organization matching the given query
 	SearchOrganizations(query string) ([]db.Organization, error)
 
 	// OrganizationById returns an Organization given the Id or an error if it doesn't exist
-	OrganizationById(id string) (*db.Organization, error)
+	OrganizationById(id core.PartyID) (*db.Organization, error)
 
 	// ReverseLookup finds an exact match on name or returns an error if not found
 	ReverseLookup(name string) (*db.Organization, error)
 
 	// RegisterEndpoint registers an endpoint for an organization
-	RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, properties map[string]string) (events.Event, error)
+	RegisterEndpoint(organizationID core.PartyID, id string, url string, endpointType string, status string, properties map[string]string) (events.Event, error)
 
 	// VendorClaim registers an organization under a vendor. orgKeys are the organization's keys in JWK format
-	VendorClaim(orgID string, orgName string, orgKeys []interface{}) (events.Event, error)
+	VendorClaim(orgID core.PartyID, orgName string, orgKeys []interface{}) (events.Event, error)
 
 	// RegisterVendor registers a vendor with the given id, name for the specified domain. If the vendor with this ID
 	// already exists, it functions as an update.
@@ -109,7 +109,7 @@ type RegistryClient interface {
 
 	// RefreshOrganizationCertificate issues a new certificate for the organization. The organization must be registered under the current vendor.
 	// If successful it returns the resulting event.
-	RefreshOrganizationCertificate(organizationID string) (events.Event, error)
+	RefreshOrganizationCertificate(organizationID core.PartyID) (events.Event, error)
 
 	// Verify verifies the data in the registry owned by this node.
 	// If fix=true, data will be fixed/upgraded when necessary (e.g. issue certificates). Events resulting from fixing the data are returned.
@@ -231,7 +231,7 @@ func (r *Registry) Verify(fix bool) ([]events.Event, bool, error) {
 }
 
 // EndpointsByOrganization is a wrapper for sam func on DB
-func (r *Registry) EndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]db.Endpoint, error) {
+func (r *Registry) EndpointsByOrganizationAndType(organizationIdentifier core.PartyID, endpointType *string) ([]db.Endpoint, error) {
 	return r.Db.FindEndpointsByOrganizationAndType(organizationIdentifier, endpointType)
 }
 
@@ -241,7 +241,7 @@ func (r *Registry) SearchOrganizations(query string) ([]db.Organization, error) 
 }
 
 // OrganizationById is a wrapper for sam func on DB
-func (r *Registry) OrganizationById(id string) (*db.Organization, error) {
+func (r *Registry) OrganizationById(id core.PartyID) (*db.Organization, error) {
 	return r.Db.OrganizationById(id)
 }
 

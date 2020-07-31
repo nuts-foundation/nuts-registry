@@ -41,37 +41,37 @@ import (
 // v2 Vendor Dos
 
 var registerVendor1 = events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{
-	Identifier: "v1",
+	Identifier: test.VendorID("v1"),
 	Name:       "Vendor Uno",
 }, nil)
 var registerVendor2 = events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{
-	Identifier: "v2",
+	Identifier: test.VendorID("v2"),
 	Name:       "Vendor Dos",
 }, nil)
 
 var vendorClaim1 = events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
-	VendorIdentifier: "v1",
-	OrgIdentifier:    "o1",
-	OrgName:          "Organization Uno",
-	OrgKeys:          nil,
+	VendorID:       test.VendorID("v1"),
+	OrganizationID: test.OrganizationID("o1"),
+	OrgName:        "Organization Uno",
+	OrgKeys:        nil,
 }, nil)
 
 var vendorClaim2 = events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
-	VendorIdentifier: "v1",
-	OrgIdentifier:    "o2",
-	OrgName:          "Organization Dos",
-	OrgKeys:          nil,
+	VendorID:       test.VendorID("v1"),
+	OrganizationID: test.OrganizationID("o2"),
+	OrgName:        "Organization Dos",
+	OrgKeys:        nil,
 }, nil)
 
 var registerEndpoint1 = events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{
-	Organization: "o1",
+	Organization: test.OrganizationID("o1"),
 	URL:          "foo:bar",
 	EndpointType: "simple",
 	Identifier:   "e1",
 	Status:       StatusActive,
 }, nil)
 var registerEndpoint2 = events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{
-	Organization: "o1",
+	Organization: test.OrganizationID("o1"),
 	URL:          "foo:bar",
 	EndpointType: "simple",
 	Identifier:   "e2",
@@ -132,9 +132,9 @@ func TestMemoryDb_RegisterVendor(t *testing.T) {
 		payload := domain.RegisterVendorEvent{}
 		registerVendor1.Unmarshal(&payload)
 		payload.Name = "Foobar"
-		payload.Identifier = "123"
+		payload.Identifier = test.VendorID("123")
 		err := eventSystem.PublishEvent(events.CreateEvent(registerVendor1.Type(), payload, registerVendor1.Ref()))
-		assert.EqualError(t, err, "referred event contains a different vendor: actual vendorId (v1) differs from expected (123)")
+		assert.EqualError(t, err, "referred event contains a different vendor: actual vendorId (urn:oid:1.3.6.1.4.1.54851.4:v1) differs from expected (urn:oid:1.3.6.1.4.1.54851.4:123)")
 	}))
 
 	t.Run("error - vendor already exists", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
@@ -143,7 +143,7 @@ func TestMemoryDb_RegisterVendor(t *testing.T) {
 			return
 		}
 		err = eventSystem.PublishEvent(registerVendor1)
-		assert.EqualError(t, err, "vendor already registered (id = v1)")
+		assert.EqualError(t, err, "vendor already registered (id = urn:oid:1.3.6.1.4.1.54851.4:v1)")
 	}))
 }
 
@@ -153,17 +153,18 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		assert.Len(t, db.vendors["v1"].orgs, 0)
+		vendorID := test.VendorID("v1").String()
+		assert.Len(t, db.vendors[vendorID].orgs, 0)
 		err = eventSystem.PublishEvent(vendorClaim1)
 		if !assert.NoError(t, err) {
 			return
 		}
-		assert.Len(t, db.vendors["v1"].orgs, 1)
+		assert.Len(t, db.vendors[vendorID].orgs, 1)
 		err = eventSystem.PublishEvent(vendorClaim2)
 		if !assert.NoError(t, err) {
 			return
 		}
-		assert.Len(t, db.vendors["v1"].orgs, 2)
+		assert.Len(t, db.vendors[vendorID].orgs, 2)
 	}))
 
 	t.Run("ok - update", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
@@ -176,7 +177,7 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		assert.Equal(t, payload.OrgName, db.lookupOrg(payload.OrgIdentifier.String()).OrgName)
+		assert.Equal(t, payload.OrgName, db.lookupOrg(payload.OrganizationID).OrgName)
 	}))
 
 	t.Run("error - update - org ID differs", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
@@ -184,22 +185,21 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 		eventSystem.PublishEvent(vendorClaim1)
 		payload := domain.VendorClaimEvent{}
 		vendorClaim1.Unmarshal(&payload)
-		payload.OrgIdentifier = "1234"
+		payload.OrganizationID = test.OrganizationID("1234")
 		payload.OrgName = "Foobar"
 		err := eventSystem.PublishEvent(events.CreateEvent(vendorClaim1.Type(), payload, vendorClaim1.Ref()))
-		assert.EqualError(t, err, "can't change organization ID: actual organizationId (o1) differs from expected (1234)")
+		assert.EqualError(t, err, "can't change organization ID: actual organizationId (urn:oid:2.16.840.1.113883.2.4.6.1:o1) differs from expected (urn:oid:2.16.840.1.113883.2.4.6.1:1234)")
 	}))
-
 	t.Run("error - update - vendor ID differs", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		eventSystem.PublishEvent(registerVendor1)
 		eventSystem.PublishEvent(registerVendor2)
 		eventSystem.PublishEvent(vendorClaim1)
 		payload := domain.VendorClaimEvent{}
 		vendorClaim1.Unmarshal(&payload)
-		payload.VendorIdentifier = "v2"
+		payload.VendorID = test.VendorID("v2")
 		payload.OrgName = "Foobar"
 		err := eventSystem.PublishEvent(events.CreateEvent(vendorClaim1.Type(), payload, vendorClaim1.Ref()))
-		assert.EqualError(t, err, "can't change organization's vendor: actual vendorId (v1) differs from expected (v2)")
+		assert.EqualError(t, err, "can't change organization's vendor: actual vendorId (urn:oid:1.3.6.1.4.1.54851.4:v1) differs from expected (urn:oid:1.3.6.1.4.1.54851.4:v2)")
 	}))
 
 	t.Run("error - update - org ID differs", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
@@ -207,10 +207,10 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 		eventSystem.PublishEvent(vendorClaim1)
 		payload := domain.VendorClaimEvent{}
 		vendorClaim1.Unmarshal(&payload)
-		payload.OrgIdentifier = "1234"
+		payload.OrganizationID = test.OrganizationID("1234")
 		payload.OrgName = "Foobar"
 		err := eventSystem.PublishEvent(events.CreateEvent(vendorClaim1.Type(), payload, vendorClaim1.Ref()))
-		assert.EqualError(t, err, "can't change organization ID: actual organizationId (o1) differs from expected (1234)")
+		assert.EqualError(t, err, "can't change organization ID: actual organizationId (urn:oid:2.16.840.1.113883.2.4.6.1:o1) differs from expected (urn:oid:2.16.840.1.113883.2.4.6.1:1234)")
 	}))
 
 	t.Run("error - unknown vendor", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
@@ -244,10 +244,10 @@ func TestMemoryDb_VendorByID(t *testing.T) {
 	}
 
 	t.Run("found", func(t *testing.T) {
-		assert.NotNil(t, db.VendorByID("v1"))
+		assert.NotNil(t, db.VendorByID(test.VendorID("v1")))
 	})
 	t.Run("not found", func(t *testing.T) {
-		assert.Nil(t, db.VendorByID("v2"))
+		assert.Nil(t, db.VendorByID(test.VendorID("v2")))
 	})
 }
 
@@ -257,7 +257,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 			return
 		}
 
-		result, err := db.FindEndpointsByOrganizationAndType("o1", nil)
+		result, err := db.FindEndpointsByOrganizationAndType(test.OrganizationID("o1"), nil)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -271,7 +271,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		}
 
 		et := "simple"
-		result, err := db.FindEndpointsByOrganizationAndType("o1", &et)
+		result, err := db.FindEndpointsByOrganizationAndType(test.OrganizationID("o1"), &et)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -284,7 +284,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 		}
 
 		et := "unknown"
-		result, err := db.FindEndpointsByOrganizationAndType("o1", &et)
+		result, err := db.FindEndpointsByOrganizationAndType(test.OrganizationID("o1"), &et)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -296,7 +296,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 			return
 		}
 
-		result, err := db.FindEndpointsByOrganizationAndType("o1", nil)
+		result, err := db.FindEndpointsByOrganizationAndType(test.OrganizationID("o1"), nil)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -308,7 +308,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 			return
 		}
 
-		result, err := db.FindEndpointsByOrganizationAndType("o1", nil)
+		result, err := db.FindEndpointsByOrganizationAndType(test.OrganizationID("o1"), nil)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -321,7 +321,7 @@ func TestMemoryDb_FindEndpointsByOrganization(t *testing.T) {
 			return
 		}
 
-		result, err := db.FindEndpointsByOrganizationAndType("o1", nil)
+		result, err := db.FindEndpointsByOrganizationAndType(test.OrganizationID("o1"), nil)
 		if !assert.Error(t, err) {
 			return
 		}
@@ -352,7 +352,7 @@ func TestMemoryDb_RegisterEndpoint(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		endpoints, _ := db.FindEndpointsByOrganizationAndType(payload1.Organization.String(), nil)
+		endpoints, _ := db.FindEndpointsByOrganizationAndType(payload1.Organization, nil)
 		if !assert.Len(t, endpoints, 1) {
 			return
 		}
@@ -367,9 +367,9 @@ func TestMemoryDb_RegisterEndpoint(t *testing.T) {
 		eventSystem.PublishEvent(vendorClaim2)
 		payload := domain.RegisterEndpointEvent{}
 		registerEndpoint1.Unmarshal(&payload)
-		payload.Organization = "o2" // this is org from vendorClaim2
+		payload.Organization = test.OrganizationID("o2") // this is org from vendorClaim2
 		err := eventSystem.PublishEvent(events.CreateEvent(registerEndpoint1.Type(), payload, registerEndpoint1.Ref()))
-		assert.EqualError(t, err, "can't change endpoint's organization: actual organizationId (o1) differs from expected (o2)")
+		assert.EqualError(t, err, "can't change endpoint's organization: actual organizationId (urn:oid:2.16.840.1.113883.2.4.6.1:o1) differs from expected (urn:oid:2.16.840.1.113883.2.4.6.1:o2)")
 	}))
 	t.Run("error - endpoint already registered", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		eventSystem.PublishEvent(registerVendor1)
@@ -380,7 +380,7 @@ func TestMemoryDb_RegisterEndpoint(t *testing.T) {
 	}))
 	t.Run("error - unknown organization", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		err := eventSystem.PublishEvent(registerEndpoint1)
-		assert.EqualError(t, err, "organization not registered (id = o1)")
+		assert.EqualError(t, err, "organization not registered (id = urn:oid:2.16.840.1.113883.2.4.6.1:o1)")
 	}))
 }
 
@@ -443,7 +443,7 @@ func TestMemoryDb_OrganizationById(t *testing.T) {
 			return
 		}
 
-		result, err := db.OrganizationById("o1")
+		result, err := db.OrganizationById(test.OrganizationID("o1"))
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -455,7 +455,7 @@ func TestMemoryDb_OrganizationById(t *testing.T) {
 			return
 		}
 
-		_, err := db.OrganizationById("unknown")
+		_, err := db.OrganizationById(test.OrganizationID("unknown"))
 		assert.True(t, errors.Is(err, ErrOrganizationNotFound))
 	}))
 }
@@ -465,21 +465,21 @@ func TestMemoryDb_OrganizationsByVendorID(t *testing.T) {
 		if !pub(t, eventSystem, registerVendor1, vendorClaim1, vendorClaim2) {
 			return
 		}
-		orgs := db.OrganizationsByVendorID("v1")
+		orgs := db.OrganizationsByVendorID(test.VendorID("v1"))
 		assert.Len(t, orgs, 2)
 	}))
 	t.Run("vendor not found", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		if !pub(t, eventSystem) {
 			return
 		}
-		orgs := db.OrganizationsByVendorID("unknown vendor")
+		orgs := db.OrganizationsByVendorID(test.VendorID("unknown vendor"))
 		assert.Len(t, orgs, 0)
 	}))
 	t.Run("vendor with no orgs", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {
 		if !pub(t, eventSystem, registerVendor1) {
 			return
 		}
-		orgs := db.OrganizationsByVendorID("v1")
+		orgs := db.OrganizationsByVendorID(test.VendorID("v1"))
 		assert.Len(t, orgs, 0)
 	}))
 }
@@ -503,10 +503,10 @@ func Test_org_toDb(t *testing.T) {
 		jwkAsMap, _ := cert.JwkToMap(keyAsJWK)
 		jwkAsMap["kty"] = "RSA"
 		o := org{VendorClaimEvent: domain.VendorClaimEvent{
-			VendorIdentifier: "v1",
-			OrgIdentifier:    "o1",
-			OrgName:          "Organization Uno",
-			OrgKeys:          []interface{}{jwkAsMap},
+			VendorID:       test.VendorID("v1"),
+			OrganizationID: test.OrganizationID("o1"),
+			OrgName:        "Organization Uno",
+			OrgKeys:        []interface{}{jwkAsMap},
 		}}
 		publicKey := o.toDb().PublicKey
 		if !assert.NotNil(t, publicKey) {

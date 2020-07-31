@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"errors"
+	"syscall"
 	"testing"
 	"time"
 
@@ -19,6 +20,17 @@ import (
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestServer(t *testing.T) {
+	command := cmd()
+	command.SetArgs([]string{"server"})
+	go func() {
+		time.Sleep(time.Second)
+		syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+	}()
+	err := command.Execute()
+	assert.NoError(t, err)
+}
 
 func TestRegisterVendor(t *testing.T) {
 	command := cmd()
@@ -43,16 +55,17 @@ func TestRegisterVendor(t *testing.T) {
 
 func TestVendorClaim(t *testing.T) {
 	command := cmd()
+	orgID := test.OrganizationID("orgId")
 	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		event := events.CreateEvent(domain.VendorClaim, domain.RegisterVendorEvent{}, nil)
-		client.EXPECT().VendorClaim("orgId", "orgName", nil).Return(event, nil)
-		command.SetArgs([]string{"vendor-claim", "orgId", "orgName"})
+		client.EXPECT().VendorClaim(orgID, "orgName", nil).Return(event, nil)
+		command.SetArgs([]string{"vendor-claim", orgID.String(), "orgName"})
 		err := command.Execute()
 		assert.NoError(t, err)
 	}))
 	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		client.EXPECT().VendorClaim(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("failed"))
-		command.SetArgs([]string{"vendor-claim", "orgId", "orgName"})
+		command.SetArgs([]string{"vendor-claim", orgID.String(), "orgName"})
 		command.Execute()
 	}))
 }
@@ -82,23 +95,24 @@ func TestRefreshVendorCertificate(t *testing.T) {
 
 func TestRefreshOrganizationCertificate(t *testing.T) {
 	command := cmd()
+	orgID := test.OrganizationID("123")
 	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		event := events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{OrgKeys: []interface{}{generateCertificate()}}, nil)
-		client.EXPECT().RefreshOrganizationCertificate("123").Return(event, nil)
-		command.SetArgs([]string{"refresh-organization-cert", "123"})
+		client.EXPECT().RefreshOrganizationCertificate(orgID).Return(event, nil)
+		command.SetArgs([]string{"refresh-organization-cert", orgID.String()})
 		err := command.Execute()
 		assert.NoError(t, err)
 	}))
 	t.Run("ok - no certs", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		event := events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{}, nil)
-		client.EXPECT().RefreshOrganizationCertificate("123").Return(event, nil)
-		command.SetArgs([]string{"refresh-organization-cert", "123"})
+		client.EXPECT().RefreshOrganizationCertificate(orgID).Return(event, nil)
+		command.SetArgs([]string{"refresh-organization-cert", orgID.String()})
 		err := command.Execute()
 		assert.NoError(t, err)
 	}))
 	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
-		client.EXPECT().RefreshOrganizationCertificate("123").Return(nil, errors.New("failed"))
-		command.SetArgs([]string{"refresh-organization-cert", "123"})
+		client.EXPECT().RefreshOrganizationCertificate(orgID).Return(nil, errors.New("failed"))
+		command.SetArgs([]string{"refresh-organization-cert", orgID.String()})
 		command.Execute()
 	}))
 }
@@ -144,23 +158,24 @@ func TestVerify(t *testing.T) {
 
 func TestRegisterEndpoint(t *testing.T) {
 	command := cmd()
+	var orgID, _ = core.ParsePartyID("urn:oid:1.2.3:foo")
 	t.Run("ok - bare minimum parameters", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		event := events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{}, nil)
-		client.EXPECT().RegisterEndpoint("orgId", "", "url", "type", db.StatusActive, map[string]string{}).Return(event, nil)
-		command.SetArgs([]string{"register-endpoint", "orgId", "type", "url"})
+		client.EXPECT().RegisterEndpoint(orgID, "", "url", "type", db.StatusActive, map[string]string{}).Return(event, nil)
+		command.SetArgs([]string{"register-endpoint", orgID.String(), "type", "url"})
 		err := command.Execute()
 		assert.NoError(t, err)
 	}))
 	t.Run("ok - all parameters", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		event := events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{}, nil)
-		client.EXPECT().RegisterEndpoint("orgId", "id", "url", "type", db.StatusActive, map[string]string{"k1": "v1", "k2": "v2"}).Return(event, nil)
-		command.SetArgs([]string{"register-endpoint", "orgId", "type", "url", "-i", "id", "-p", "k1=v1", "-p", "k2=v2"})
+		client.EXPECT().RegisterEndpoint(orgID, "id", "url", "type", db.StatusActive, map[string]string{"k1": "v1", "k2": "v2"}).Return(event, nil)
+		command.SetArgs([]string{"register-endpoint", orgID.String(), "type", "url", "-i", "id", "-p", "k1=v1", "-p", "k2=v2"})
 		err := command.Execute()
 		assert.NoError(t, err)
 	}))
 	t.Run("error", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		client.EXPECT().RegisterEndpoint(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("failed"))
-		command.SetArgs([]string{"register-endpoint", "orgId", "type", "url"})
+		command.SetArgs([]string{"register-endpoint", orgID.String(), "type", "url"})
 		command.Execute()
 	}))
 }

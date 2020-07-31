@@ -25,6 +25,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"net/http"
 	"net/url"
 	"strings"
@@ -89,7 +90,11 @@ func (apiResource ApiWrapper) DeprecatedVendorClaim(ctx echo.Context, _ string) 
 }
 
 func (apiResource ApiWrapper) RefreshOrganizationCertificate(ctx echo.Context, id string) error {
-	event, err := apiResource.R.RefreshOrganizationCertificate(id)
+	partyID := tryParsePartyID(id, ctx)
+	if partyID.IsZero() {
+		return nil
+	}
+	event, err := apiResource.R.RefreshOrganizationCertificate(partyID)
 	if errors.Is(err, ErrOrganizationNotFound) {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
@@ -109,9 +114,9 @@ func (apiResource ApiWrapper) RefreshVendorCertificate(ctx echo.Context) error {
 
 // RegisterEndpoint is the Api implementation for registering an endpoint.
 func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) error {
-	unescapedID, err := url.PathUnescape(id)
-	if err != nil {
-		return err
+	organizationID := tryParsePartyID(id, ctx)
+	if organizationID.IsZero() {
+		return nil
 	}
 	bytes, err := ioutil.ReadAll(ctx.Request().Body)
 	if err != nil {
@@ -125,7 +130,7 @@ func (apiResource ApiWrapper) RegisterEndpoint(ctx echo.Context, id string) erro
 	if err = ep.validate(); err != nil {
 		return ctx.String(http.StatusBadRequest, err.Error())
 	}
-	event, err := apiResource.R.RegisterEndpoint(unescapedID, ep.Identifier.String(), ep.URL, ep.EndpointType, ep.Status, fromEndpointProperties(ep.Properties))
+	event, err := apiResource.R.RegisterEndpoint(organizationID, ep.Identifier.String(), ep.URL, ep.EndpointType, ep.Status, fromEndpointProperties(ep.Properties))
 	if err != nil {
 		return ctx.String(http.StatusInternalServerError, err.Error())
 	}
@@ -150,7 +155,11 @@ func (apiResource ApiWrapper) VendorClaim(ctx echo.Context) error {
 	if org.Keys != nil {
 		keys = jwkToMap(*org.Keys)
 	}
-	event, err := apiResource.R.VendorClaim(org.Identifier.String(), org.Name, keys)
+	organizationID := tryParsePartyID(org.Identifier.String(), ctx)
+	if organizationID.IsZero() {
+		return nil
+	}
+	event, err := apiResource.R.VendorClaim(organizationID, org.Name, keys)
 	if err != nil {
 		return ctx.String(http.StatusInternalServerError, err.Error())
 	}
@@ -179,18 +188,17 @@ func (apiResource ApiWrapper) RegisterVendor(ctx echo.Context) error {
 
 // OrganizationById is the Api implementation for getting an organization based on its Id.
 func (apiResource ApiWrapper) OrganizationById(ctx echo.Context, id string) error {
-
-	unescaped, err := url.PathUnescape(id)
-
+	organizationID := tryParsePartyID(id, ctx)
+	if organizationID.IsZero() {
+		return nil
+	}
+	result, err := apiResource.R.OrganizationById(organizationID)
 	if err != nil {
-		return err
+		logrus.Errorf("Error getting organization %s: %v", organizationID, err)
 	}
-
-	result, err := apiResource.R.OrganizationById(unescaped)
 	if result == nil {
-		return ctx.JSON(http.StatusNotFound, fmt.Sprintf("Could not find organization with id %v", unescaped))
+		return ctx.JSON(http.StatusNotFound, fmt.Sprintf("Could not find organization with id %s", organizationID))
 	}
-
 	return ctx.JSON(http.StatusOK, Organization{}.fromDb(*result))
 }
 
@@ -199,7 +207,11 @@ func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params
 	foundEPs := []Endpoint{}
 	strict := params.Strict
 	for _, id := range params.OrgIds {
-		dbEndpoints, err := apiResource.R.EndpointsByOrganizationAndType(id, params.Type)
+		organizationID := tryParsePartyID(id, ctx)
+		if organizationID.IsZero() {
+			return nil
+		}
+		dbEndpoints, err := apiResource.R.EndpointsByOrganizationAndType(organizationID, params.Type)
 
 		if err != nil {
 			logrus.Warning(err.Error())
@@ -358,4 +370,18 @@ func (apiResource ApiWrapper) MTLSCertificates(ctx echo.Context) error {
 	var err error
 
 	return err
+}
+
+func tryParsePartyID(id string, ctx echo.Context) core.PartyID {
+	unescapedID, err := url.PathUnescape(id)
+	if err != nil {
+		_ = ctx.String(http.StatusBadRequest, err.Error())
+		return core.PartyID{}
+	}
+	if partyID, err := core.ParsePartyID(unescapedID); err != nil {
+		_ = ctx.String(http.StatusBadRequest, err.Error())
+		return core.PartyID{}
+	} else {
+		return partyID
+	}
 }

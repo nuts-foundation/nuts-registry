@@ -21,13 +21,15 @@ package api
 
 import (
 	"fmt"
+	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-registry/pkg/types"
 
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 )
 
 func (e Endpoint) fromDb(db db.Endpoint) Endpoint {
 	e.URL = db.URL
-	e.Organization = Identifier(db.Organization)
+	e.Organization = Identifier(db.Organization.String())
 	e.EndpointType = db.EndpointType
 	e.Identifier = Identifier(db.Identifier)
 	e.Status = db.Status
@@ -37,7 +39,7 @@ func (e Endpoint) fromDb(db db.Endpoint) Endpoint {
 
 func (o Organization) fromDb(db db.Organization) Organization {
 	e := endpointsFromDb(db.Endpoints)
-	o.Identifier = Identifier(db.Identifier)
+	o.Identifier = Identifier(db.Identifier.String())
 	o.Name = db.Name
 	o.PublicKey = db.PublicKey
 	o.Endpoints = &e
@@ -58,8 +60,9 @@ func (o Organization) fromDb(db db.Organization) Organization {
 }
 
 func (o Organization) toDb() db.Organization {
+	id, _ := core.ParsePartyID(o.Identifier.String())
 	org := db.Organization{
-		Identifier: db.Identifier(o.Identifier),
+		Identifier: id,
 		Name:       o.Name,
 		PublicKey:  o.PublicKey,
 	}
@@ -76,11 +79,12 @@ func (o Organization) toDb() db.Organization {
 }
 
 func (e Endpoint) toDb() db.Endpoint {
+	organizationID, _ := core.ParsePartyID(e.Organization.String())
 	return db.Endpoint{
 		URL:          e.URL,
 		EndpointType: e.EndpointType,
-		Identifier:   db.Identifier(e.Identifier),
-		Organization: db.Identifier(e.Organization),
+		Identifier:   types.EndpointID(e.Identifier),
+		Organization: organizationID,
 		Status:       e.Status,
 		Properties:   fromEndpointProperties(e.Properties),
 	}

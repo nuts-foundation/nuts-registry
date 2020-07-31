@@ -77,7 +77,6 @@ func (t *certificateEventHandler) handleEvent(event events.Event, _ events.Event
 		}
 	}
 
-
 	return nil
 }
 
@@ -113,7 +112,7 @@ func (t *certificateEventHandler) getCertificatesToBeTrusted(jwks []interface{},
 func verifyCertChainNutsDomain(chain []*x509.Certificate) error {
 	var expectedDomain string
 	for _, certificate := range chain {
-		domainInCert, err := cert2.GetDomain(certificate)
+		domainInCert, err := cert2.NewNutsCertificate(certificate).GetDomain()
 		if err != nil {
 			return err
 		}

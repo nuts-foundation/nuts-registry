@@ -21,6 +21,7 @@ package engine
 
 import (
 	"fmt"
+	"github.com/nuts-foundation/nuts-registry/pkg/types"
 	"os"
 	"os/signal"
 	"strings"
@@ -140,7 +141,7 @@ func cmd() *cobra.Command {
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl := registryClientCreator()
-			var vendorDomain = domain.FallbackDomain
+			var vendorDomain = types.FallbackDomain
 			if len(args) == 2 {
 				vendorDomain = args[1]
 			}
@@ -188,7 +189,11 @@ func cmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl := registryClientCreator()
-			event, err := cl.RefreshOrganizationCertificate(args[0])
+			organizationID, err := core.ParsePartyID(args[0])
+			if err != nil {
+				return err
+			}
+			event, err := cl.RefreshOrganizationCertificate(organizationID)
 			if err != nil {
 				logrus.Errorf("Unable to refresh organization certificate: %v", err)
 				return err
@@ -217,7 +222,11 @@ func cmd() *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cl := registryClientCreator()
-			event, err := cl.VendorClaim(args[0], args[1], nil)
+			organizationID, err := core.ParsePartyID(args[0])
+			if err != nil {
+				return err
+			}
+			event, err := cl.VendorClaim(organizationID, args[1], nil)
 			if err != nil {
 				logrus.Errorf("Unable to register vendor organisation claim: %v", err)
 				return err
@@ -272,7 +281,11 @@ func cmd() *cobra.Command {
 			Args:  cobra.ExactArgs(3),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				cl := registryClientCreator()
-				event, err := cl.RegisterEndpoint(args[0], *id, args[2], args[1], db.StatusActive, parseCLIProperties(*properties))
+				partyID, err := core.ParsePartyID(args[0])
+				if err != nil {
+					return err
+				}
+				event, err := cl.RegisterEndpoint(partyID, *id, args[2], args[1], db.StatusActive, parseCLIProperties(*properties))
 				if err != nil {
 					logrus.Errorf("Unable to register endpoint: %v", err)
 					return err

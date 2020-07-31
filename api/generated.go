@@ -22,22 +22,15 @@ import (
 // CAListWithChain defines model for CAListWithChain.
 type CAListWithChain struct {
 
-	// list of current active (or will be active) vendor CA's. PEM encoded
+	// list of current active (or will be active) vendor CAs. PEM encoded
 	CAList []string `json:"CAList"`
 
-	// list of certificates, roots first then intermediates, shared amongst all CA's. PEM encoded.
+	// list of certificates, roots first then intermediates, shared amongst all CAs. PEM encoded.
 	Chain []string `json:"chain"`
 }
 
 // Domain defines model for Domain.
 type Domain string
-
-// List of Domain
-const (
-	Domain_healthcare Domain = "healthcare"
-	Domain_insurance  Domain = "insurance"
-	Domain_personal   Domain = "personal"
-)
 
 // Endpoint defines model for Endpoint.
 type Endpoint struct {
@@ -1208,54 +1201,7 @@ func WithBaseURL(baseURL string) ClientOption {
 	}
 }
 
-// ClientWithResponsesInterface is the interface specification for the client with responses above.
-type ClientWithResponsesInterface interface {
-	// Verify request
-	VerifyWithResponse(ctx context.Context, params *VerifyParams) (*VerifyResponse, error)
-
-	// EndpointsByOrganisationId request
-	EndpointsByOrganisationIdWithResponse(ctx context.Context, params *EndpointsByOrganisationIdParams) (*EndpointsByOrganisationIdResponse, error)
-
-	// MTLSCAs request
-	MTLSCAsWithResponse(ctx context.Context) (*MTLSCAsResponse, error)
-
-	// MTLSCertificates request
-	MTLSCertificatesWithResponse(ctx context.Context) (*MTLSCertificatesResponse, error)
-
-	// VendorClaim request  with any body
-	VendorClaimWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*VendorClaimResponse, error)
-
-	VendorClaimWithResponse(ctx context.Context, body VendorClaimJSONRequestBody) (*VendorClaimResponse, error)
-
-	// OrganizationById request
-	OrganizationByIdWithResponse(ctx context.Context, id string) (*OrganizationByIdResponse, error)
-
-	// RegisterEndpoint request  with any body
-	RegisterEndpointWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader) (*RegisterEndpointResponse, error)
-
-	RegisterEndpointWithResponse(ctx context.Context, id string, body RegisterEndpointJSONRequestBody) (*RegisterEndpointResponse, error)
-
-	// RefreshOrganizationCertificate request
-	RefreshOrganizationCertificateWithResponse(ctx context.Context, id string) (*RefreshOrganizationCertificateResponse, error)
-
-	// SearchOrganizations request
-	SearchOrganizationsWithResponse(ctx context.Context, params *SearchOrganizationsParams) (*SearchOrganizationsResponse, error)
-
-	// RefreshVendorCertificate request
-	RefreshVendorCertificateWithResponse(ctx context.Context) (*RefreshVendorCertificateResponse, error)
-
-	// DeprecatedVendorClaim request  with any body
-	DeprecatedVendorClaimWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader) (*DeprecatedVendorClaimResponse, error)
-
-	DeprecatedVendorClaimWithResponse(ctx context.Context, id string, body DeprecatedVendorClaimJSONRequestBody) (*DeprecatedVendorClaimResponse, error)
-
-	// RegisterVendor request  with any body
-	RegisterVendorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*RegisterVendorResponse, error)
-
-	RegisterVendorWithResponse(ctx context.Context, body RegisterVendorJSONRequestBody) (*RegisterVendorResponse, error)
-}
-
-type VerifyResponse struct {
+type verifyResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
@@ -1269,7 +1215,7 @@ type VerifyResponse struct {
 }
 
 // Status returns HTTPResponse.Status
-func (r VerifyResponse) Status() string {
+func (r verifyResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1277,20 +1223,20 @@ func (r VerifyResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r VerifyResponse) StatusCode() int {
+func (r verifyResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type EndpointsByOrganisationIdResponse struct {
+type endpointsByOrganisationIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 }
 
 // Status returns HTTPResponse.Status
-func (r EndpointsByOrganisationIdResponse) Status() string {
+func (r endpointsByOrganisationIdResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1298,21 +1244,21 @@ func (r EndpointsByOrganisationIdResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r EndpointsByOrganisationIdResponse) StatusCode() int {
+func (r endpointsByOrganisationIdResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type MTLSCAsResponse struct {
+type mTLSCAsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *CAListWithChain
 }
 
 // Status returns HTTPResponse.Status
-func (r MTLSCAsResponse) Status() string {
+func (r mTLSCAsResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1320,21 +1266,21 @@ func (r MTLSCAsResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r MTLSCAsResponse) StatusCode() int {
+func (r mTLSCAsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type MTLSCertificatesResponse struct {
+type mTLSCertificatesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *[]string
 }
 
 // Status returns HTTPResponse.Status
-func (r MTLSCertificatesResponse) Status() string {
+func (r mTLSCertificatesResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1342,21 +1288,21 @@ func (r MTLSCertificatesResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r MTLSCertificatesResponse) StatusCode() int {
+func (r mTLSCertificatesResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type VendorClaimResponse struct {
+type vendorClaimResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Event
 }
 
 // Status returns HTTPResponse.Status
-func (r VendorClaimResponse) Status() string {
+func (r vendorClaimResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1364,20 +1310,20 @@ func (r VendorClaimResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r VendorClaimResponse) StatusCode() int {
+func (r vendorClaimResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type OrganizationByIdResponse struct {
+type organizationByIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 }
 
 // Status returns HTTPResponse.Status
-func (r OrganizationByIdResponse) Status() string {
+func (r organizationByIdResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1385,43 +1331,21 @@ func (r OrganizationByIdResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r OrganizationByIdResponse) StatusCode() int {
+func (r organizationByIdResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type RegisterEndpointResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *Event
-}
-
-// Status returns HTTPResponse.Status
-func (r RegisterEndpointResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r RegisterEndpointResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type RefreshOrganizationCertificateResponse struct {
+type registerEndpointResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Event
 }
 
 // Status returns HTTPResponse.Status
-func (r RefreshOrganizationCertificateResponse) Status() string {
+func (r registerEndpointResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1429,42 +1353,21 @@ func (r RefreshOrganizationCertificateResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r RefreshOrganizationCertificateResponse) StatusCode() int {
+func (r registerEndpointResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type SearchOrganizationsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r SearchOrganizationsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r SearchOrganizationsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type RefreshVendorCertificateResponse struct {
+type refreshOrganizationCertificateResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Event
 }
 
 // Status returns HTTPResponse.Status
-func (r RefreshVendorCertificateResponse) Status() string {
+func (r refreshOrganizationCertificateResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1472,21 +1375,20 @@ func (r RefreshVendorCertificateResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r RefreshVendorCertificateResponse) StatusCode() int {
+func (r refreshOrganizationCertificateResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type DeprecatedVendorClaimResponse struct {
+type searchOrganizationsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *Event
 }
 
 // Status returns HTTPResponse.Status
-func (r DeprecatedVendorClaimResponse) Status() string {
+func (r searchOrganizationsResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1494,21 +1396,21 @@ func (r DeprecatedVendorClaimResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r DeprecatedVendorClaimResponse) StatusCode() int {
+func (r searchOrganizationsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type RegisterVendorResponse struct {
+type refreshVendorCertificateResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Event
 }
 
 // Status returns HTTPResponse.Status
-func (r RegisterVendorResponse) Status() string {
+func (r refreshVendorCertificateResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1516,7 +1418,51 @@ func (r RegisterVendorResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r RegisterVendorResponse) StatusCode() int {
+func (r refreshVendorCertificateResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type deprecatedVendorClaimResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Event
+}
+
+// Status returns HTTPResponse.Status
+func (r deprecatedVendorClaimResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r deprecatedVendorClaimResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type registerVendorResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Event
+}
+
+// Status returns HTTPResponse.Status
+func (r registerVendorResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r registerVendorResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -1524,7 +1470,7 @@ func (r RegisterVendorResponse) StatusCode() int {
 }
 
 // VerifyWithResponse request returning *VerifyResponse
-func (c *ClientWithResponses) VerifyWithResponse(ctx context.Context, params *VerifyParams) (*VerifyResponse, error) {
+func (c *ClientWithResponses) VerifyWithResponse(ctx context.Context, params *VerifyParams) (*verifyResponse, error) {
 	rsp, err := c.Verify(ctx, params)
 	if err != nil {
 		return nil, err
@@ -1533,7 +1479,7 @@ func (c *ClientWithResponses) VerifyWithResponse(ctx context.Context, params *Ve
 }
 
 // EndpointsByOrganisationIdWithResponse request returning *EndpointsByOrganisationIdResponse
-func (c *ClientWithResponses) EndpointsByOrganisationIdWithResponse(ctx context.Context, params *EndpointsByOrganisationIdParams) (*EndpointsByOrganisationIdResponse, error) {
+func (c *ClientWithResponses) EndpointsByOrganisationIdWithResponse(ctx context.Context, params *EndpointsByOrganisationIdParams) (*endpointsByOrganisationIdResponse, error) {
 	rsp, err := c.EndpointsByOrganisationId(ctx, params)
 	if err != nil {
 		return nil, err
@@ -1542,7 +1488,7 @@ func (c *ClientWithResponses) EndpointsByOrganisationIdWithResponse(ctx context.
 }
 
 // MTLSCAsWithResponse request returning *MTLSCAsResponse
-func (c *ClientWithResponses) MTLSCAsWithResponse(ctx context.Context) (*MTLSCAsResponse, error) {
+func (c *ClientWithResponses) MTLSCAsWithResponse(ctx context.Context) (*mTLSCAsResponse, error) {
 	rsp, err := c.MTLSCAs(ctx)
 	if err != nil {
 		return nil, err
@@ -1551,7 +1497,7 @@ func (c *ClientWithResponses) MTLSCAsWithResponse(ctx context.Context) (*MTLSCAs
 }
 
 // MTLSCertificatesWithResponse request returning *MTLSCertificatesResponse
-func (c *ClientWithResponses) MTLSCertificatesWithResponse(ctx context.Context) (*MTLSCertificatesResponse, error) {
+func (c *ClientWithResponses) MTLSCertificatesWithResponse(ctx context.Context) (*mTLSCertificatesResponse, error) {
 	rsp, err := c.MTLSCertificates(ctx)
 	if err != nil {
 		return nil, err
@@ -1560,7 +1506,7 @@ func (c *ClientWithResponses) MTLSCertificatesWithResponse(ctx context.Context) 
 }
 
 // VendorClaimWithBodyWithResponse request with arbitrary body returning *VendorClaimResponse
-func (c *ClientWithResponses) VendorClaimWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*VendorClaimResponse, error) {
+func (c *ClientWithResponses) VendorClaimWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*vendorClaimResponse, error) {
 	rsp, err := c.VendorClaimWithBody(ctx, contentType, body)
 	if err != nil {
 		return nil, err
@@ -1568,7 +1514,7 @@ func (c *ClientWithResponses) VendorClaimWithBodyWithResponse(ctx context.Contex
 	return ParseVendorClaimResponse(rsp)
 }
 
-func (c *ClientWithResponses) VendorClaimWithResponse(ctx context.Context, body VendorClaimJSONRequestBody) (*VendorClaimResponse, error) {
+func (c *ClientWithResponses) VendorClaimWithResponse(ctx context.Context, body VendorClaimJSONRequestBody) (*vendorClaimResponse, error) {
 	rsp, err := c.VendorClaim(ctx, body)
 	if err != nil {
 		return nil, err
@@ -1577,7 +1523,7 @@ func (c *ClientWithResponses) VendorClaimWithResponse(ctx context.Context, body 
 }
 
 // OrganizationByIdWithResponse request returning *OrganizationByIdResponse
-func (c *ClientWithResponses) OrganizationByIdWithResponse(ctx context.Context, id string) (*OrganizationByIdResponse, error) {
+func (c *ClientWithResponses) OrganizationByIdWithResponse(ctx context.Context, id string) (*organizationByIdResponse, error) {
 	rsp, err := c.OrganizationById(ctx, id)
 	if err != nil {
 		return nil, err
@@ -1586,7 +1532,7 @@ func (c *ClientWithResponses) OrganizationByIdWithResponse(ctx context.Context, 
 }
 
 // RegisterEndpointWithBodyWithResponse request with arbitrary body returning *RegisterEndpointResponse
-func (c *ClientWithResponses) RegisterEndpointWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader) (*RegisterEndpointResponse, error) {
+func (c *ClientWithResponses) RegisterEndpointWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader) (*registerEndpointResponse, error) {
 	rsp, err := c.RegisterEndpointWithBody(ctx, id, contentType, body)
 	if err != nil {
 		return nil, err
@@ -1594,7 +1540,7 @@ func (c *ClientWithResponses) RegisterEndpointWithBodyWithResponse(ctx context.C
 	return ParseRegisterEndpointResponse(rsp)
 }
 
-func (c *ClientWithResponses) RegisterEndpointWithResponse(ctx context.Context, id string, body RegisterEndpointJSONRequestBody) (*RegisterEndpointResponse, error) {
+func (c *ClientWithResponses) RegisterEndpointWithResponse(ctx context.Context, id string, body RegisterEndpointJSONRequestBody) (*registerEndpointResponse, error) {
 	rsp, err := c.RegisterEndpoint(ctx, id, body)
 	if err != nil {
 		return nil, err
@@ -1603,7 +1549,7 @@ func (c *ClientWithResponses) RegisterEndpointWithResponse(ctx context.Context, 
 }
 
 // RefreshOrganizationCertificateWithResponse request returning *RefreshOrganizationCertificateResponse
-func (c *ClientWithResponses) RefreshOrganizationCertificateWithResponse(ctx context.Context, id string) (*RefreshOrganizationCertificateResponse, error) {
+func (c *ClientWithResponses) RefreshOrganizationCertificateWithResponse(ctx context.Context, id string) (*refreshOrganizationCertificateResponse, error) {
 	rsp, err := c.RefreshOrganizationCertificate(ctx, id)
 	if err != nil {
 		return nil, err
@@ -1612,7 +1558,7 @@ func (c *ClientWithResponses) RefreshOrganizationCertificateWithResponse(ctx con
 }
 
 // SearchOrganizationsWithResponse request returning *SearchOrganizationsResponse
-func (c *ClientWithResponses) SearchOrganizationsWithResponse(ctx context.Context, params *SearchOrganizationsParams) (*SearchOrganizationsResponse, error) {
+func (c *ClientWithResponses) SearchOrganizationsWithResponse(ctx context.Context, params *SearchOrganizationsParams) (*searchOrganizationsResponse, error) {
 	rsp, err := c.SearchOrganizations(ctx, params)
 	if err != nil {
 		return nil, err
@@ -1621,7 +1567,7 @@ func (c *ClientWithResponses) SearchOrganizationsWithResponse(ctx context.Contex
 }
 
 // RefreshVendorCertificateWithResponse request returning *RefreshVendorCertificateResponse
-func (c *ClientWithResponses) RefreshVendorCertificateWithResponse(ctx context.Context) (*RefreshVendorCertificateResponse, error) {
+func (c *ClientWithResponses) RefreshVendorCertificateWithResponse(ctx context.Context) (*refreshVendorCertificateResponse, error) {
 	rsp, err := c.RefreshVendorCertificate(ctx)
 	if err != nil {
 		return nil, err
@@ -1630,7 +1576,7 @@ func (c *ClientWithResponses) RefreshVendorCertificateWithResponse(ctx context.C
 }
 
 // DeprecatedVendorClaimWithBodyWithResponse request with arbitrary body returning *DeprecatedVendorClaimResponse
-func (c *ClientWithResponses) DeprecatedVendorClaimWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader) (*DeprecatedVendorClaimResponse, error) {
+func (c *ClientWithResponses) DeprecatedVendorClaimWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader) (*deprecatedVendorClaimResponse, error) {
 	rsp, err := c.DeprecatedVendorClaimWithBody(ctx, id, contentType, body)
 	if err != nil {
 		return nil, err
@@ -1638,7 +1584,7 @@ func (c *ClientWithResponses) DeprecatedVendorClaimWithBodyWithResponse(ctx cont
 	return ParseDeprecatedVendorClaimResponse(rsp)
 }
 
-func (c *ClientWithResponses) DeprecatedVendorClaimWithResponse(ctx context.Context, id string, body DeprecatedVendorClaimJSONRequestBody) (*DeprecatedVendorClaimResponse, error) {
+func (c *ClientWithResponses) DeprecatedVendorClaimWithResponse(ctx context.Context, id string, body DeprecatedVendorClaimJSONRequestBody) (*deprecatedVendorClaimResponse, error) {
 	rsp, err := c.DeprecatedVendorClaim(ctx, id, body)
 	if err != nil {
 		return nil, err
@@ -1647,7 +1593,7 @@ func (c *ClientWithResponses) DeprecatedVendorClaimWithResponse(ctx context.Cont
 }
 
 // RegisterVendorWithBodyWithResponse request with arbitrary body returning *RegisterVendorResponse
-func (c *ClientWithResponses) RegisterVendorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*RegisterVendorResponse, error) {
+func (c *ClientWithResponses) RegisterVendorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*registerVendorResponse, error) {
 	rsp, err := c.RegisterVendorWithBody(ctx, contentType, body)
 	if err != nil {
 		return nil, err
@@ -1655,7 +1601,7 @@ func (c *ClientWithResponses) RegisterVendorWithBodyWithResponse(ctx context.Con
 	return ParseRegisterVendorResponse(rsp)
 }
 
-func (c *ClientWithResponses) RegisterVendorWithResponse(ctx context.Context, body RegisterVendorJSONRequestBody) (*RegisterVendorResponse, error) {
+func (c *ClientWithResponses) RegisterVendorWithResponse(ctx context.Context, body RegisterVendorJSONRequestBody) (*registerVendorResponse, error) {
 	rsp, err := c.RegisterVendor(ctx, body)
 	if err != nil {
 		return nil, err
@@ -1664,14 +1610,14 @@ func (c *ClientWithResponses) RegisterVendorWithResponse(ctx context.Context, bo
 }
 
 // ParseVerifyResponse parses an HTTP response from a VerifyWithResponse call
-func ParseVerifyResponse(rsp *http.Response) (*VerifyResponse, error) {
+func ParseVerifyResponse(rsp *http.Response) (*verifyResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &VerifyResponse{
+	response := &verifyResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1697,14 +1643,14 @@ func ParseVerifyResponse(rsp *http.Response) (*VerifyResponse, error) {
 }
 
 // ParseEndpointsByOrganisationIdResponse parses an HTTP response from a EndpointsByOrganisationIdWithResponse call
-func ParseEndpointsByOrganisationIdResponse(rsp *http.Response) (*EndpointsByOrganisationIdResponse, error) {
+func ParseEndpointsByOrganisationIdResponse(rsp *http.Response) (*endpointsByOrganisationIdResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &EndpointsByOrganisationIdResponse{
+	response := &endpointsByOrganisationIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1716,14 +1662,14 @@ func ParseEndpointsByOrganisationIdResponse(rsp *http.Response) (*EndpointsByOrg
 }
 
 // ParseMTLSCAsResponse parses an HTTP response from a MTLSCAsWithResponse call
-func ParseMTLSCAsResponse(rsp *http.Response) (*MTLSCAsResponse, error) {
+func ParseMTLSCAsResponse(rsp *http.Response) (*mTLSCAsResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &MTLSCAsResponse{
+	response := &mTLSCAsResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1745,14 +1691,14 @@ func ParseMTLSCAsResponse(rsp *http.Response) (*MTLSCAsResponse, error) {
 }
 
 // ParseMTLSCertificatesResponse parses an HTTP response from a MTLSCertificatesWithResponse call
-func ParseMTLSCertificatesResponse(rsp *http.Response) (*MTLSCertificatesResponse, error) {
+func ParseMTLSCertificatesResponse(rsp *http.Response) (*mTLSCertificatesResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &MTLSCertificatesResponse{
+	response := &mTLSCertificatesResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1774,14 +1720,14 @@ func ParseMTLSCertificatesResponse(rsp *http.Response) (*MTLSCertificatesRespons
 }
 
 // ParseVendorClaimResponse parses an HTTP response from a VendorClaimWithResponse call
-func ParseVendorClaimResponse(rsp *http.Response) (*VendorClaimResponse, error) {
+func ParseVendorClaimResponse(rsp *http.Response) (*vendorClaimResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &VendorClaimResponse{
+	response := &vendorClaimResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1800,14 +1746,14 @@ func ParseVendorClaimResponse(rsp *http.Response) (*VendorClaimResponse, error) 
 }
 
 // ParseOrganizationByIdResponse parses an HTTP response from a OrganizationByIdWithResponse call
-func ParseOrganizationByIdResponse(rsp *http.Response) (*OrganizationByIdResponse, error) {
+func ParseOrganizationByIdResponse(rsp *http.Response) (*organizationByIdResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &OrganizationByIdResponse{
+	response := &organizationByIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1819,14 +1765,14 @@ func ParseOrganizationByIdResponse(rsp *http.Response) (*OrganizationByIdRespons
 }
 
 // ParseRegisterEndpointResponse parses an HTTP response from a RegisterEndpointWithResponse call
-func ParseRegisterEndpointResponse(rsp *http.Response) (*RegisterEndpointResponse, error) {
+func ParseRegisterEndpointResponse(rsp *http.Response) (*registerEndpointResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &RegisterEndpointResponse{
+	response := &registerEndpointResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1845,14 +1791,14 @@ func ParseRegisterEndpointResponse(rsp *http.Response) (*RegisterEndpointRespons
 }
 
 // ParseRefreshOrganizationCertificateResponse parses an HTTP response from a RefreshOrganizationCertificateWithResponse call
-func ParseRefreshOrganizationCertificateResponse(rsp *http.Response) (*RefreshOrganizationCertificateResponse, error) {
+func ParseRefreshOrganizationCertificateResponse(rsp *http.Response) (*refreshOrganizationCertificateResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &RefreshOrganizationCertificateResponse{
+	response := &refreshOrganizationCertificateResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1871,14 +1817,14 @@ func ParseRefreshOrganizationCertificateResponse(rsp *http.Response) (*RefreshOr
 }
 
 // ParseSearchOrganizationsResponse parses an HTTP response from a SearchOrganizationsWithResponse call
-func ParseSearchOrganizationsResponse(rsp *http.Response) (*SearchOrganizationsResponse, error) {
+func ParseSearchOrganizationsResponse(rsp *http.Response) (*searchOrganizationsResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &SearchOrganizationsResponse{
+	response := &searchOrganizationsResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1890,14 +1836,14 @@ func ParseSearchOrganizationsResponse(rsp *http.Response) (*SearchOrganizationsR
 }
 
 // ParseRefreshVendorCertificateResponse parses an HTTP response from a RefreshVendorCertificateWithResponse call
-func ParseRefreshVendorCertificateResponse(rsp *http.Response) (*RefreshVendorCertificateResponse, error) {
+func ParseRefreshVendorCertificateResponse(rsp *http.Response) (*refreshVendorCertificateResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &RefreshVendorCertificateResponse{
+	response := &refreshVendorCertificateResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1916,14 +1862,14 @@ func ParseRefreshVendorCertificateResponse(rsp *http.Response) (*RefreshVendorCe
 }
 
 // ParseDeprecatedVendorClaimResponse parses an HTTP response from a DeprecatedVendorClaimWithResponse call
-func ParseDeprecatedVendorClaimResponse(rsp *http.Response) (*DeprecatedVendorClaimResponse, error) {
+func ParseDeprecatedVendorClaimResponse(rsp *http.Response) (*deprecatedVendorClaimResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &DeprecatedVendorClaimResponse{
+	response := &deprecatedVendorClaimResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1942,14 +1888,14 @@ func ParseDeprecatedVendorClaimResponse(rsp *http.Response) (*DeprecatedVendorCl
 }
 
 // ParseRegisterVendorResponse parses an HTTP response from a RegisterVendorWithResponse call
-func ParseRegisterVendorResponse(rsp *http.Response) (*RegisterVendorResponse, error) {
+func ParseRegisterVendorResponse(rsp *http.Response) (*registerVendorResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &RegisterVendorResponse{
+	response := &registerVendorResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1975,7 +1921,7 @@ type ServerInterface interface {
 	// Find endpoints based on organisation identifiers and type of endpoint (optional)
 	// (GET /api/endpoints)
 	EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error
-	// Get a list of current active vendor CA's
+	// Get a list of current active vendor CAs
 	// (GET /api/mtls/cas)
 	MTLSCAs(ctx echo.Context) error
 	// Get a list of current active certificates that may be used to setup a mTLS connection

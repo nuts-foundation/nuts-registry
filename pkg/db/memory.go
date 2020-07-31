@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	errors2 "github.com/pkg/errors"
@@ -50,7 +51,7 @@ type endpoint struct {
 
 func (o org) toDb() Organization {
 	result := Organization{
-		Identifier: toDbIdentifier(o.OrgIdentifier),
+		Identifier: o.OrganizationID,
 		Name:       o.OrgName,
 		Keys:       o.OrgKeys,
 		Endpoints:  o.toDbEndpoints(),
@@ -72,7 +73,7 @@ func (o org) toDb() Organization {
 
 func (v vendor) toDb() Vendor {
 	return Vendor{
-		Identifier: toDbIdentifier(v.Identifier),
+		Identifier: v.Identifier,
 		Name:       v.Name,
 		Domain:     v.Domain,
 		Keys:       v.Keys,
@@ -82,9 +83,9 @@ func (v vendor) toDb() Vendor {
 func (e endpoint) toDb() Endpoint {
 	return Endpoint{
 		URL:          e.URL,
-		Organization: toDbIdentifier(e.Organization),
+		Organization: e.Organization,
 		EndpointType: e.EndpointType,
-		Identifier:   toDbIdentifier(e.Identifier),
+		Identifier:   e.Identifier,
 		Status:       e.Status,
 		Properties:   e.Properties,
 	}
@@ -99,21 +100,21 @@ func (o org) toDbEndpoints() []Endpoint {
 }
 
 // assertSameVendor asserts that the event concerns the expected vendor (the event must be a RegisterVendorEvent or VendorClaimEvent).
-func assertSameVendor(expectedId string, event events.Event) error {
-	var actualId string
+func assertSameVendor(expectedId core.PartyID, event events.Event) error {
+	var actualId core.PartyID
 	switch event.Type() {
 	case domain.RegisterVendor:
 		payload := domain.RegisterVendorEvent{}
 		if err := event.Unmarshal(&payload); err != nil {
 			return err
 		}
-		actualId = string(payload.Identifier)
+		actualId = payload.Identifier
 	case domain.VendorClaim:
 		payload := domain.VendorClaimEvent{}
 		if err := event.Unmarshal(&payload); err != nil {
 			return err
 		}
-		actualId = string(payload.VendorIdentifier)
+		actualId = payload.VendorID
 	default:
 		// Should not be reachable
 		panic("unsupported event type: " + event.Type())
@@ -125,21 +126,21 @@ func assertSameVendor(expectedId string, event events.Event) error {
 }
 
 // assertSameOrganization asserts that the event concerns the expected organization (the event must be a VendorClaimEvent or RegisterEndpointEvent).
-func assertSameOrganization(expectedId string, event events.Event) error {
-	var actualId string
+func assertSameOrganization(expectedId core.PartyID, event events.Event) error {
+	var actualId core.PartyID
 	switch event.Type() {
 	case domain.VendorClaim:
 		payload := domain.VendorClaimEvent{}
 		if err := event.Unmarshal(&payload); err != nil {
 			return err
 		}
-		actualId = string(payload.OrgIdentifier)
+		actualId = payload.OrganizationID
 	case domain.RegisterEndpoint:
 		payload := domain.RegisterEndpointEvent{}
 		if err := event.Unmarshal(&payload); err != nil {
 			return err
 		}
-		actualId = string(payload.Organization)
+		actualId = payload.Organization
 	default:
 		// Should not be reachable
 		panic("unsupported event type: " + event.Type())
@@ -158,7 +159,8 @@ func (db *MemoryDb) RegisterEventHandlers(fn events.EventRegistrar) {
 		if err := event.Unmarshal(&payload); err != nil {
 			return err
 		}
-		id := string(payload.Identifier)
+		id := payload.Identifier
+		idAsString := payload.Identifier.String()
 		// Validate
 		if !event.PreviousRef().IsZero() {
 			if err := assertSameVendor(id, lookup.Get(event.PreviousRef())); err != nil {
@@ -166,16 +168,16 @@ func (db *MemoryDb) RegisterEventHandlers(fn events.EventRegistrar) {
 			}
 		}
 		// Process
-		if db.vendors[id] != nil {
+		if db.vendors[idAsString] != nil {
 			if event.PreviousRef() == nil {
 				return fmt.Errorf("vendor already registered (id = %s)", payload.Identifier)
 			}
 			// Update event
 
-			db.vendors[id].RegisterVendorEvent = payload
+			db.vendors[idAsString].RegisterVendorEvent = payload
 		} else {
 			// Registration event
-			db.vendors[id] = &vendor{
+			db.vendors[idAsString] = &vendor{
 				RegisterVendorEvent: payload,
 				orgs:                make(map[string]*org),
 			}
@@ -188,30 +190,28 @@ func (db *MemoryDb) RegisterEventHandlers(fn events.EventRegistrar) {
 		if err := event.Unmarshal(&payload); err != nil {
 			return err
 		}
-		orgID := string(payload.OrgIdentifier)
-		vendorID := string(payload.VendorIdentifier)
 		// Validate
-		if db.vendors[vendorID] == nil {
-			return fmt.Errorf("vendor is not registered (id = %s)", payload.VendorIdentifier)
+		if db.vendors[payload.VendorID.String()] == nil {
+			return fmt.Errorf("vendor is not registered (id = %s)", payload.VendorID)
 		}
 		if !event.PreviousRef().IsZero() {
-			if err := assertSameVendor(vendorID, lookup.Get(event.PreviousRef())); err != nil {
+			if err := assertSameVendor(payload.VendorID, lookup.Get(event.PreviousRef())); err != nil {
 				return errors2.Wrap(err, "can't change organization's vendor")
 			}
-			if err := assertSameOrganization(orgID, lookup.Get(event.PreviousRef())); err != nil {
+			if err := assertSameOrganization(payload.OrganizationID, lookup.Get(event.PreviousRef())); err != nil {
 				return errors2.Wrap(err, "can't change organization ID")
 			}
 		}
 		// Process
-		if db.lookupOrg(orgID) != nil {
+		if db.lookupOrg(payload.OrganizationID) != nil {
 			if event.PreviousRef() == nil {
-				return fmt.Errorf("organization already registered (id = %s)", payload.OrgIdentifier)
+				return fmt.Errorf("organization already registered (id = %s)", payload.OrganizationID)
 			}
 			// Update event
-			db.vendors[vendorID].orgs[orgID].VendorClaimEvent = payload
+			db.vendors[payload.VendorID.String()].orgs[payload.OrganizationID.String()].VendorClaimEvent = payload
 		} else {
 			// Registration event
-			db.vendors[vendorID].orgs[orgID] = &org{
+			db.vendors[payload.VendorID.String()].orgs[payload.OrganizationID.String()] = &org{
 				VendorClaimEvent: payload,
 				endpoints:        make(map[string]*endpoint),
 			}
@@ -225,10 +225,9 @@ func (db *MemoryDb) RegisterEventHandlers(fn events.EventRegistrar) {
 			return err
 		}
 		// Validate
-		orgID := string(payload.Organization)
-		o := db.lookupOrg(orgID)
+		o := db.lookupOrg(payload.Organization)
 		if o == nil {
-			return fmt.Errorf("organization not registered (id = %s)", orgID)
+			return fmt.Errorf("organization not registered (id = %s)", payload.Organization)
 		}
 		if o.endpoints[string(payload.Identifier)] != nil {
 			if event.PreviousRef() == nil {
@@ -236,7 +235,7 @@ func (db *MemoryDb) RegisterEventHandlers(fn events.EventRegistrar) {
 			}
 		}
 		if !event.PreviousRef().IsZero() {
-			if err := assertSameOrganization(orgID, lookup.Get(event.PreviousRef())); err != nil {
+			if err := assertSameOrganization(payload.Organization, lookup.Get(event.PreviousRef())); err != nil {
 				return errors2.Wrap(err, "can't change endpoint's organization")
 			}
 		}
@@ -248,18 +247,14 @@ func (db *MemoryDb) RegisterEventHandlers(fn events.EventRegistrar) {
 	})
 }
 
-func (db *MemoryDb) lookupOrg(orgID string) *org {
+func (db *MemoryDb) lookupOrg(orgID core.PartyID) *org {
 	for _, vendor := range db.vendors {
-		o := vendor.orgs[orgID]
+		o := vendor.orgs[orgID.String()]
 		if o != nil {
 			return o
 		}
 	}
 	return nil
-}
-
-func toDbIdentifier(identifier domain.Identifier) Identifier {
-	return Identifier(string(identifier))
 }
 
 func New() *MemoryDb {
@@ -269,16 +264,17 @@ func New() *MemoryDb {
 }
 
 // VendorByID looks up the vendor by the given ID.
-func (db *MemoryDb) VendorByID(id string) *Vendor {
-	if db.vendors[id] == nil {
+func (db *MemoryDb) VendorByID(id core.PartyID) *Vendor {
+	idAsString := id.String()
+	if db.vendors[idAsString] == nil {
 		return nil
 	}
-	result := db.vendors[id].toDb()
+	result := db.vendors[idAsString].toDb()
 	return &result
 }
 
-func (db *MemoryDb) OrganizationsByVendorID(id string) []*Organization {
-	vendor := db.vendors[id]
+func (db *MemoryDb) OrganizationsByVendorID(id core.PartyID) []*Organization {
+	vendor := db.vendors[id.String()]
 	if vendor == nil {
 		return nil
 	}
@@ -290,7 +286,7 @@ func (db *MemoryDb) OrganizationsByVendorID(id string) []*Organization {
 	return orgs
 }
 
-func (db *MemoryDb) FindEndpointsByOrganizationAndType(organizationIdentifier string, endpointType *string) ([]Endpoint, error) {
+func (db *MemoryDb) FindEndpointsByOrganizationAndType(organizationIdentifier core.PartyID, endpointType *string) ([]Endpoint, error) {
 	o := db.lookupOrg(organizationIdentifier)
 	if o == nil {
 		return nil, fmt.Errorf("organization with identifier [%s] does not exist", organizationIdentifier)
@@ -339,7 +335,7 @@ func (db *MemoryDb) ReverseLookup(name string) (*Organization, error) {
 	return nil, fmt.Errorf("reverse lookup failed for %s: %w", name, ErrOrganizationNotFound)
 }
 
-func (db *MemoryDb) OrganizationById(id string) (*Organization, error) {
+func (db *MemoryDb) OrganizationById(id core.PartyID) (*Organization, error) {
 	org := db.lookupOrg(id)
 	if org == nil {
 		return nil, fmt.Errorf("%s: %w", id, ErrOrganizationNotFound)

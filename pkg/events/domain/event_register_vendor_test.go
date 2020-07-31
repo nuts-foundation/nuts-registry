@@ -3,6 +3,7 @@ package domain
 import (
 	cert2 "github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/pkg/types"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -39,10 +40,10 @@ func TestRegisterVendorEvent(t *testing.T) {
 
 func TestRegisterVendorEvent_PostProcessUnmarshal(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		csr, _ := cert2.VendorCertificateRequest("abc", "Vendor", "CA", HealthcareDomain)
+		csr, _ := cert2.VendorCertificateRequest(test.VendorID("abc"), "Vendor", "CA", types.HealthcareDomain)
 		cert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
 		event := RegisterVendorEvent{
-			Identifier: Identifier("abc"),
+			Identifier: test.VendorID("abc"),
 			Keys:       []interface{}{certToMap(cert)},
 		}
 		err := event.PostProcessUnmarshal(events.CreateEvent(RegisterVendor, event, nil))
@@ -57,19 +58,19 @@ func TestRegisterVendorEvent_PostProcessUnmarshal(t *testing.T) {
 		assert.Equal(t, "healthcare", event.Domain)
 	})
 	t.Run("certificate vendor doesn't match", func(t *testing.T) {
-		csr, _ := cert2.VendorCertificateRequest("def", "Vendor", "CA", HealthcareDomain)
+		csr, _ := cert2.VendorCertificateRequest(test.VendorID("def"), "Vendor", "CA", types.HealthcareDomain)
 		cert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
 		event := RegisterVendorEvent{
-			Identifier: Identifier("abc"),
+			Identifier: test.VendorID("abc"),
 			Keys:       []interface{}{certToMap(cert)},
 		}
 		err := event.PostProcessUnmarshal(events.CreateEvent(RegisterVendor, event, nil))
-		assert.EqualError(t, err, "vendor ID in certificate (def) doesn't match event (abc)")
+		assert.EqualError(t, err, "vendor ID in certificate (urn:oid:1.3.6.1.4.1.54851.4:def) doesn't match event (urn:oid:1.3.6.1.4.1.54851.4:abc)")
 	})
 }
 
 func TestVendorEventMatcher(t *testing.T) {
-	assert.False(t, VendorEventMatcher("123")(events.CreateEvent(RegisterVendor, RegisterVendorEvent{}, nil)))
-	assert.False(t, VendorEventMatcher("123")(events.CreateEvent("foobar", struct{}{}, nil)))
-	assert.True(t, VendorEventMatcher("123")(events.CreateEvent(RegisterVendor, RegisterVendorEvent{Identifier: "123"}, nil)))
+	assert.False(t, VendorEventMatcher(test.VendorID("123"))(events.CreateEvent(RegisterVendor, RegisterVendorEvent{}, nil)))
+	assert.False(t, VendorEventMatcher(test.VendorID("123"))(events.CreateEvent("foobar", struct{}{}, nil)))
+	assert.True(t, VendorEventMatcher(test.VendorID("123"))(events.CreateEvent(RegisterVendor, RegisterVendorEvent{Identifier: test.VendorID("123")}, nil)))
 }

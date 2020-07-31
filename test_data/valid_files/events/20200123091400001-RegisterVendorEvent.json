@@ -2,6 +2,6 @@
   "type": "RegisterVendorEvent",
   "payload": {
     "name": "BecauseWeCare Software Inc.",
-    "identifier": "08013836"
+    "identifier": "urn:oid:1.2.3:08013836"
   }
 }

@@ -91,10 +91,10 @@ func (hb HttpClient) RefreshVendorCertificate() (events.Event, error) {
 	return testAndParseEventResponse(response)
 }
 
-func (hb HttpClient) RefreshOrganizationCertificate(organizationID string) (events.Event, error) {
+func (hb HttpClient) RefreshOrganizationCertificate(organizationID core.PartyID) (events.Event, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
-	response, err := hb.client().RefreshOrganizationCertificate(ctx, organizationID)
+	response, err := hb.client().RefreshOrganizationCertificate(ctx, organizationID.String())
 	if err != nil {
 		return nil, err
 	}
@@ -102,12 +102,12 @@ func (hb HttpClient) RefreshOrganizationCertificate(organizationID string) (even
 }
 
 // EndpointsByOrganization is the client Api implementation for getting all or certain types of endpoints for an organization
-func (hb HttpClient) EndpointsByOrganizationAndType(legalEntity string, endpointType *string) ([]db.Endpoint, error) {
+func (hb HttpClient) EndpointsByOrganizationAndType(organizationID core.PartyID, endpointType *string) ([]db.Endpoint, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 
 	params := &EndpointsByOrganisationIdParams{
-		OrgIds: []string{legalEntity},
+		OrgIds: []string{organizationID.String()},
 		Type:   endpointType,
 	}
 	res, err := hb.client().EndpointsByOrganisationId(ctx, params)
@@ -206,10 +206,10 @@ func (hb HttpClient) searchOrganization(params SearchOrganizationsParams) ([]db.
 }
 
 // RegisterEndpoint is the client Api implementation for registering an endpoint for an organisation.
-func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url string, endpointType string, status string, properties map[string]string) (events.Event, error) {
+func (hb HttpClient) RegisterEndpoint(organizationID core.PartyID, id string, url string, endpointType string, status string, properties map[string]string) (events.Event, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
-	res, err := hb.client().RegisterEndpoint(ctx, organizationID, RegisterEndpointJSONRequestBody{
+	res, err := hb.client().RegisterEndpoint(ctx, organizationID.String(), RegisterEndpointJSONRequestBody{
 		URL:          url,
 		EndpointType: endpointType,
 		Identifier:   Identifier(id),
@@ -223,7 +223,7 @@ func (hb HttpClient) RegisterEndpoint(organizationID string, id string, url stri
 }
 
 // VendorClaim is the client Api implementation for registering an organisation.
-func (hb HttpClient) VendorClaim(orgID string, orgName string, orgKeys []interface{}) (events.Event, error) {
+func (hb HttpClient) VendorClaim(orgID core.PartyID, orgName string, orgKeys []interface{}) (events.Event, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 	var keys = make([]JWK, 0)
@@ -233,7 +233,7 @@ func (hb HttpClient) VendorClaim(orgID string, orgName string, orgKeys []interfa
 		}
 	}
 	res, err := hb.client().VendorClaim(ctx, VendorClaimJSONRequestBody{
-		Identifier: Identifier(orgID),
+		Identifier: Identifier(orgID.String()),
 		Keys:       &keys,
 		Name:       orgName,
 	})
@@ -260,11 +260,11 @@ func (hb HttpClient) RegisterVendor(name string, domain string) (events.Event, e
 }
 
 // OrganizationById is the client Api implementation for getting an organization based on its Id.
-func (hb HttpClient) OrganizationById(legalEntity string) (*db.Organization, error) {
+func (hb HttpClient) OrganizationById(id core.PartyID) (*db.Organization, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
 
-	res, err := hb.client().OrganizationById(ctx, legalEntity)
+	res, err := hb.client().OrganizationById(ctx, id.String())
 	if err != nil {
 		logrus.Error("error while getting endpoints by organization", err)
 		return nil, core.Wrap(err)
