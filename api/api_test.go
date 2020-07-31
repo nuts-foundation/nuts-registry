@@ -786,6 +786,22 @@ func TestApiResource_VendorClaim(t *testing.T) {
 				t.Errorf("Got status=%d, want %d", rec.Code, http.StatusBadRequest)
 			}
 		})
+
+		t.Run("400 - invalid org ID", func(t *testing.T) {
+			var registryClient = mock.NewMockRegistryClient(mockCtrl)
+			e, wrapper := initMockEcho(registryClient)
+
+			b, _ := json.Marshal(Organization{Identifier: "foobar", Name: "test"})
+
+			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/api/organization")
+
+			err := wrapper.VendorClaim(c)
+			assert.NoError(t, err)
+			assert.Equal(t, rec.Code, http.StatusBadRequest)
+		})
 	})
 }
 
