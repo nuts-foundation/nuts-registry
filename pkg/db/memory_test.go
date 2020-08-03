@@ -20,11 +20,10 @@
 package db
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"errors"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
+	test2 "github.com/nuts-foundation/nuts-crypto/test"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/nuts-foundation/nuts-registry/test"
@@ -498,7 +497,7 @@ func withTestContext(fn func(t *testing.T, eventSystem events.EventSystem, db *M
 
 func Test_org_toDb(t *testing.T) {
 	t.Run("PublicKey backwards compatibility", func(t *testing.T) {
-		rsaKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+		rsaKey := test2.GenerateRSAKey()
 		keyAsJWK, _ := jwk.New(&rsaKey.PublicKey)
 		jwkAsMap, _ := cert.JwkToMap(keyAsJWK)
 		jwkAsMap["kty"] = "RSA"

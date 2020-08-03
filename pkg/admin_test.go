@@ -478,7 +478,7 @@ func createRegistry(repo *test.TestRepo) *Registry {
 	cryptoClient := crypto.Crypto{
 		Config: crypto.CryptoConfig{
 			Fspath:  filepath.Join(repo.Directory, "crypto"),
-			Keysize: 2048,
+			Keysize: 1024,
 		},
 	}
 	if err := cryptoClient.Configure(); err != nil {

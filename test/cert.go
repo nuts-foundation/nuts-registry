@@ -7,6 +7,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"github.com/nuts-foundation/nuts-crypto/test"
 	"math/big"
 	"time"
 
@@ -81,7 +82,7 @@ func SignCertificateFromCSRWithKey(csr x509.CertificateRequest, notBefore time.T
 }
 
 func SelfSignCertificateFromCSR(csr x509.CertificateRequest, notBefore time.Time, validityInDays int) (*x509.Certificate, *rsa.PrivateKey) {
-	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+	key := test.GenerateRSAKey()
 	csr.PublicKey = &key.PublicKey
 	return SignCertificateFromCSRWithKey(csr, notBefore, validityInDays, nil, key), key
 }
