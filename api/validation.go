@@ -31,13 +31,6 @@ func (o Organization) validate() error {
 	return nil
 }
 
-func (v Vendor) validate() error {
-	if err := nonEmptyString(v.Name, "name"); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (e Endpoint) validate() error {
 	if err := nonEmptyString(e.URL, "url"); err != nil {
 		return err

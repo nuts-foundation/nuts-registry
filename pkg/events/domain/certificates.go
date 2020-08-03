@@ -29,7 +29,7 @@ func (t *certificateEventHandler) RegisterEventHandlers(fn func(events.EventType
 }
 
 // Verify verifies the given certificate against the truststore. In addition it also verifies the correctness of the
-// "Nuts Domain" in the certificate tree.
+// "Nuts Domain" in the cerertificate tree.
 func (t certificateEventHandler) Verify(certificate *x509.Certificate, moment time.Time) error {
 	_, err := t.verify(certificate, moment)
 	return err

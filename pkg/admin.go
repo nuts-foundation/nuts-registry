@@ -31,72 +31,40 @@ var ErrCertificateIssue = errors.New("unable to issue certificate")
 var ErrOrganizationNotFound = errors.New("organization not found")
 
 // RegisterVendor registers a vendor
-func (r *Registry) RegisterVendor(name string, domain string) (events.Event, error) {
+func (r *Registry) RegisterVendor(certificate *x509.Certificate) (events.Event, error) {
 	id := core.NutsConfig().VendorID()
-	r.logger().Infof("Registering vendor, id=%s, name=%s, domain=%s", id, name, domain)
-	jwkAsMap, err := r.issueVendorCertificate(id, name, domain)
+	// Find out whether this is a registration or update operation
+	previousEvent, err := r.EventSystem.FindLastEvent(dom.VendorEventMatcher(id))
 	if err != nil {
 		return nil, err
 	}
-
-	// The event is signed with the vendor certificate, which is issued by the just issued vendor CA.
+	if previousEvent == nil {
+		r.logger().Infof("Registering vendor: %s", certificate.Subject)
+	} else {
+		r.logger().Infof("Updating vendor: %s", certificate.Subject)
+	}
+	name := certificate.Subject.Organization[0]
+	domain, err := certutil.NewNutsCertificate(certificate).GetDomain()
+	if err != nil {
+		return nil, errors2.Wrap(err, "unable to get domain from vendor certificate")
+	}
+	certificateAsJWK, _ := cert.CertificateToJWK(certificate)
+	certificateAsMap, _ := cert.JwkToMap(certificateAsJWK)
+	if err := r.crypto.StoreVendorCACertificate(certificate); err != nil {
+		return nil, err
+	}
+	// The event is signed with the vendor certificate, which need to be issued by the just issued vendor CA.
+	entity := types.LegalEntity{URI: id.String()}
+	if _, _, err := r.crypto.RenewSigningCertificate(entity); err != nil {
+		return nil, err
+	}
 	return r.signAndPublishEvent(dom.RegisterVendor, dom.RegisterVendorEvent{
 		Identifier: id,
 		Name:       name,
 		Domain:     domain,
-		Keys:       []interface{}{jwkAsMap},
-	}, nil, func(dataToBeSigned []byte, instant time.Time) ([]byte, error) {
-		return r.signAsVendor(id, name, domain, dataToBeSigned, instant)
-	})
-}
-
-func (r *Registry) issueVendorCertificate(id core.PartyID, name string, domain string) (map[string]interface{}, error) {
-	_, err := r.loadOrGenerateKey(id)
-	if err != nil {
-		return nil, err
-	}
-	entity := types.LegalEntity{URI: id.String()}
-	certificate, err := r.createAndSubmitCSR(func() (x509.CertificateRequest, error) {
-		return certutil.VendorCertificateRequest(id, name, "CA Intermediate", domain)
-	}, entity, entity, crypto.CertificateProfile{
-		IsCA:         true,
-		NumDaysValid: r.Config.VendorCACertificateValidity,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	jwkAsMap, err := certToJwkMap(certificate, certutil.VendorCACertificate)
-	if err != nil {
-		return nil, errors2.Wrap(err, ErrJWKConstruction.Error())
-	}
-	return jwkAsMap, err
-}
-
-func (r *Registry) RefreshVendorCertificate() (events.Event, error) {
-	logrus.Info("Issuing new CA certificate for vendor using existing private key (if present)")
-	id := core.NutsConfig().VendorID()
-	// This operation can only be used to issue a new certificate for an existing vendor. The resulting event refers
-	// to the last RegisterVendorEvent.
-	prevEvent, err := r.EventSystem.FindLastEvent(dom.VendorEventMatcher(id))
-	if err != nil {
-		return nil, err
-	}
-	if prevEvent == nil {
-		return nil, fmt.Errorf("vendor doesn't exist (id=%s)", id)
-	}
-	var prevEventPayload = dom.RegisterVendorEvent{}
-	_ = prevEvent.Unmarshal(&prevEventPayload)
-
-	// Issue certificate, apply as update to the last event and emit
-	// The event is signed with the vendor certificate, which is issued by the just issued vendor CA.
-	jwkAsMap, err := r.issueVendorCertificate(id, prevEventPayload.Name, prevEventPayload.Domain)
-	if err != nil {
-		return nil, err
-	}
-	prevEventPayload.Keys = append(prevEventPayload.Keys, jwkAsMap)
-	return r.signAndPublishEvent(dom.RegisterVendor, prevEventPayload, prevEvent, func(dataToBeSigned []byte, instant time.Time) ([]byte, error) {
-		return r.signAsVendor(id, prevEventPayload.Name, prevEventPayload.Domain, dataToBeSigned, instant)
+		Keys:       []interface{}{certificateAsMap},
+	}, previousEvent, func(dataToBeSigned []byte, instant time.Time) ([]byte, error) {
+		return r.crypto.SignJWS(dataToBeSigned, types.KeyForEntity(entity).WithQualifier(crypto.SigningCertificateQualifier))
 	})
 }
 
@@ -172,11 +140,8 @@ func (r *Registry) issueOrganizationCertificate(vendor *db.Vendor, orgID core.Pa
 		return nil, errors2.Wrap(err, ErrCertificateIssue.Error())
 	}
 
-	jwkAsMap, err := certToJwkMap(certificate, certutil.OrganisationCertificate)
-	if err != nil {
-		return nil, errors2.Wrap(err, ErrJWKConstruction.Error())
-	}
-	return jwkAsMap, nil
+	key, _ := cert.CertificateToJWK(certificate)
+	return cert.JwkToMap(key)
 }
 
 func (r *Registry) RefreshOrganizationCertificate(organizationID core.PartyID) (events.Event, error) {
@@ -307,26 +272,6 @@ func (r *Registry) createAndSubmitCSR(csrTemplateFn func() (x509.CertificateRequ
 	}
 
 	return x509.ParseCertificate(certASN1)
-}
-
-func certToJwkMap(certificate *x509.Certificate, certType certutil.CertificateType) (map[string]interface{}, error) {
-	key, _ := cert.CertificateToJWK(certificate)
-	keyAsMap, _ := cert.JwkToMap(key)
-	keyAsMap[certutil.JwkCertificateType] = certType
-	return keyAsMap, nil
-}
-
-func (r *Registry) signAsVendor(vendorId core.PartyID, vendorName string, domain string, payload []byte, instant time.Time) ([]byte, error) {
-	logrus.Debug("Signing event as vendor")
-	csr, err := certutil.VendorCertificateRequest(vendorId, vendorName, "", domain)
-	if err != nil {
-		return nil, errors2.Wrap(err, "unable to create CSR for JWS signing")
-	}
-	signature, err := r.crypto.SignJWSEphemeral(payload, types.KeyForEntity(types.LegalEntity{URI: vendorId.String()}), csr, instant)
-	if err != nil {
-		return nil, errors2.Wrap(err, "unable to sign JWS")
-	}
-	return signature, nil
 }
 
 func (r *Registry) signAsOrganization(orgID core.PartyID, orgName string, payload []byte, instant time.Time, hasCerts bool) ([]byte, error) {

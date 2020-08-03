@@ -8,16 +8,17 @@ info:
 paths:
   /api/vendors:
     post:
-      summary: "Adds a vendor to the registry"
+      summary: "Registers the vendor in the registry"
       operationId: "registerVendor"
       tags:
         - vendors
       requestBody:
         required: true
+        description: "Vendor CA certificate as PEM encoded X.509 certificate"
         content:
-          application/json:
+          application/x-pem-file:
             schema:
-              $ref: '#/components/schemas/Vendor'
+              type: string
       responses:
         '200':
           description: "Vendor has been created successfully"
@@ -26,7 +27,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Event'
         '400':
-          description: "incorrect data"
+          description: "incorrect PEM file"
   /api/vendor/{id}/claim:
     post:
       deprecated: true
@@ -57,20 +58,6 @@ paths:
                 $ref: '#/components/schemas/Event'
         '400':
           description: "incorrect data"
-  /api/vendor/refresh-cert:
-    post:
-      summary: "Refreshes the vendor's certificate."
-      description: "New vendor CA certificate is issued using existing keys. If there are no keys, they're generated."
-      operationId: "refreshVendorCertificate"
-      tags:
-        - vendors
-      responses:
-        '200':
-          description: "Certificate has been refreshed"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Event'
   /api/mtls/cas:
     get:
       summary: "Get a list of current active vendor CAs"

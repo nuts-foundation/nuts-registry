@@ -409,7 +409,7 @@ func TestRegistry_Verify(t *testing.T) {
 		defer os.Unsetenv("NUTS_IDENTITY")
 		evts, fix, err := (&Registry{Db: mockDb}).Verify(false)
 		assert.NoError(t, err)
-		assert.True(t, fix)
+		assert.False(t, fix)
 		assert.Empty(t, evts)
 	})
 }

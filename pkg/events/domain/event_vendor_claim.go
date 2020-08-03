@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"crypto/x509"
+	"errors"
 	"fmt"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -33,17 +35,46 @@ func (v VendorClaimEvent) PostProcessUnmarshal(event events.Event) error {
 	}
 	for _, key := range v.OrgKeys {
 		if certificate := cert.GetCertificate(key); certificate != nil {
-			var err error
-			var organizationId core.PartyID
-			if organizationId, err = cert2.NewNutsCertificate(certificate).GetOrganizationID(); err != nil {
-				return errors2.Wrap(err, "unable to unmarshal organization ID from certificate")
+			// Backwards compatibility: <= 0.14 VendorClaimEvent was signed by organization certificate, now it's the
+			// vendor's signing certificate. So either the organization ID in the certificate must match (<= 0.14) or
+			// the vendor ID (>= 0.15)
+			if valid, err := v.isVendorIDValid(certificate); err != nil {
+				return errors2.Wrap(err, "vendor ID validation failed")
+			} else if valid {
+				continue
 			}
-			if v.OrganizationID != organizationId {
-				return fmt.Errorf("organization ID in certificate (%s) doesn't match event (%s)", organizationId, v.OrganizationID)
+			if valid, err := v.isOrganizationIDValid(certificate); err != nil {
+				return errors2.Wrap(err, "organization ID validation failed")
+			} else if !valid {
+				return errors.New("event should either be signed by organization or vendor signing certificate")
 			}
 		}
 	}
 	return nil
+}
+
+func (v VendorClaimEvent) isVendorIDValid(certificate *x509.Certificate) (bool, error) {
+	var vendorID core.PartyID
+	var err error
+	if vendorID, err = cert2.NewNutsCertificate(certificate).GetVendorID(); err != nil {
+		return false, errors2.Wrap(err, "unable to unmarshal vendor ID from certificate")
+	}
+	if !vendorID.IsZero() && v.VendorID != vendorID {
+		return false, fmt.Errorf("vendor ID in certificate (%s) doesn't match event (%s)", vendorID, v.VendorID.Value())
+	}
+	return !vendorID.IsZero(), nil
+}
+
+func (v VendorClaimEvent) isOrganizationIDValid(certificate *x509.Certificate) (bool, error) {
+	var organizationID core.PartyID
+	var err error
+	if organizationID, err = cert2.NewNutsCertificate(certificate).GetOrganizationID(); err != nil {
+		return false, errors2.Wrap(err, "unable to unmarshal organization ID from certificate")
+	}
+	if !organizationID.IsZero() && v.OrganizationID != organizationID {
+		return false, fmt.Errorf("organization ID in certificate (%s) doesn't match event (%s)", organizationID, v.OrganizationID)
+	}
+	return !organizationID.IsZero(), nil
 }
 
 // OrganizationEventMatcher returns an EventMatcher which matches the VendorClaimEvent which registered the organization

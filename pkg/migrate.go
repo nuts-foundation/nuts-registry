@@ -25,7 +25,7 @@ func (r *Registry) verify(config core.NutsConfigValues, autoFix bool) ([]events.
 	if vendor == nil {
 		err = fmt.Errorf("configured vendor (%s) is not registered, please register it using the 'register-vendor' CLI command", identity)
 	} else {
-		if event, fixRequired, err = r.verifyVendorCertificate(vendor, identity, autoFix); event != nil {
+		if event, fixRequired, err = r.verifyVendorCertificate(vendor, identity); event != nil {
 			resultingEvents = append(resultingEvents, event)
 		}
 		if err != nil {
@@ -52,19 +52,11 @@ func (r *Registry) verify(config core.NutsConfigValues, autoFix bool) ([]events.
 	return resultingEvents, fixRequired, err
 }
 
-func (r *Registry) verifyVendorCertificate(vendor *db.Vendor, identity core.PartyID, autoFix bool) (events.Event, bool, error) {
+func (r *Registry) verifyVendorCertificate(vendor *db.Vendor, identity core.PartyID) (events.Event, bool, error) {
 	certificates := vendor.GetActiveCertificates()
 	if len(certificates) == 0 {
 		r.logger().Warn("No active certificates found for configured vendor.")
-		if autoFix {
-			r.logger().Info("Issuing certificate for vendor")
-			event, err := r.RefreshVendorCertificate()
-			if err != nil {
-				return nil, false, errors2.Wrap(err, "couldn't issue vendor certificate")
-			}
-			return event, false, nil
-		}
-		return nil, true, nil
+		return nil, false, nil
 	} else {
 		if !r.crypto.PrivateKeyExists(types.KeyForEntity(types.LegalEntity{URI: identity.String()})) {
 			return nil, false, errors.New("active certificates were found for configured vendor, but there's no private key available for cryptographic operations. Please recover your key material")

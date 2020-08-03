@@ -1,7 +1,10 @@
 package cert
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
@@ -51,5 +54,16 @@ func TestNutsCertificate_GetVendorID(t *testing.T) {
 			return
 		}
 		assert.Equal(t, vendorID, altName)
+	})
+	t.Run("ok - certificate contains e-mail address SAN", func(t *testing.T) {
+		privateKey, _ := rsa.GenerateKey(rand.Reader, 1024)
+		cert := test.SignCertificateFromCSRWithKey(x509.CertificateRequest{
+			PublicKey:                privateKey.Public(),
+			Subject:                  pkix.Name{CommonName: "Foobar"},
+			EmailAddresses:           []string{"foo@bar.nl"},
+		}, time.Now(), 2, nil, privateKey)
+		actual, err := NutsCertificate(*cert).GetVendorID()
+		assert.NoError(t, err)
+		assert.True(t, actual.IsZero())
 	})
 }

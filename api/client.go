@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -79,16 +80,6 @@ func (hb HttpClient) Verify(fix bool) ([]events.Event, bool, error) {
 		return nil, false, err
 	}
 	return verifyResponse.Events, verifyResponse.Fix, nil
-}
-
-func (hb HttpClient) RefreshVendorCertificate() (events.Event, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
-	defer cancel()
-	response, err := hb.client().RefreshVendorCertificate(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return testAndParseEventResponse(response)
 }
 
 func (hb HttpClient) RefreshOrganizationCertificate(organizationID core.PartyID) (events.Event, error) {
@@ -244,14 +235,10 @@ func (hb HttpClient) VendorClaim(orgID core.PartyID, orgName string, orgKeys []i
 }
 
 // RegisterVendor is the client Api implementation for registering a vendor.
-func (hb HttpClient) RegisterVendor(name string, domain string) (events.Event, error) {
+func (hb HttpClient) RegisterVendor(certificate *x509.Certificate) (events.Event, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
 	defer cancel()
-
-	res, err := hb.client().RegisterVendor(ctx, RegisterVendorJSONRequestBody{
-		Name:   name,
-		Domain: Domain(domain),
-	})
+	res, err := hb.client().RegisterVendorWithBody(ctx, "application/x-pem-file", strings.NewReader(cert.CertificateToPEM(certificate)))
 	if err != nil {
 		logrus.Error("error while registering vendor", err)
 		return nil, core.Wrap(err)
