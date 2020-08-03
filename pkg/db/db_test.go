@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
+	test2 "github.com/nuts-foundation/nuts-crypto/test"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"testing"
 	"time"
@@ -249,8 +250,7 @@ func TestOrganization_HasKey(t *testing.T) {
 		assert.True(t, hasKey)
 	})
 	t.Run("ok - match: JWK with certificate", func(t *testing.T) {
-		k, _ := rsa.GenerateKey(rand.Reader, 2048)
-		asn1cert := test.GenerateCertificateEx(time.Now(), 2, k)
+		asn1cert := test.GenerateCertificateEx(time.Now(), 2, test2.GenerateRSAKey())
 		certificate, _ := x509.ParseCertificate(asn1cert)
 		certAsJWK, _ := cert.CertificateToJWK(certificate)
 		jwkAsMap, _ := cert.JwkToMap(certAsJWK)
@@ -261,8 +261,7 @@ func TestOrganization_HasKey(t *testing.T) {
 		assert.True(t, hasKey)
 	})
 	t.Run("ok - match: JWK with certificate, but expired", func(t *testing.T) {
-		k, _ := rsa.GenerateKey(rand.Reader, 2048)
-		asn1cert := test.GenerateCertificateEx(time.Now(), 2, k)
+		asn1cert := test.GenerateCertificateEx(time.Now(), 2, test2.GenerateRSAKey())
 		certificate, _ := x509.ParseCertificate(asn1cert)
 		certAsJWK, _ := cert.CertificateToJWK(certificate)
 		jwkAsMap, _ := cert.JwkToMap(certAsJWK)
@@ -273,8 +272,7 @@ func TestOrganization_HasKey(t *testing.T) {
 		assert.False(t, hasKey)
 	})
 	t.Run("error - org contains invalid keys", func(t *testing.T) {
-		k, _ := rsa.GenerateKey(rand.Reader, 2048)
-		keyAsJWK, _ := jwk.New(k)
+		keyAsJWK, _ := jwk.New(test2.GenerateRSAKey())
 		o := Organization{Keys: []interface{}{map[string]interface{}{}}}
 		hasKey, err := o.HasKey(keyAsJWK, time.Time{})
 		assert.Error(t, err)
@@ -283,14 +281,13 @@ func TestOrganization_HasKey(t *testing.T) {
 }
 
 func generatePEM() (jwk.Key, string) {
-	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+	key := test2.GenerateRSAKey()
 	keyAsJWK, _ := jwk.New(key)
 	pem, _ := cert.PublicKeyToPem(&key.PublicKey)
 	return keyAsJWK, pem
 }
 
 func generateJWK() jwk.Key {
-	k, _ := rsa.GenerateKey(rand.Reader, 2048)
-	jw, _ := jwk.New(k)
+	jw, _ := jwk.New(test2.GenerateRSAKey())
 	return jw
 }
