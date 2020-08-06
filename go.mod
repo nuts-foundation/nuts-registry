@@ -1,6 +1,6 @@
 module github.com/nuts-foundation/nuts-registry
 
-go 1.13
+go 1.14
 
 require (
 	github.com/cyberphone/json-canonicalization v0.0.0-20200417180520-cd6247b5f11e
