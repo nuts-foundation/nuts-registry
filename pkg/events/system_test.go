@@ -31,11 +31,10 @@ import (
 )
 
 func TestUnknownEventType(t *testing.T) {
-	repo, err := test.NewTestRepo(t.Name())
+	repo, err := test.NewTestRepo(t)
 	if !assert.NoError(t, err) {
 		return
 	}
-	defer repo.Cleanup()
 	system := NewEventSystem()
 	system.Configure(repo.Directory + "/events")
 	input := `{
@@ -50,11 +49,10 @@ func TestUnknownEventType(t *testing.T) {
 }
 
 func TestNoEventHandler(t *testing.T) {
-	repo, err := test.NewTestRepo(t.Name())
+	repo, err := test.NewTestRepo(t)
 	if !assert.NoError(t, err) {
 		return
 	}
-	defer repo.Cleanup()
 	system := NewEventSystem("some-type")
 	system.Configure(repo.Directory + "/events")
 	input := "{\"type\":\"some-type\"}"
@@ -90,11 +88,10 @@ func TestLoadEvents(t *testing.T) {
 		assert.Equal(t, ec, endpointsCreated, "unexpected number of events for: RegisterEndpoint")
 	}
 
-	repo, err := test.NewTestRepo(t.Name())
+	repo, err := test.NewTestRepo(t)
 	if !assert.NoError(t, err) {
 		return
 	}
-	defer repo.Cleanup()
 	system.Configure(repo.Directory + "/events")
 
 	const sourceDir = "../../test_data/valid_files"
@@ -162,11 +159,10 @@ func TestSystemNotConfigured(t *testing.T) {
 }
 
 func TestLoadEventsInvalidJson(t *testing.T) {
-	repo, err := test.NewTestRepoFrom(t.Name(), "../../test_data/invalid_files")
+	repo, err := test.NewTestRepoFrom(t, "../../test_data/invalid_files")
 	if !assert.NoError(t, err) {
 		return
 	}
-	defer repo.Cleanup()
 	system := NewEventSystem()
 	system.Configure(repo.Directory + "/events")
 	err = system.LoadAndApplyEvents()
@@ -174,11 +170,10 @@ func TestLoadEventsInvalidJson(t *testing.T) {
 }
 
 func TestLoadEventsEmptyFile(t *testing.T) {
-	repo, err := test.NewTestRepoFrom(t.Name(), "../../test_data/empty_files")
+	repo, err := test.NewTestRepoFrom(t, "../../test_data/empty_files")
 	if !assert.NoError(t, err) {
 		return
 	}
-	defer repo.Cleanup()
 	system := NewEventSystem()
 	system.Configure(repo.Directory + "/events")
 	err = system.LoadAndApplyEvents()
@@ -205,14 +200,9 @@ func TestParseTimestamp(t *testing.T) {
 }
 
 func TestEventLookup(t *testing.T) {
-	repo, err := test.NewTestRepo(t.Name())
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer repo.Cleanup()
 	system := NewEventSystem("evt")
 	t.Run("ok - Get is delegated", func(t *testing.T) {
-		assert.Nil(t, system.Get(Ref([]byte{1, 2, 3})))
+		assert.Nil(t, system.Get([]byte{1, 2, 3}))
 	})
 	t.Run("ok - FindLastEvent is delegated", func(t *testing.T) {
 		event, err := system.FindLastEvent(func(event Event) bool {
@@ -224,11 +214,10 @@ func TestEventLookup(t *testing.T) {
 }
 
 func TestPublishEvents(t *testing.T) {
-	repo, err := test.NewTestRepo(t.Name())
+	repo, err := test.NewTestRepo(t)
 	if !assert.NoError(t, err) {
 		return
 	}
-	defer repo.Cleanup()
 	system := NewEventSystem("evt")
 	system.Configure(repo.Directory)
 	called := 0
@@ -282,12 +271,10 @@ func Test_readEvent(t *testing.T) {
 	})
 	t.Run("v1", func(t *testing.T) {
 		// From v1 on event contains issuedAt which should be used instead of the file name
-		repo, err := test.NewTestRepo(t.Name())
+		repo, err := test.NewTestRepo(t)
 		if !assert.NoError(t, err) {
 			return
 		}
-		defer repo.Cleanup()
-
 		event := CreateEvent(eventType, eventPayload, nil)
 		(event.(*jsonEvent)).EventIssuedAt = time.Date(2020, 1, 2, 3, 4, 5, 6, time.UTC)
 		eventFilePath := normalizeLocation(repo.Directory, SuggestEventFileName(event))

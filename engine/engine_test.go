@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"errors"
+	"github.com/nuts-foundation/nuts-go-test/io"
 	"net"
 	"syscall"
 	"testing"
@@ -23,6 +24,8 @@ import (
 )
 
 func TestServer(t *testing.T) {
+	// Register test instance singleton
+	pkg.NewTestRegistryInstance(io.TestDirectory(t))
 	command := cmd()
 	t.Run("SIGINT stops server", func(t *testing.T) {
 		command.SetArgs([]string{"server"})
@@ -45,6 +48,8 @@ func TestServer(t *testing.T) {
 }
 
 func TestRegisterVendor(t *testing.T) {
+	// Register test instance singleton
+	pkg.NewTestRegistryInstance(io.TestDirectory(t))
 	command := cmd()
 	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		client.EXPECT().RegisterVendor(gomock.Any()).Return(events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{}, nil), nil)
@@ -71,6 +76,8 @@ func TestRegisterVendor(t *testing.T) {
 }
 
 func TestVendorClaim(t *testing.T) {
+	// Register test instance singleton
+	pkg.NewTestRegistryInstance(io.TestDirectory(t))
 	command := cmd()
 	orgID := test.OrganizationID("orgId")
 	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
@@ -88,6 +95,8 @@ func TestVendorClaim(t *testing.T) {
 }
 
 func TestRefreshOrganizationCertificate(t *testing.T) {
+	// Register test instance singleton
+	pkg.NewTestRegistryInstance(io.TestDirectory(t))
 	command := cmd()
 	orgID := test.OrganizationID("123")
 	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
@@ -112,6 +121,8 @@ func TestRefreshOrganizationCertificate(t *testing.T) {
 }
 
 func TestVerify(t *testing.T) {
+	// Register test instance singleton
+	pkg.NewTestRegistryInstance(io.TestDirectory(t))
 	t.Run("ok - fix data", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		client.EXPECT().Verify(true).Return(nil, false, nil)
 		command := cmd()
@@ -151,6 +162,8 @@ func TestVerify(t *testing.T) {
 }
 
 func TestRegisterEndpoint(t *testing.T) {
+	// Register test instance singleton
+	pkg.NewTestRegistryInstance(io.TestDirectory(t))
 	command := cmd()
 	var orgID, _ = core.ParsePartyID("urn:oid:1.2.3:foo")
 	t.Run("ok - bare minimum parameters", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
@@ -175,6 +188,8 @@ func TestRegisterEndpoint(t *testing.T) {
 }
 
 func TestSearchOrg(t *testing.T) {
+	// Register test instance singleton
+	pkg.NewTestRegistryInstance(io.TestDirectory(t))
 	command := cmd()
 	t.Run("ok", withMock(func(t *testing.T, client *mock.MockRegistryClient) {
 		client.EXPECT().SearchOrganizations("foo")
@@ -185,6 +200,8 @@ func TestSearchOrg(t *testing.T) {
 }
 
 func TestPrintVersion(t *testing.T) {
+	// Register test instance singleton
+	pkg.NewTestRegistryInstance(io.TestDirectory(t))
 	command := cmd()
 	command.SetArgs([]string{"version"})
 	err := command.Execute()
@@ -196,7 +213,8 @@ func Test_flagSet(t *testing.T) {
 }
 
 func TestNewRegistryEngine(t *testing.T) {
-
+	// Register test instance singleton
+	pkg.NewTestRegistryInstance(io.TestDirectory(t))
 	t.Run("instance", func(t *testing.T) {
 		assert.NotNil(t, NewRegistryEngine())
 	})
