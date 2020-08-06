@@ -472,22 +472,7 @@ func getLastUpdatedFile(dir string) string {
 
 func createRegistry(repo *test.TestRepo) *Registry {
 	core.NutsConfig().Load(&cobra.Command{})
-	cryptoClient := crypto.Crypto{
-		Config: crypto.CryptoConfig{
-			Fspath:  filepath.Join(repo.Directory, "crypto"),
-			Keysize: 1024,
-		},
-	}
-	if err := cryptoClient.Configure(); err != nil {
-		panic(err)
-	}
-	registry := Registry{
-		Config:      DefaultRegistryConfig(),
-		EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
-		crypto:      &cryptoClient,
-	}
-	registry.Config.Datadir = repo.Directory
-	return &registry
+	return NewTestRegistryInstance(repo.Directory)
 }
 
 type testContext struct {
@@ -551,7 +536,7 @@ func (cxt *testContext) issueVendorCACertificate() *x509.Certificate {
 
 func createTestContext(t *testing.T) testContext {
 	os.Setenv("NUTS_IDENTITY", vendorId.String())
-	repo, err := test.NewTestRepo(t.Name())
+	repo, err := test.NewTestRepo(t)
 	if err != nil {
 		panic(err)
 	}
@@ -563,12 +548,6 @@ func createTestContext(t *testing.T) testContext {
 		mockCtrl:          mockCtrl,
 		networkAmbassador: network.NewMockAmbassador(mockCtrl),
 		repo:              repo,
-	}
-	context.registry.networkAmbassador = context.networkAmbassador
-	context.networkAmbassador.EXPECT().RegisterEventHandlers(gomock.Any(), gomock.Any())
-	// Call configure after mock services have been configured in Registry instance
-	if err := context.registry.Configure(); err != nil {
-		panic(err)
 	}
 	return context
 }

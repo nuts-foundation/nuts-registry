@@ -25,6 +25,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-network/pkg"
+	"github.com/nuts-foundation/nuts-registry/pkg/network"
 	"io"
 	"net/http"
 	"os"
@@ -39,10 +41,10 @@ import (
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
 	networkClient "github.com/nuts-foundation/nuts-network/client"
+	networkPkg "github.com/nuts-foundation/nuts-network/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
-	"github.com/nuts-foundation/nuts-registry/pkg/network"
 	"github.com/sirupsen/logrus"
 )
 
@@ -148,8 +150,9 @@ type Registry struct {
 	Config            RegistryConfig
 	Db                db.Db
 	EventSystem       events.EventSystem
-	OnChange          func(registry *Registry)
+	network           networkPkg.NetworkClient
 	crypto            crypto.Client
+	OnChange          func(registry *Registry)
 	networkAmbassador network.Ambassador
 	configOnce        sync.Once
 	_logger           *logrus.Entry
@@ -165,14 +168,23 @@ func init() {
 
 // RegistryInstance returns the singleton Registry
 func RegistryInstance() *Registry {
+	if instance != nil {
+		return instance
+	}
 	oneRegistry.Do(func() {
-		instance = &Registry{
-			Config:  DefaultRegistryConfig(),
-			_logger: logrus.StandardLogger().WithField("module", ModuleName),
-		}
+		instance = NewRegistryInstance(DefaultRegistryConfig(), client.NewCryptoClient(), networkClient.NewNetworkClient())
 	})
 
 	return instance
+}
+
+func NewRegistryInstance(config RegistryConfig, cryptoClient crypto.Client, networkClient pkg.NetworkClient) *Registry {
+	return &Registry{
+		Config:  config,
+		crypto:  cryptoClient,
+		network: networkClient,
+		_logger: logrus.StandardLogger().WithField("module", ModuleName),
+	}
 }
 
 // Configure initializes the db, but only when in server mode
@@ -184,9 +196,6 @@ func (r *Registry) Configure() error {
 		r.Config.Mode = cfg.GetEngineMode(r.Config.Mode)
 		if r.Config.Mode == core.ServerEngineMode {
 			r.EventSystem = events.NewEventSystem(domain.GetEventTypes()...)
-			if r.crypto == nil {
-				r.crypto = client.NewCryptoClient()
-			}
 			if r.Config.VendorCACertificateValidity < 1 {
 				err = errors.New("vendor CA certificate validity must be at least 1 day")
 				return
@@ -207,7 +216,7 @@ func (r *Registry) Configure() error {
 			r.Db = db.New()
 			r.Db.RegisterEventHandlers(r.EventSystem.RegisterEventHandler)
 			if r.networkAmbassador == nil {
-				r.networkAmbassador = network.NewAmbassador(networkClient.NewNetworkClient(), r.crypto)
+				r.networkAmbassador = network.NewAmbassador(r.network, r.crypto)
 			}
 			r.networkAmbassador.RegisterEventHandlers(r.EventSystem.RegisterEventHandler, domain.GetEventTypes())
 			if err = r.EventSystem.Configure(r.getEventsDir()); err != nil {

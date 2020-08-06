@@ -232,11 +232,10 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 }
 
 func TestMemoryDb_VendorByID(t *testing.T) {
-	repo, err := test.NewTestRepo(t.Name())
+	repo, err := test.NewTestRepo(t)
 	if !assert.NoError(t, err) {
 		return
 	}
-	defer repo.Cleanup()
 	eventSystem, db := initDb(*repo)
 	if !pub(t, eventSystem, registerVendor1, vendorClaim1, registerEndpoint1) {
 		return
@@ -485,11 +484,10 @@ func TestMemoryDb_OrganizationsByVendorID(t *testing.T) {
 
 func withTestContext(fn func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb)) func(*testing.T) {
 	return func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
+		repo, err := test.NewTestRepo(t)
 		if !assert.NoError(t, err) {
 			return
 		}
-		defer repo.Cleanup()
 		eventSystem, db := initDb(*repo)
 		fn(t, eventSystem, db)
 	}

@@ -71,7 +71,6 @@ func TestRegistry_Instance(t *testing.T) {
 	assert.Same(t, registry1, registry2)
 	assert.Equal(t, DefaultRegistryConfig(), registry1.Config, "Default registry instance should contain default config")
 	assert.Nil(t, registry1.EventSystem)
-	assert.Nil(t, registry1.crypto)
 }
 
 func TestRegistry_Start(t *testing.T) {
@@ -206,11 +205,10 @@ func TestRegistry_Configure(t *testing.T) {
 	})
 
 	t.Run("error - loading events", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
+		repo, err := test.NewTestRepo(t)
 		if !assert.NoError(t, err) {
 			return
 		}
-		defer repo.Cleanup()
 		registry := Registry{
 			Config:      DefaultRegistryConfig(),
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
@@ -225,29 +223,19 @@ func TestRegistry_Configure(t *testing.T) {
 		assert.Error(t, err)
 	})
 	t.Run("error - vendor CA certificate validity invalid", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
 		registry := Registry{
 			Config: DefaultRegistryConfig(),
 		}
 		registry.Config.VendorCACertificateValidity = 0
-		err = registry.Configure()
+		err := registry.Configure()
 		assert.EqualError(t, err, "vendor CA certificate validity must be at least 1 day")
 	})
 	t.Run("error - organisation certificate validity invalid", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t.Name())
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer repo.Cleanup()
 		registry := Registry{
 			Config: DefaultRegistryConfig(),
 		}
 		registry.Config.OrganisationCertificateValidity = 0
-		err = registry.Configure()
+		err := registry.Configure()
 		assert.EqualError(t, err, "organisation certificate validity must be at least 1 day")
 	})
 }
@@ -261,11 +249,10 @@ func TestRegistry_FileUpdate(t *testing.T) {
 		wg := sync.WaitGroup{}
 		wg.Add(1)
 
-		repo, err := test.NewTestRepo(t.Name())
+		repo, err := test.NewTestRepo(t)
 		if !assert.NoError(t, err) {
 			return
 		}
-		defer repo.Cleanup()
 		registry := Registry{
 			Config: DefaultRegistryConfig(),
 			OnChange: func(registry *Registry) {
@@ -314,12 +301,10 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 		wg := sync.WaitGroup{}
 		wg.Add(1)
 
-		repo, err := test.NewTestRepo(t.Name())
+		repo, err := test.NewTestRepo(t)
 		if !assert.NoError(t, err) {
 			return
 		}
-		defer repo.Cleanup()
-
 		registry := Registry{
 			Config: DefaultRegistryConfig(),
 			OnChange: func(registry *Registry) {
@@ -430,9 +415,7 @@ func TestRegistry_VendorCAs(t *testing.T) {
 	t.Run("returns empty slice when truststore is empty", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
-		repo, _ := test.NewTestRepo(t.Name())
-		defer repo.Cleanup()
-
+		repo, _ := test.NewTestRepo(t)
 		trustStore, err := cert.NewTrustStore(fmt.Sprintf("%s/truststore.pem", repo.Directory))
 		assert.NoError(t, err)
 
@@ -445,9 +428,7 @@ func TestRegistry_VendorCAs(t *testing.T) {
 	t.Run("returns empty slice when truststore only contains a root", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
-		repo, _ := test.NewTestRepo(t.Name())
-		defer repo.Cleanup()
-
+		repo, _ := test.NewTestRepo(t)
 		trustStore, err := cert.NewTrustStore(fmt.Sprintf("%s/truststore.pem", repo.Directory))
 		assert.NoError(t, err)
 		trustStore.AddCertificate(root)
@@ -461,9 +442,7 @@ func TestRegistry_VendorCAs(t *testing.T) {
 	t.Run("returns empty slice when truststore only contains a root and 1 intermediate", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
-		repo, _ := test.NewTestRepo(t.Name())
-		defer repo.Cleanup()
-
+		repo, _ := test.NewTestRepo(t)
 		trustStore, err := cert.NewTrustStore(fmt.Sprintf("%s/truststore.pem", repo.Directory))
 		assert.NoError(t, err)
 		trustStore.AddCertificate(root)
@@ -478,9 +457,7 @@ func TestRegistry_VendorCAs(t *testing.T) {
 	t.Run("returns 2 chains when truststore contains a root, an intermediate and 2 vendor CAs", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
-		repo, _ := test.NewTestRepo(t.Name())
-		defer repo.Cleanup()
-
+		repo, _ := test.NewTestRepo(t)
 		trustStore, err := cert.NewTrustStore(fmt.Sprintf("%s/truststore.pem", repo.Directory))
 		assert.NoError(t, err)
 		trustStore.AddCertificate(root)

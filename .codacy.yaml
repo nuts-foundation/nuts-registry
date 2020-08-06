@@ -1,6 +1,7 @@
 exclude_paths:
   - 'api/generated.go'
   - 'test/*'
+  - '**/test.go'
   - 'mock/*'
   - "mock.go"
   - "docs/*"

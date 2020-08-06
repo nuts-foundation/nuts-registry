@@ -1,29 +1,26 @@
 package test
 
 import (
+	io2 "github.com/nuts-foundation/nuts-go-test/io"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
+	"testing"
 )
 
 type TestRepo struct {
 	Directory string
 }
 
-func NewTestRepo(testName string) (*TestRepo, error) {
-	return NewTestRepoFrom(testName, "")
+func NewTestRepo(t *testing.T) (*TestRepo, error) {
+	return NewTestRepoFrom(t, "")
 }
 
-func NewTestRepoFrom(testName string, sourceDir string) (*TestRepo, error) {
-	normalizedName := strings.ReplaceAll(testName, "/", "_")
-	dir, err := ioutil.TempDir("", normalizedName)
-	if err != nil {
-		return nil, err
-	}
+func NewTestRepoFrom(t *testing.T, sourceDir string) (*TestRepo, error) {
+	dir := io2.TestDirectory(t)
 	if sourceDir != "" {
-		err = copyDir(sourceDir, dir)
+		err := copyDir(sourceDir, dir)
 		if err != nil {
 			return nil, err
 		}
