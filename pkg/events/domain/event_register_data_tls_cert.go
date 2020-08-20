@@ -22,18 +22,14 @@ package domain
 import (
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"github.com/nuts-foundation/nuts-registry/pkg/types"
 )
 
-// RegisterEndpoint event type
-const RegisterEndpoint events.EventType = "RegisterEndpointEvent"
+// RegisterDataClientCertificate event type
+const RegisterDataClientCertificate events.EventType = "RegisterDataClientCertificate"
 
-// RegisterEndpointEvent event
-type RegisterEndpointEvent struct {
-	Organization core.PartyID      `json:"organization"`
-	URL          string            `json:"URL"`
-	EndpointType string            `json:"endpointType"`
-	Identifier   types.EndpointID  `json:"identifier"`
-	Status       string            `json:"status"`
-	Properties   map[string]string `json:"properties,omitempty"`
+// RegisterDataClientCertificateEvent event holds the certificate(s) which is to be used as client certificate in data connections
+// the X509 certificates are encoded as a JWKSet in the Keys property
+type RegisterDataClientCertificateEvent struct {
+	VendorID core.PartyID  `json:"vendorIdentifier"`
+	Keys     []interface{} `json:"keys,omitempty"`
 }

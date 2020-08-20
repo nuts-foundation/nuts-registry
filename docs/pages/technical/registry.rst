@@ -59,13 +59,14 @@ To validate an event signature, the following checks must be performed:
 When an event payload containing a CA certificate is successfully validated, it should be added to the node's trust store so that
 future events which are signed using certificates issued by the (CA) certificate can be validated.
 
-======================  ============  ===========
-Event                   Signer        Owner check
-======================  ============  ===========
-RegisterVendor          Vendor        ``Event.Payload.Vendor == Certificate.SubjectAltName[Vendor]``
-VendorClaim             Vendor        ``Event.Payload.Vendor == Certificate.SubjectAltName[Vendor]``
-RegisterEndpoint        Organization  ``Event.Payload.Organization == Certificate.SubjectAltName[Organization]``
-======================  ============  ===========
+=============================   ============  ===========
+Event                           Signer        Owner check
+=============================   ============  ===========
+RegisterVendor                  Vendor        ``Event.Payload.Vendor == Certificate.SubjectAltName[Vendor]``
+VendorClaim                     Vendor        ``Event.Payload.Vendor == Certificate.SubjectAltName[Vendor]``
+RegisterEndpoint                Organization  ``Event.Payload.Organization == Certificate.SubjectAltName[Organization]``
+RegisterDataClientCertificate   Vendor        ``Event.Payload.Vendor == Certificate.SubjectAltName[Vendor]``
+=============================   ============  ===========
 
 .. note::
     The Nuts Foundation will act as Root Certificate Authority so that intermediates are issued by an entity which is trusted
