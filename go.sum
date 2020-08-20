@@ -356,6 +356,8 @@ github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200803081751-21fde7f898c1/go.
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200803140504-b933fa351767/go.mod h1:0YBfTlcHXGt0B3W/yAU4qPh5xa+LRN3PpXbf6g7TvOE=
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200806064724-32ed0e791e6a h1:z8svmty9hvyYoFUAKr20+4MRuom0sXdT6A/+25+nfJw=
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200806064724-32ed0e791e6a/go.mod h1:H4VJ2zVuktzNSkRlMCQWv9ijSyxB4u6vdPvrXZ+DEWg=
+github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200820094547-b4c9cde032d6 h1:78LfRLb1Vrc2gdDVpFSRlRJQU0hq3yRr9JQ8rPqhH6g=
+github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200820094547-b4c9cde032d6/go.mod h1:VnDO/ILeeFoQxRqyYFzxOFXYpsdPhkmcNIreOjWMnjQ=
 github.com/nuts-foundation/nuts-go-core v0.14.1-0.20200624131634-75b5f59c0b8e h1:Ums7038f7Y0sOx/MnXIrLwFNbQPwpeGDU6K3feSXlSI=
 github.com/nuts-foundation/nuts-go-core v0.14.1-0.20200624131634-75b5f59c0b8e/go.mod h1:zn4htpIzJ9ap5HYF8l4enNsf75Bq83kK/+B1pd/kflU=
 github.com/nuts-foundation/nuts-go-core v0.14.1-0.20200728125536-8a1b46560e8a h1:N4cQlzSatE6lvPewRHj7NEKA90UPmBJh686axIAIzpE=

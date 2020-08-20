@@ -26,12 +26,14 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
+	"github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-go-test/io"
+	pkg2 "github.com/nuts-foundation/nuts-network/pkg"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
@@ -66,11 +68,10 @@ func (h *ZipHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestRegistry_Instance(t *testing.T) {
+	NewTestRegistryInstance(io.TestDirectory(t))
 	registry1 := RegistryInstance()
 	registry2 := RegistryInstance()
 	assert.Same(t, registry1, registry2)
-	assert.Equal(t, DefaultRegistryConfig(), registry1.Config, "Default registry instance should contain default config")
-	assert.Nil(t, registry1.EventSystem)
 }
 
 func TestRegistry_Start(t *testing.T) {
@@ -164,17 +165,20 @@ func TestRegistry_Start(t *testing.T) {
 
 func TestRegistry_Configure(t *testing.T) {
 	configureIdleTimeout()
-	t.Run("ok", func(t *testing.T) {
-		registry := Registry{
-			Config:      DefaultRegistryConfig(),
-			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
+	create := func(t *testing.T) *Registry {
+		testDirectory := io.TestDirectory(t)
+		return &Registry{
+			Config:      TestRegistryConfig(testDirectory),
+			crypto:      pkg.NewTestCryptoInstance(testDirectory),
+			network:     pkg2.NewTestNetworkInstance(testDirectory),
 		}
+	}
+	t.Run("ok", func(t *testing.T) {
+		registry := create(t)
 		registry.Config.Datadir = "../test_data/valid_files"
-
 		if err := registry.Configure(); err != nil {
 			t.Errorf("Expected no error, got [%v]", err)
 		}
-
 		if len(registry.Db.SearchOrganizations("")) == 0 {
 			t.Error("Expected loaded organizations, got 0")
 		}
@@ -183,39 +187,25 @@ func TestRegistry_Configure(t *testing.T) {
 		os.Setenv("NUTS_MODE", "cli")
 		defer os.Unsetenv("NUTS_MODE")
 		core.NutsConfig().Load(&cobra.Command{})
-		registry := Registry{
-			Config: DefaultRegistryConfig(),
-		}
+		registry := create(t)
 		err := registry.Configure()
 		if !assert.NoError(t, err) {
 			return
 		}
 		// Make sure engine services aren't initialized when running in client mode
 		assert.Nil(t, registry.EventSystem)
-		assert.Nil(t, registry.crypto)
 	})
 	t.Run("error - configuring event system", func(t *testing.T) {
-		registry := Registry{
-			Config:      DefaultRegistryConfig(),
-			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
-		}
+		registry := create(t)
 		registry.Config.Datadir = "///"
 		err := registry.Configure()
 		assert.Error(t, err)
 	})
 
 	t.Run("error - loading events", func(t *testing.T) {
-		repo, err := test.NewTestRepo(t)
-		if !assert.NoError(t, err) {
-			return
-		}
-		registry := Registry{
-			Config:      DefaultRegistryConfig(),
-			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
-		}
-		registry.Config.Datadir = repo.Directory
-		os.MkdirAll(filepath.Join(repo.Directory, "events"), os.ModePerm)
-		err = ioutil.WriteFile(filepath.Join(repo.Directory, "events/20200123091400001-RegisterOrganizationEvent.json"), []byte("this is a file"), os.ModePerm)
+		registry := create(t)
+		os.MkdirAll(filepath.Join(registry.Config.Datadir, "events"), os.ModePerm)
+		err := ioutil.WriteFile(filepath.Join(registry.Config.Datadir, "events/20200123091400001-RegisterOrganizationEvent.json"), []byte("this is a file"), os.ModePerm)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -223,17 +213,13 @@ func TestRegistry_Configure(t *testing.T) {
 		assert.Error(t, err)
 	})
 	t.Run("error - vendor CA certificate validity invalid", func(t *testing.T) {
-		registry := Registry{
-			Config: DefaultRegistryConfig(),
-		}
+		registry := create(t)
 		registry.Config.VendorCACertificateValidity = 0
 		err := registry.Configure()
 		assert.EqualError(t, err, "vendor CA certificate validity must be at least 1 day")
 	})
 	t.Run("error - organisation certificate validity invalid", func(t *testing.T) {
-		registry := Registry{
-			Config: DefaultRegistryConfig(),
-		}
+		registry := create(t)
 		registry.Config.OrganisationCertificateValidity = 0
 		err := registry.Configure()
 		assert.EqualError(t, err, "organisation certificate validity must be at least 1 day")
@@ -246,46 +232,39 @@ func TestRegistry_FileUpdate(t *testing.T) {
 	t.Run("New files are loaded", func(t *testing.T) {
 		logrus.StandardLogger().SetLevel(logrus.DebugLevel)
 
-		wg := sync.WaitGroup{}
-		wg.Add(1)
-
-		repo, err := test.NewTestRepo(t)
-		if !assert.NoError(t, err) {
-			return
-		}
-		registry := Registry{
-			Config: DefaultRegistryConfig(),
-			OnChange: func(registry *Registry) {
-				wg.Done()
-			},
-			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
-		}
-		registry.Config.Datadir = repo.Directory
-		defer registry.Shutdown()
-
-		if err := registry.Configure(); err != nil {
+		eventHandled := false
+		cxt := createTestContext(t)
+		cxt.registry.EventSystem.RegisterEventHandler(domain.VendorClaim, func(event events.Event, lookup events.EventLookup) error {
+			eventHandled = true
+			return nil
+		})
+		defer cxt.close()
+		if err := cxt.registry.Configure(); err != nil {
 			t.Errorf("Expected no error, got [%v]", err)
 		}
 
-		if err := registry.Start(); err != nil {
+		if err := cxt.registry.Start(); err != nil {
 			t.Errorf("Expected no error, got [%v]", err)
 		}
 
-		if len(registry.Db.SearchOrganizations("")) != 0 {
+		if len(cxt.registry.Db.SearchOrganizations("")) != 0 {
 			t.Error("Expected empty db")
 		}
 
 		// copy valid files
-		err = repo.ImportDir("../test_data/valid_files")
+		err := test.TestRepo{Directory: cxt.registry.Config.Datadir}.ImportDir("../test_data/valid_files")
 		if !assert.NoError(t, err) {
 			return
 		}
 
-		wg.Wait()
-
-		if len(registry.Db.SearchOrganizations("")) == 0 {
-			t.Error("Expected loaded organizations, got 0")
+		for i := 0; i < 5; i++ {
+			if eventHandled {
+				// Events were loaded
+				return
+			}
+			time.Sleep(time.Second)
 		}
+		t.Fatal("No events were loaded")
 	})
 }
 
@@ -298,22 +277,13 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
-		wg := sync.WaitGroup{}
-		wg.Add(1)
-
-		repo, err := test.NewTestRepo(t)
-		if !assert.NoError(t, err) {
-			return
-		}
+		testDirectory := io.TestDirectory(t)
 		registry := Registry{
-			Config: DefaultRegistryConfig(),
-			OnChange: func(registry *Registry) {
-				println("EVENT")
-				wg.Done()
-			},
+			Config: TestRegistryConfig(testDirectory),
+			crypto: pkg.NewTestCryptoInstance(testDirectory),
+			network: pkg2.NewTestNetworkInstance(testDirectory),
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
-		registry.Config.Datadir = repo.Directory
 		registry.Config.SyncMode = "github"
 		registry.Config.SyncAddress = server.URL
 		defer registry.Shutdown()
@@ -322,16 +292,24 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 			t.Errorf("Expected no error, got [%v]", err)
 		}
 
+		eventHandled := false
+		registry.EventSystem.RegisterEventHandler(domain.VendorClaim, func(event events.Event, lookup events.EventLookup) error {
+			eventHandled = true
+			return nil
+		})
+
 		if err := registry.Start(); err != nil {
 			t.Errorf("Expected no error, got [%v]", err)
 		}
 
-		// wait for download
-		wg.Wait()
-
-		if len(registry.Db.SearchOrganizations("")) == 0 {
-			t.Error("Expected loaded organizations, got 0")
+		for i := 0; i < 5; i++ {
+			if eventHandled {
+				// Events were loaded
+				return
+			}
+			time.Sleep(time.Second)
 		}
+		t.Fatal("No events were loaded")
 	})
 }
 

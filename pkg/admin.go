@@ -212,7 +212,7 @@ func (r *Registry) loadOrGenerateKey(party core.PartyID) (map[string]interface{}
 	key := types.KeyForEntity(types.LegalEntity{URI: party.String()})
 	if !r.crypto.PrivateKeyExists(key) {
 		logrus.Infof("No keys found for entity (%s), will generate a new key pair.", party)
-		if _, err := r.crypto.GenerateKeyPair(key); err != nil {
+		if _, err := r.crypto.GenerateKeyPair(key, false); err != nil {
 			return nil, err
 		}
 	}
