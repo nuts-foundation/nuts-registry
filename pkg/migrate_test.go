@@ -114,7 +114,7 @@ func TestRegistry_verify(t *testing.T) {
 			cxt.registry.VendorClaim(orgId, vendorName, nil)
 			// Empty key material directory
 			cxt.empty()
-			cxt.registry.crypto.GenerateKeyPair(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: vendorId.String()}))
+			cxt.registry.crypto.GenerateKeyPair(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: vendorId.String()}), false)
 			_, _, err := cxt.registry.verify(mockConfig{vendorId}, autoFix)
 			assert.Error(t, err)
 		})

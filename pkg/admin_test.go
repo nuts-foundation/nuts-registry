@@ -188,7 +188,7 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 		org := test.OrganizationID(uuid.New().String())
 		orgKey := cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: org.String()})
 		// "Out-of-Band" generate key material
-		orgPubKey, err := cxt.registry.crypto.GenerateKeyPair(orgKey)
+		orgPubKey, err := cxt.registry.crypto.GenerateKeyPair(orgKey, false)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -263,7 +263,7 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 		cxt.registry.RegisterVendor(cxt.issueVendorCACertificate())
 		org := test.OrganizationID("org")
 		entity := cryptoTypes.LegalEntity{URI: org.String()}
-		_, err := cxt.registry.crypto.GenerateKeyPair(cryptoTypes.KeyForEntity(entity))
+		_, err := cxt.registry.crypto.GenerateKeyPair(cryptoTypes.KeyForEntity(entity), false)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -383,7 +383,7 @@ func TestCreateAndSubmitCSR(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		cxt := createTestContext(t)
 		defer cxt.close()
-		cxt.registry.crypto.GenerateKeyPair(cryptoTypes.KeyForEntity(entity))
+		cxt.registry.crypto.GenerateKeyPair(cryptoTypes.KeyForEntity(entity), false)
 		_, err := cxt.registry.createAndSubmitCSR(func() (x509.CertificateRequest, error) {
 			return x509.CertificateRequest{Subject: pkix.Name{CommonName: "Mosselman"}}, nil
 		}, entity, entity, crypto.CertificateProfile{})
