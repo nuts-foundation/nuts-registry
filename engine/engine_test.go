@@ -6,7 +6,9 @@ import (
 	"crypto/x509"
 	"errors"
 	"github.com/nuts-foundation/nuts-go-test/io"
+	"github.com/spf13/cobra"
 	"net"
+	"os"
 	"syscall"
 	"testing"
 	"time"
@@ -24,6 +26,7 @@ import (
 )
 
 func TestServer(t *testing.T) {
+	configureIdentity()
 	// Register test instance singleton
 	pkg.NewTestRegistryInstance(io.TestDirectory(t))
 	command := cmd()
@@ -246,4 +249,9 @@ func generateCertificate() map[string]interface{} {
 	certAsJWK, _ := cert.CertificateToJWK(certificate)
 	certAsMap, _ := cert.JwkToMap(certAsJWK)
 	return certAsMap
+}
+
+func configureIdentity() {
+	os.Setenv("NUTS_IDENTITY", test.VendorID("4").String())
+	core.NutsConfig().Load(&cobra.Command{})
 }

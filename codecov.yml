@@ -3,5 +3,5 @@ ignore:
   - "test/*"
   - '**/test.go'
   - "mock/*"
-  - "mock.go"
+  - "**/mock.go"
   - "docs/*"

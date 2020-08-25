@@ -283,7 +283,7 @@ func (hb HttpClient) OrganizationById(id core.PartyID) (*db.Organization, error)
 
 // VendorCAs on the client is not implemented
 func (hb HttpClient) VendorCAs() [][]*x509.Certificate {
-	return [][]*x509.Certificate{{}}
+	return [][]*x509.Certificate{}
 }
 
 func testResponseCode(expectedStatusCode int, response *http.Response) error {

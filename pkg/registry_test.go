@@ -68,6 +68,7 @@ func (h *ZipHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestRegistry_Instance(t *testing.T) {
+	configureIdentity()
 	NewTestRegistryInstance(io.TestDirectory(t))
 	registry1 := RegistryInstance()
 	registry2 := RegistryInstance()
@@ -76,101 +77,55 @@ func TestRegistry_Instance(t *testing.T) {
 
 func TestRegistry_Start(t *testing.T) {
 	configureIdleTimeout()
+	configureIdentity()
 	t.Run("Start with an incorrect configuration returns error", func(t *testing.T) {
-		os.Setenv("NUTS_IDENTITY", test.VendorID("foobar").String())
-		core.NutsConfig().Load(&cobra.Command{})
-		registry := Registry{
-			Config: RegistryConfig{
-				Mode:     core.ServerEngineMode,
-				SyncMode: "unknown",
-				Datadir:  ".",
-			},
-			Db: &db.MemoryDb{},
-		}
+		registry := NewTestRegistryInstance(io.TestDirectory(t))
 		registry.Config.SyncMode = "unknown"
-
 		err := registry.Start()
 
-		if err == nil {
-			t.Error("Expected error, got nothing")
-		}
-
-		expected := "invalid syncMode: unknown"
-		if err.Error() != expected {
-			t.Errorf("Expected error [%s], got [%v]", expected, err)
-		}
+		assert.EqualError(t, err, "invalid syncMode: unknown")
 	})
 
 	t.Run("Starting sets the file watcher", func(t *testing.T) {
-		registry := Registry{
-			Config: RegistryConfig{
-				Mode:     core.ServerEngineMode,
-				SyncMode: "fs",
-				Datadir:  ".",
-			},
-			Db: &db.MemoryDb{},
+		registry := NewTestRegistryInstance(io.TestDirectory(t))
+		err := registry.Start()
+		if !assert.NoError(t, err) {
+			return
 		}
-		registry.Config.Datadir = "."
-
-		if err := registry.Start(); err != nil {
-			t.Errorf("Expected no error, got [%v]", err)
-		}
-
-		if len(registry.closers) != 1 {
-			t.Error("Expected watcher to be started")
-		}
+		assert.Len(t, registry.closers, 1)
 	})
 
 	t.Run("Invalid datadir gives error on Start", func(t *testing.T) {
-		registry := Registry{
-			Config: RegistryConfig{
-				Mode:     core.ServerEngineMode,
-				SyncMode: "fs",
-				Datadir:  ":",
-			},
-			Db: &db.MemoryDb{},
-		}
+		registry := NewTestRegistryInstance(io.TestDirectory(t))
 		registry.Config.Datadir = ":"
-
 		err := registry.Start()
-
-		if err == nil {
-			t.Error("Expected error, got nothing")
-		}
+		assert.Error(t, err)
 	})
 
 	t.Run("Shutdown stops the file watcher", func(t *testing.T) {
-		registry := Registry{
-			Config: RegistryConfig{
-				Mode:     core.ServerEngineMode,
-				SyncMode: "fs",
-				Datadir:  ".",
-			},
-			Db: &db.MemoryDb{},
+		registry := NewTestRegistryInstance(io.TestDirectory(t))
+		err := registry.Start()
+		if !assert.NoError(t, err) {
+			return
 		}
-		registry.Config.Datadir = "."
-
-		if err := registry.Start(); err != nil {
-			t.Errorf("Expected no error, got [%v]", err)
-		}
-
 		// watcher delay
 		time.Sleep(time.Millisecond * 100)
-
-		if err := registry.Shutdown(); err != nil {
-			t.Errorf("Expected no error, got [%v]", err)
+		err = registry.Shutdown()
+		if !assert.NoError(t, err) {
+			return
 		}
 	})
 }
 
 func TestRegistry_Configure(t *testing.T) {
 	configureIdleTimeout()
+	configureIdentity()
 	create := func(t *testing.T) *Registry {
 		testDirectory := io.TestDirectory(t)
 		return &Registry{
-			Config:      TestRegistryConfig(testDirectory),
-			crypto:      pkg.NewTestCryptoInstance(testDirectory),
-			network:     pkg2.NewTestNetworkInstance(testDirectory),
+			Config:  TestRegistryConfig(testDirectory),
+			crypto:  pkg.NewTestCryptoInstance(testDirectory),
+			network: pkg2.NewTestNetworkInstance(testDirectory),
 		}
 	}
 	t.Run("ok", func(t *testing.T) {
@@ -228,6 +183,7 @@ func TestRegistry_Configure(t *testing.T) {
 
 func TestRegistry_FileUpdate(t *testing.T) {
 	configureIdleTimeout()
+	configureIdentity()
 
 	t.Run("New files are loaded", func(t *testing.T) {
 		logrus.StandardLogger().SetLevel(logrus.DebugLevel)
@@ -271,6 +227,7 @@ func TestRegistry_FileUpdate(t *testing.T) {
 func TestRegistry_GithubUpdate(t *testing.T) {
 	logrus.StandardLogger().SetLevel(logrus.DebugLevel)
 	configureIdleTimeout()
+	configureIdentity()
 
 	t.Run("New files are downloaded", func(t *testing.T) {
 		handler := &ZipHandler{}
@@ -279,9 +236,9 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 
 		testDirectory := io.TestDirectory(t)
 		registry := Registry{
-			Config: TestRegistryConfig(testDirectory),
-			crypto: pkg.NewTestCryptoInstance(testDirectory),
-			network: pkg2.NewTestNetworkInstance(testDirectory),
+			Config:      TestRegistryConfig(testDirectory),
+			crypto:      pkg.NewTestCryptoInstance(testDirectory),
+			network:     pkg2.NewTestNetworkInstance(testDirectory),
 			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
 		}
 		registry.Config.SyncMode = "github"
@@ -311,10 +268,6 @@ func TestRegistry_GithubUpdate(t *testing.T) {
 		}
 		t.Fatal("No events were loaded")
 	})
-}
-
-func configureIdleTimeout() {
-	ReloadRegistryIdleTimeout = 100 * time.Millisecond
 }
 
 func TestRegistry_EndpointsByOrganizationAndType(t *testing.T) {
@@ -361,14 +314,13 @@ func TestRegistry_ReverseLookup(t *testing.T) {
 }
 
 func TestRegistry_Verify(t *testing.T) {
+	configureIdentity()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	t.Run("ok", func(t *testing.T) {
 		mockDb := mock.NewMockDb(mockCtrl)
 		mockDb.EXPECT().VendorByID(vendorId).Return(&db.Vendor{Identifier: vendorId})
 		mockDb.EXPECT().OrganizationsByVendorID(vendorId).Return(nil)
-		os.Setenv("NUTS_IDENTITY", vendorId.String())
-		core.NutsConfig().Load(&cobra.Command{})
 		defer os.Unsetenv("NUTS_IDENTITY")
 		evts, fix, err := (&Registry{Db: mockDb}).Verify(false)
 		assert.NoError(t, err)
@@ -378,6 +330,7 @@ func TestRegistry_Verify(t *testing.T) {
 }
 
 func TestRegistry_VendorCAs(t *testing.T) {
+	configureIdentity()
 	pk1, _ := rsa.GenerateKey(rand.Reader, 1024)
 	pk2, _ := rsa.GenerateKey(rand.Reader, 1024)
 	pk3, _ := rsa.GenerateKey(rand.Reader, 1024)
@@ -452,4 +405,13 @@ func TestRegistry_VendorCAs(t *testing.T) {
 		assert.NotEqual(t, cas[0][0], cas[1][0])
 		assert.Equal(t, cas[0][2], cas[1][2])
 	})
+}
+
+func configureIdentity() {
+	os.Setenv("NUTS_IDENTITY", vendorId.String())
+	core.NutsConfig().Load(&cobra.Command{})
+}
+
+func configureIdleTimeout() {
+	ReloadRegistryIdleTimeout = 100 * time.Millisecond
 }

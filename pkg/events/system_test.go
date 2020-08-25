@@ -86,9 +86,11 @@ func TestProcessEventsOutOfOrder(t *testing.T) {
 		return nil
 	})
 	events := make([]Event, 0)
+	var prevEvent Ref
 	for i := 0; i < 100; i++ {
-		event := CreateTestEvent(eventType, i + 1, nil, time.Unix(int64(10000 + i), 0))
+		event := CreateTestEvent(eventType, i + 1, prevEvent, time.Unix(int64(10000 + i), 0))
 		events = append(events, event)
+		prevEvent = event.Ref()
 	}
 	// Sort random order
 	sort.Slice(events, func(i, j int) bool {
@@ -103,7 +105,7 @@ func TestProcessEventsOutOfOrder(t *testing.T) {
 	assert.Empty(t, (system.(*diskEventSystem)).eventsToBeRetried)
 }
 
-func TestLoadEvents(t *testing.T) {
+func TestLoadAndApplyEvents(t *testing.T) {
 	system := NewEventSystem("RegisterVendorEvent", "VendorClaimEvent", "RegisterEndpointEvent")
 	vendorsCreated := 0
 	system.RegisterEventHandler("RegisterVendorEvent", func(e Event, _ EventLookup) error {

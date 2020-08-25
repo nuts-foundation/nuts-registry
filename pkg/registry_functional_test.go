@@ -23,12 +23,15 @@ package pkg
 
 import (
 	"github.com/google/uuid"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-go-test/io"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/nuts-foundation/nuts-registry/pkg/types"
 	"github.com/nuts-foundation/nuts-registry/test"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 	"time"
 )
@@ -37,6 +40,8 @@ import (
 // Test_Functional_OutOfOrder_Registrations tests that events that are created in chronological order but processed
 // out of order (which can be the case when received through Nuts Network) are still processed later on.
 func Test_Functional_OutOfOrder_Registrations(t *testing.T) {
+	os.Setenv("NUTS_IDENTITY", test.VendorID("4").String())
+	core.NutsConfig().Load(&cobra.Command{})
 	configureIdleTimeout()
 	registry := NewTestRegistryInstance(io.TestDirectory(t))
 	vendorID := test.VendorID("1234")

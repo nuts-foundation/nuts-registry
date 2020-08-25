@@ -30,13 +30,14 @@ import (
 
 // NewRegistryClient creates a new Local- or RemoteClient for the nuts registry
 func NewRegistryClient() pkg.RegistryClient {
-	registry := pkg.RegistryInstance()
+	return initialize(pkg.RegistryInstance())
+}
 
+func initialize(registry *pkg.Registry) pkg.RegistryClient {
 	if registry.Config.Mode == core.ServerEngineMode {
 		if err := registry.Configure(); err != nil {
 			logrus.Panic(err)
 		}
-
 		return registry
 	} else {
 		return api.HttpClient{

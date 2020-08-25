@@ -216,7 +216,7 @@ func (r *Registry) Configure() error {
 			r.Db = db.New()
 			r.Db.RegisterEventHandlers(r.EventSystem.RegisterEventHandler)
 			if r.networkAmbassador == nil {
-				r.networkAmbassador = network.NewAmbassador(r.network, r.crypto)
+				r.networkAmbassador = network.NewAmbassador(r.network, r.crypto, r.EventSystem)
 			}
 			r.networkAmbassador.RegisterEventHandlers(r.EventSystem.RegisterEventHandler, domain.GetEventTypes())
 			if err = r.EventSystem.Configure(r.getEventsDir()); err != nil {
@@ -276,6 +276,7 @@ func (r *Registry) Start() error {
 		if err != nil {
 			logrus.Error("Error occurred during registry data verification: ", err)
 		}
+		r.networkAmbassador.Start()
 		switch cm := r.Config.SyncMode; cm {
 		case "fs":
 			return r.startFileSystemWatcher()

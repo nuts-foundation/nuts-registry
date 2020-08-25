@@ -73,6 +73,13 @@ func TestHttpClient_OrganizationById(t *testing.T) {
 			t.Errorf("Expected return organization identifier to be [%s], got [%s]", organizations[0].Identifier, res.Identifier)
 		}
 	})
+
+	t.Run("http execution error", func(t *testing.T) {
+		c := HttpClient{ServerAddress: "localhost:9876", Timeout: time.Second}
+		event, err := c.OrganizationById(test.OrganizationID("id"))
+		assert.Contains(t, err.Error(), "connection refused")
+		assert.Nil(t, event)
+	})
 }
 
 func TestHttpClient_SearchOrganizations(t *testing.T) {
@@ -149,6 +156,20 @@ func TestHttpClient_VendorClaim(t *testing.T) {
 		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
 	})
+	t.Run("http execution error", func(t *testing.T) {
+		c := HttpClient{ServerAddress: "localhost:9876", Timeout: time.Second}
+		event, err := c.VendorClaim(test.OrganizationID("orgID"), "name", []interface{}{})
+		assert.Contains(t, err.Error(), "connection refused")
+		assert.Nil(t, event)
+	})
+}
+
+func TestHttpClient_VendorCAs(t *testing.T) {
+	t.Run("not implemented", func(t *testing.T) {
+		c := HttpClient{ServerAddress: "", Timeout: time.Second}
+		vendorCAs := c.VendorCAs()
+		assert.Empty(t, vendorCAs)
+	})
 }
 
 func TestHttpClient_RegisterVendor(t *testing.T) {
@@ -170,6 +191,12 @@ func TestHttpClient_RegisterVendor(t *testing.T) {
 		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
 		event, err := c.RegisterVendor(certificate)
 		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
+		assert.Nil(t, event)
+	})
+	t.Run("http execution error", func(t *testing.T) {
+		c := HttpClient{ServerAddress: "localhost:9876", Timeout: time.Second}
+		event, err := c.RegisterVendor(certificate)
+		assert.Contains(t, err.Error(), "connection refused")
 		assert.Nil(t, event)
 	})
 }
@@ -194,6 +221,12 @@ func TestHttpClient_RefreshOrganizationCertificate(t *testing.T) {
 		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
 		assert.Nil(t, event)
 	})
+	t.Run("http execution error", func(t *testing.T) {
+		c := HttpClient{ServerAddress: "localhost:9876", Timeout: time.Second}
+		event, err := c.RefreshOrganizationCertificate(test.OrganizationID("1234"))
+		assert.Contains(t, err.Error(), "connection refused")
+		assert.Nil(t, event)
+	})
 }
 
 func TestHttpClient_RegisterEndpoint(t *testing.T) {
@@ -214,6 +247,12 @@ func TestHttpClient_RegisterEndpoint(t *testing.T) {
 
 		event, err := c.RegisterEndpoint(test.OrganizationID("orgId"), "id", "url", "type", "status", nil)
 		assert.EqualError(t, err, "registry returned HTTP 500 (expected: 200), response: ", "error")
+		assert.Nil(t, event)
+	})
+	t.Run("http execution error", func(t *testing.T) {
+		c := HttpClient{ServerAddress: "localhost:9876", Timeout: time.Second}
+		event, err := c.RegisterEndpoint(test.OrganizationID("orgId"), "id", "url", "type", "status", map[string]string{"foo": "bar"})
+		assert.Contains(t, err.Error(), "connection refused")
 		assert.Nil(t, event)
 	})
 }
@@ -268,5 +307,11 @@ func TestHttpClient_EndpointsByOrganizationAndType(t *testing.T) {
 		if len(res) != 1 {
 			t.Errorf("Expected 1 Endpoint in return, got [%d]", len(res))
 		}
+	})
+	t.Run("http execution error", func(t *testing.T) {
+		c := HttpClient{ServerAddress: "localhost:9876", Timeout: time.Second}
+		event, err := c.EndpointsByOrganizationAndType(test.OrganizationID("entity"), nil)
+		assert.Contains(t, err.Error(), "connection refused")
+		assert.Nil(t, event)
 	})
 }
