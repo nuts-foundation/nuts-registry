@@ -11,6 +11,16 @@ import (
 	"time"
 )
 
+func CreateTestEvent(eventType EventType, payload interface{}, previousEvent Ref, issuedAt time.Time) Event {
+	return &jsonEvent{
+		EventVersion:  currentEventVersion,
+		EventType:     string(eventType),
+		PreviousEvent: previousEvent,
+		EventIssuedAt: issuedAt,
+		EventPayload:  payload,
+	}
+}
+
 type testEvent struct {
 	unmarshalPostProcCalled bool
 }

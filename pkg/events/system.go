@@ -22,13 +22,14 @@ package events
 import (
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-crypto/log"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	errors2 "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -79,20 +80,23 @@ type EventMatcher func(Event) bool
 // JwsVerifier defines a verification delegate for JWS'.
 type JwsVerifier func(signature []byte, signingTime time.Time, verifier cert.Verifier) ([]byte, error)
 
-
 type diskEventSystem struct {
 	eventHandlers map[EventType][]EventHandler
 	eventTypes    []EventType
-	// lastLoadedEvent contains the identifier of the last event that was loaded. It is used to keep track from
-	// what event to resume when the events are reloaded (from disk)
-	lastLoadedEvent time.Time
-	location        string
-	lut             *eventLookupTable
+	location      string
+	lut           *eventLookupTable
+	// eventsToBeRetried holds events which should be retried since it failed previously.
+	eventsToBeRetried map[string]Event
 }
 
 // NewEventSystem creates and initializes a new event system.
 func NewEventSystem(eventTypes ...EventType) EventSystem {
-	return &diskEventSystem{eventTypes: eventTypes, eventHandlers: make(map[EventType][]EventHandler, 0), lut: newEventLookupTable()}
+	return &diskEventSystem{
+		eventTypes:        eventTypes,
+		eventHandlers:     make(map[EventType][]EventHandler, 0),
+		lut:               newEventLookupTable(),
+		eventsToBeRetried: make(map[string]Event),
+	}
 }
 
 func (system *diskEventSystem) Configure(location string) error {
@@ -121,26 +125,61 @@ func (system *diskEventSystem) ProcessEvent(event Event) error {
 	if !system.isEventType(event.Type()) {
 		return fmt.Errorf("unknown event type: %s", event.Type())
 	}
-	if err := system.lut.register(event); err != nil {
-		return err
+	// If this event has already been processed, we can skip it
+	if system.lut.Get(event.Ref()) != nil {
+		return nil
 	}
-	// Process
-	logrus.WithFields(map[string]interface{}{
-		"ref":      event.Ref(),
-		"prev":     event.PreviousRef(),
-		"type":     event.Type(),
-		"issuedAt": event.IssuedAt(),
-	}).Info("Processing event")
+	// If there is a previous event which hasn't been processed yet, we set it aside to be processed later.
+	if !event.PreviousRef().IsZero() && system.lut.Get(event.PreviousRef()) == nil {
+		log.Logger().Infof("Event %s refers to previous event %s which hasn't been processed yet, setting it aside.", event.Ref(), event.PreviousRef())
+		system.eventsToBeRetried[event.Ref().String()] = event
+		return nil
+	}
+	err := system.processEvent(event)
+	// There might be unprocessed (received out of order) events that depend on this event, so we retry events which failed earlier
+	system.retryEvents()
+	return err
+}
+
+func (system *diskEventSystem) retryEvents() {
+	events := make([]Event, len(system.eventsToBeRetried))
+	i := 0
+	for _, event := range system.eventsToBeRetried {
+		events[i] = event
+		i++
+	}
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].IssuedAt().Before(events[j].IssuedAt())
+	})
+	for _, event := range events {
+		if err := system.processEvent(event); err != nil {
+			log.Logger().Debugf("Error while processing set-aside event %s, will retry later: %v", event.Ref(), err)
+		}
+	}
+}
+
+func (system *diskEventSystem) processEvent(event Event) error {
 	handlers := system.eventHandlers[event.Type()]
 	if handlers == nil {
 		return fmt.Errorf("no handlers registered for event (type = %s), handlers are: %v", event.Type(), system.eventHandlers)
 	}
 	for _, handler := range handlers {
 		if err := handler(event, system.lut); err != nil {
+			log.Logger().Warnf("Error while processing event %s, event will set aside to be processed later: %v", event.Ref(), err)
+			system.eventsToBeRetried[event.Ref().String()] = event
 			return err
 		}
 	}
-	system.lastLoadedEvent = event.IssuedAt()
+	if err := system.lut.register(event); err != nil {
+		return err
+	}
+	logrus.WithFields(map[string]interface{}{
+		"ref":      event.Ref(),
+		"prev":     event.PreviousRef(),
+		"type":     event.Type(),
+		"issuedAt": event.IssuedAt(),
+	}).Info("Event processed")
+	delete(system.eventsToBeRetried, event.Ref().String())
 	return nil
 }
 
@@ -173,16 +212,11 @@ func (system *diskEventSystem) LoadAndApplyEvents() error {
 	if err := system.assertConfigured(); err != nil {
 		return err
 	}
-	type fileEvent struct {
-		file  string
-		event Event
-	}
-	events := make([]fileEvent, 0)
 	entries, err := ioutil.ReadDir(system.location)
 	if err != nil {
 		return err
 	}
-	for i := system.findStartIndex(entries); i < len(entries); i++ {
+	for i := 0; i < len(entries); i++ {
 		entry := entries[i]
 		if !isJSONFile(entry) {
 			continue
@@ -197,19 +231,8 @@ func (system *diskEventSystem) LoadAndApplyEvents() error {
 		if err != nil {
 			return errors2.Wrapf(err, "error reading event: %s", entry.Name())
 		}
-		events = append(events, fileEvent{
-			file:  entry.Name(),
-			event: event,
-		})
-	}
-
-	if len(events) > 0 {
-		logrus.Info("Applying events...")
-		for _, e := range events {
-			err := system.ProcessEvent(e.event)
-			if err != nil {
-				return errors2.Wrap(err, fmt.Sprintf("error while applying event (event = %s)", e.file))
-			}
+		if err := system.ProcessEvent(event); err != nil {
+			return errors2.Wrap(err, fmt.Sprintf("error while applying event (event = %s)", entry.Name()))
 		}
 	}
 	return nil
@@ -225,27 +248,6 @@ func (system diskEventSystem) assertConfigured() error {
 		return ErrEventSystemNotConfigured
 	}
 	return nil
-}
-
-func (system diskEventSystem) findStartIndex(entries []os.FileInfo) int {
-	if system.lastLoadedEvent.IsZero() {
-		// No refs were ever loaded
-		return 0
-	}
-	for index, entry := range entries {
-		if !isJSONFile(entry) {
-			continue
-		}
-		timestamp, err := parseTimestamp(filepath.Base(entry.Name()[:17]))
-		if err == nil {
-			if timestamp.After(system.lastLoadedEvent) {
-				// Incremental change
-				return index
-			}
-		}
-	}
-	// No new refs
-	return len(entries) + 1
 }
 
 type TrustStore interface {

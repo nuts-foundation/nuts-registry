@@ -408,16 +408,6 @@ func TestCreateAndSubmitCSR(t *testing.T) {
 	})
 }
 
-//
-//func TestRegistry_signAsVendor(t *testing.T) {
-//	t.Run("error - unable to create CSR", func(t *testing.T) {
-//		cxt := createTestContext(t)
-//		defer cxt.close()
-//		_, err := cxt.registry.signAsVendor(vendorId, "vendorName", "", []byte{1, 2, 3}, time.Now())
-//		assert.Equal(t, err.Error(), "unable to create CSR for JWS signing: missing domain")
-//	})
-//}
-
 func TestRegistry_signAsOrganization(t *testing.T) {
 	t.Run("error - unable to create CSR", func(t *testing.T) {
 		cxt := createTestContext(t)
