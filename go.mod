@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/cyberphone/json-canonicalization v0.0.0-20200417180520-cd6247b5f11e
-	github.com/deepmap/oapi-codegen v1.3.11
+	github.com/deepmap/oapi-codegen v1.3.12
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/golang/mock v1.4.4
 	github.com/google/uuid v1.1.1
