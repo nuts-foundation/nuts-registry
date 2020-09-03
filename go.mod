@@ -7,7 +7,7 @@ require (
 	github.com/deepmap/oapi-codegen v1.3.12
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/golang/mock v1.4.4
-	github.com/google/uuid v1.1.1
+	github.com/google/uuid v1.1.2
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0
 	github.com/lestrrat-go/jwx v0.9.2
