@@ -3,8 +3,10 @@ package cert
 import (
 	"crypto/x509"
 	"encoding/asn1"
+	"fmt"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	core "github.com/nuts-foundation/nuts-go-core"
+	"strings"
 )
 
 var OIDAGBCode = asn1.ObjectIdentifier{2, 16, 840, 1, 113883, 2, 4, 6, 1}
@@ -53,7 +55,16 @@ func (c NutsCertificate) getPartyIDFromSAN(oid asn1.ObjectIdentifier) (core.Part
 				return core.PartyID{}, err
 			}
 			if value, _ := cert.UnmarshalOtherSubjectAltName(oid, extension.Value); value != "" {
-				return core.NewPartyID(oid.String(), value)
+				// Vendor/Organization ID values in issued up until v0.14 are fully qualified, which was incorrect since
+				// the type (OID) was already specified in the ASN.1 structure (Type: Value). This is fixed starting 0.15.
+				// See https://github.com/nuts-foundation/nuts-registry/issues/142
+				if strings.HasPrefix(value, fmt.Sprintf("urn:oid:%s:", oid.String())) {
+					// Behaviour for <= v0.14 certificates
+					return core.ParsePartyID(value)
+				} else {
+					// Behaviour for > v0.14 certificates
+					return core.NewPartyID(oid.String(), value)
+				}
 			}
 		}
 	}
