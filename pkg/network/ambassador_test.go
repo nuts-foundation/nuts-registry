@@ -33,23 +33,10 @@ import (
 	"time"
 )
 
-func Test_ambassador_SendAndReceive(t *testing.T) {
-	os.Setenv("NUTS_IDENTITY", test.VendorID("4").String())
-	core.NutsConfig().Load(&cobra.Command{})
-	testDirectory := io.TestDirectory(t)
-	const eventType = events.EventType("testEvent")
-	var eventsHandled sync.WaitGroup
-	eventsHandled.Add(2)
-	eventSystem := events.NewEventSystem(eventType)
-	eventSystem.RegisterEventHandler(eventType, func(event events.Event, lookup events.EventLookup) error {
-		eventsHandled.Done()
-		return nil
-	})
-	eventSystem.Configure(testDirectory)
-	networkInstance := pkg2.NewTestNetworkInstance(testDirectory)
-	ambassador := NewAmbassador(networkInstance, pkg.NewTestCryptoInstance(testDirectory), eventSystem)
-	ambassador.RegisterEventHandlers(eventSystem.RegisterEventHandler, []events.EventType{eventType})
-	ambassador.Start()
+const eventType = events.EventType("testEvent")
+
+func Test_ambassador_Send(t *testing.T) {
+	eventSystem, networkInstance := createInstance(t)
 	// Test that we can send a registry event through the network
 	err := eventSystem.ProcessEvent(events.CreateEvent(eventType, "Hello, rest of Network!", nil))
 	if !assert.NoError(t, err) {
@@ -61,11 +48,33 @@ func Test_ambassador_SendAndReceive(t *testing.T) {
 		return
 	}
 	assert.Len(t, documents, 1)
-	// Test that we can receive a registry event through the network
+}
+
+func Test_ambassador_Receive(t *testing.T) {
+	eventSystem, networkInstance := createInstance(t)
+	var eventsHandled sync.WaitGroup
+	eventsHandled.Add(1)
+	eventSystem.RegisterEventHandler(eventType, func(event events.Event, lookup events.EventLookup) error {
+		eventsHandled.Done()
+		return nil
+	})
 	event := events.CreateEvent(eventType, "Hello from Network!", nil)
-	_, err = networkInstance.AddDocumentWithContents(time.Now(), documentType, event.Marshal())
+	_, err := networkInstance.AddDocumentWithContents(time.Now(), documentType, event.Marshal())
 	if !assert.NoError(t, err) {
 		return
 	}
 	eventsHandled.Wait()
+}
+
+func createInstance(t *testing.T) (events.EventSystem, *pkg2.Network) {
+	os.Setenv("NUTS_IDENTITY", test.VendorID("4").String())
+	core.NutsConfig().Load(&cobra.Command{})
+	testDirectory := io.TestDirectory(t)
+	eventSystem := events.NewEventSystem(eventType)
+	eventSystem.Configure(testDirectory)
+	networkInstance := pkg2.NewTestNetworkInstance(testDirectory)
+	ambassador := NewAmbassador(networkInstance, pkg.NewTestCryptoInstance(testDirectory), eventSystem)
+	ambassador.RegisterEventHandlers(eventSystem.RegisterEventHandler, []events.EventType{eventType})
+	ambassador.Start()
+	return eventSystem, networkInstance
 }
