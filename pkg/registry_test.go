@@ -281,6 +281,12 @@ func TestRegistry_EndpointsByOrganizationAndType(t *testing.T) {
 	})
 }
 
+func TestRegistry_Diagnostics(t *testing.T) {
+	registry := createTestContext(t).registry
+	diagnostics := registry.Diagnostics()
+	assert.NotEmpty(t, diagnostics)
+}
+
 func TestRegistry_SearchOrganizations(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()

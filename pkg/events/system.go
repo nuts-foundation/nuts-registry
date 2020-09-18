@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/nuts-foundation/nuts-crypto/log"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
+	core "github.com/nuts-foundation/nuts-go-core"
 	errors2 "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -65,6 +66,7 @@ type EventSystem interface {
 	PublishEvent(event Event) error
 	LoadAndApplyEvents() error
 	Configure(location string) error
+	Diagnostics() []core.DiagnosticResult
 	EventLookup
 }
 
@@ -106,6 +108,15 @@ func (system *diskEventSystem) Configure(location string) error {
 
 func (system *diskEventSystem) RegisterEventHandler(eventType EventType, handler EventHandler) {
 	system.eventHandlers[eventType] = append(system.eventHandlers[eventType], handler)
+}
+
+func (system *diskEventSystem) Diagnostics() []core.DiagnosticResult {
+	return []core.DiagnosticResult{
+		&core.GenericDiagnosticResult{
+			Title:   "Number of events to be retried",
+			Outcome: fmt.Sprintf("%d", len(system.eventsToBeRetried)),
+		},
+	}
 }
 
 // isEventType checks whether the given type is supported.

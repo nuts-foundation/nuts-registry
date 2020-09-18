@@ -314,6 +314,10 @@ func (r *Registry) Load() error {
 	return nil
 }
 
+func (r *Registry) Diagnostics() []core.DiagnosticResult {
+	return r.EventSystem.Diagnostics()
+}
+
 func (r *Registry) getEventsDir() string {
 	return r.Config.Datadir + "/events"
 }

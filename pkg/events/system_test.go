@@ -67,6 +67,19 @@ func TestNoEventHandler(t *testing.T) {
 	assert.EqualError(t, err, "no handlers registered for event (type = some-type), handlers are: map[]")
 }
 
+func TestDiagnostics(t *testing.T) {
+	repo, err := test.NewTestRepo(t)
+	if !assert.NoError(t, err) {
+		return
+	}
+	system := NewEventSystem()
+	system.Configure(repo.Directory + "/events")
+	diagnostics := system.Diagnostics()
+	assert.Len(t, diagnostics, 1)
+	assert.Equal(t, "0", diagnostics[0].String())
+	assert.NotEmpty(t, diagnostics[0].Name())
+}
+
 func TestProcessEventsOutOfOrder(t *testing.T) {
 	eventType := EventType("increment")
 	value := 0

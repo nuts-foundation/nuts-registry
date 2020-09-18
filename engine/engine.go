@@ -61,8 +61,9 @@ func NewRegistryEngine() *core.Engine {
 		Routes: func(router core.EchoRouter) {
 			api.RegisterHandlers(router, &api.ApiWrapper{R: r})
 		},
-		Start:    r.Start,
-		Shutdown: r.Shutdown,
+		Start:       r.Start,
+		Shutdown:    r.Shutdown,
+		Diagnostics: r.Diagnostics,
 	}
 }
 
