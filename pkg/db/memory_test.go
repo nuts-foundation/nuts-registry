@@ -1,6 +1,6 @@
 /*
  * Nuts registry
- * Copyright (C) 2019. Nuts community
+ * Copyright (C) 2020. Nuts community
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -141,7 +141,11 @@ func TestMemoryDb_RegisterVendor(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		err = eventSystem.PublishEvent(registerVendor1)
+		var duplicateVendor = events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{
+			Identifier: test.VendorID("v1"),
+			Name:       "Vendor Uno",
+		}, nil)
+		err = eventSystem.PublishEvent(duplicateVendor)
 		assert.EqualError(t, err, "vendor already registered (id = urn:oid:1.3.6.1.4.1.54851.4:v1)")
 	}))
 }
@@ -226,7 +230,13 @@ func TestMemoryDb_VendorClaim(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		err = eventSystem.PublishEvent(vendorClaim1)
+		var duplicateOrg = events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
+			VendorID:       test.VendorID("v1"),
+			OrganizationID: test.OrganizationID("o1"),
+			OrgName:        "Organization Uno",
+			OrgKeys:        nil,
+		}, nil)
+		err = eventSystem.PublishEvent(duplicateOrg)
 		assert.Error(t, err)
 	}))
 }
@@ -373,7 +383,14 @@ func TestMemoryDb_RegisterEndpoint(t *testing.T) {
 		eventSystem.PublishEvent(registerVendor1)
 		eventSystem.PublishEvent(vendorClaim1)
 		eventSystem.PublishEvent(registerEndpoint1)
-		err := eventSystem.PublishEvent(registerEndpoint1)
+		var duplicateEndpoint = events.CreateEvent(domain.RegisterEndpoint, domain.RegisterEndpointEvent{
+			Organization: test.OrganizationID("o1"),
+			URL:          "foo:bar",
+			EndpointType: "simple",
+			Identifier:   "e1",
+			Status:       StatusActive,
+		}, nil)
+		err := eventSystem.PublishEvent(duplicateEndpoint)
 		assert.EqualError(t, err, "endpoint already registered for this organization (id = e1)")
 	}))
 	t.Run("error - unknown organization", withTestContext(func(t *testing.T, eventSystem events.EventSystem, db *MemoryDb) {

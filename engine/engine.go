@@ -1,6 +1,6 @@
 /*
  * Nuts registry
- * Copyright (C) 2019. Nuts community
+ * Copyright (C) 2020. Nuts community
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,8 +61,9 @@ func NewRegistryEngine() *core.Engine {
 		Routes: func(router core.EchoRouter) {
 			api.RegisterHandlers(router, &api.ApiWrapper{R: r})
 		},
-		Start:    r.Start,
-		Shutdown: r.Shutdown,
+		Start:       r.Start,
+		Shutdown:    r.Shutdown,
+		Diagnostics: r.Diagnostics,
 	}
 }
 

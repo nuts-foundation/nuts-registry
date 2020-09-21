@@ -44,3 +44,15 @@ func (mr *MockAmbassadorMockRecorder) RegisterEventHandlers(fn, eventType interf
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterEventHandlers", reflect.TypeOf((*MockAmbassador)(nil).RegisterEventHandlers), fn, eventType)
 }
+
+// Start mocks base method
+func (m *MockAmbassador) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start
+func (mr *MockAmbassadorMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockAmbassador)(nil).Start))
+}

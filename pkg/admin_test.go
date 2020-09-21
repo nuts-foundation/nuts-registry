@@ -1,3 +1,21 @@
+/*
+ * Nuts registry
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
 package pkg
 
 import (
@@ -407,16 +425,6 @@ func TestCreateAndSubmitCSR(t *testing.T) {
 		assert.Contains(t, err.Error(), "unable to retrieve subject private key")
 	})
 }
-
-//
-//func TestRegistry_signAsVendor(t *testing.T) {
-//	t.Run("error - unable to create CSR", func(t *testing.T) {
-//		cxt := createTestContext(t)
-//		defer cxt.close()
-//		_, err := cxt.registry.signAsVendor(vendorId, "vendorName", "", []byte{1, 2, 3}, time.Now())
-//		assert.Equal(t, err.Error(), "unable to create CSR for JWS signing: missing domain")
-//	})
-//}
 
 func TestRegistry_signAsOrganization(t *testing.T) {
 	t.Run("error - unable to create CSR", func(t *testing.T) {

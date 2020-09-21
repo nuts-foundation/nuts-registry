@@ -1,6 +1,6 @@
 /*
  * Nuts registry
- * Copyright (C) 2019. Nuts community
+ * Copyright (C) 2020. Nuts community
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -216,7 +216,7 @@ func (r *Registry) Configure() error {
 			r.Db = db.New()
 			r.Db.RegisterEventHandlers(r.EventSystem.RegisterEventHandler)
 			if r.networkAmbassador == nil {
-				r.networkAmbassador = network.NewAmbassador(r.network, r.crypto)
+				r.networkAmbassador = network.NewAmbassador(r.network, r.crypto, r.EventSystem)
 			}
 			r.networkAmbassador.RegisterEventHandlers(r.EventSystem.RegisterEventHandler, domain.GetEventTypes())
 			if err = r.EventSystem.Configure(r.getEventsDir()); err != nil {
@@ -276,6 +276,7 @@ func (r *Registry) Start() error {
 		if err != nil {
 			logrus.Error("Error occurred during registry data verification: ", err)
 		}
+		r.networkAmbassador.Start()
 		switch cm := r.Config.SyncMode; cm {
 		case "fs":
 			return r.startFileSystemWatcher()
@@ -311,6 +312,10 @@ func (r *Registry) Load() error {
 	}
 
 	return nil
+}
+
+func (r *Registry) Diagnostics() []core.DiagnosticResult {
+	return r.EventSystem.Diagnostics()
 }
 
 func (r *Registry) getEventsDir() string {

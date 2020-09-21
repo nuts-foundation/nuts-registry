@@ -1,3 +1,21 @@
+/*
+ * Nuts registry
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
 package engine
 
 import (
@@ -6,7 +24,9 @@ import (
 	"crypto/x509"
 	"errors"
 	"github.com/nuts-foundation/nuts-go-test/io"
+	"github.com/spf13/cobra"
 	"net"
+	"os"
 	"syscall"
 	"testing"
 	"time"
@@ -24,6 +44,7 @@ import (
 )
 
 func TestServer(t *testing.T) {
+	configureIdentity()
 	// Register test instance singleton
 	pkg.NewTestRegistryInstance(io.TestDirectory(t))
 	command := cmd()
@@ -246,4 +267,9 @@ func generateCertificate() map[string]interface{} {
 	certAsJWK, _ := cert.CertificateToJWK(certificate)
 	certAsMap, _ := cert.JwkToMap(certAsJWK)
 	return certAsMap
+}
+
+func configureIdentity() {
+	os.Setenv("NUTS_IDENTITY", test.VendorID("4").String())
+	core.NutsConfig().Load(&cobra.Command{})
 }

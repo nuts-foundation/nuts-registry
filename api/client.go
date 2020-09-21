@@ -1,6 +1,6 @@
 /*
  * Nuts registry
- * Copyright (C) 2019. Nuts community
+ * Copyright (C) 2020. Nuts community
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -283,7 +283,7 @@ func (hb HttpClient) OrganizationById(id core.PartyID) (*db.Organization, error)
 
 // VendorCAs on the client is not implemented
 func (hb HttpClient) VendorCAs() [][]*x509.Certificate {
-	return [][]*x509.Certificate{{}}
+	return [][]*x509.Certificate{}
 }
 
 func testResponseCode(expectedStatusCode int, response *http.Response) error {

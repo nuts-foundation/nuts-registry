@@ -1,6 +1,6 @@
 /*
  * Nuts registry
- * Copyright (C) 2019. Nuts community
+ * Copyright (C) 2020. Nuts community
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,12 +20,15 @@
 package events
 
 import (
-	"crypto/rand"
+	"errors"
+	"github.com/nuts-foundation/nuts-go-test/io"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 )
@@ -64,7 +67,58 @@ func TestNoEventHandler(t *testing.T) {
 	assert.EqualError(t, err, "no handlers registered for event (type = some-type), handlers are: map[]")
 }
 
-func TestLoadEvents(t *testing.T) {
+func TestDiagnostics(t *testing.T) {
+	repo, err := test.NewTestRepo(t)
+	if !assert.NoError(t, err) {
+		return
+	}
+	system := NewEventSystem()
+	system.Configure(repo.Directory + "/events")
+	diagnostics := system.Diagnostics()
+	assert.Len(t, diagnostics, 1)
+	assert.Equal(t, "0", diagnostics[0].String())
+	assert.NotEmpty(t, diagnostics[0].Name())
+}
+
+func TestProcessEventsOutOfOrder(t *testing.T) {
+	eventType := EventType("increment")
+	value := 0
+	eventsHandled := 0
+	system := NewEventSystem(eventType)
+	system.Configure(io.TestDirectory(t))
+	system.RegisterEventHandler(eventType, func(event Event, lookup EventLookup) error {
+		newValue := 0
+		if err := event.Unmarshal(&newValue); err != nil {
+			return err
+		}
+		if newValue != value + 1 {
+			return errors.New("can't apply value")
+		}
+		value = newValue
+		eventsHandled++
+		return nil
+	})
+	events := make([]Event, 0)
+	var prevEvent Ref
+	for i := 0; i < 100; i++ {
+		event := CreateTestEvent(eventType, i + 1, prevEvent, time.Unix(int64(10000 + i), 0))
+		events = append(events, event)
+		prevEvent = event.Ref()
+	}
+	// Sort random order
+	sort.Slice(events, func(i, j int) bool {
+		return rand.Intn(2) == 1
+	})
+	for i := 0; i < len(events); i++ {
+		if err := system.ProcessEvent(events[i]); err != nil {
+			println(err.Error())
+		}
+	}
+	assert.Equal(t, len(events), eventsHandled)
+	assert.Empty(t, (system.(*diskEventSystem)).eventsToBeRetried)
+}
+
+func TestLoadAndApplyEvents(t *testing.T) {
 	system := NewEventSystem("RegisterVendorEvent", "VendorClaimEvent", "RegisterEndpointEvent")
 	vendorsCreated := 0
 	system.RegisterEventHandler("RegisterVendorEvent", func(e Event, _ EventLookup) error {
@@ -127,8 +181,6 @@ func TestLoadEvents(t *testing.T) {
 	})
 
 	t.Run("Added non-JSON file", func(t *testing.T) {
-		eventSystem := system.(*diskEventSystem)
-		eventSystem.lastLoadedEvent = time.Time{}
 		err := repo.ImportFileAs("system_test.go", "events/system_test.go")
 		if !assert.NoError(t, err) {
 			return
@@ -196,7 +248,6 @@ func TestParseTimestamp(t *testing.T) {
 		assert.True(t, timestamp.IsZero())
 		assert.Error(t, err)
 	})
-
 }
 
 func TestEventLookup(t *testing.T) {

@@ -1,6 +1,6 @@
 /*
  * Nuts registry
- * Copyright (C) 2019. Nuts community
+ * Copyright (C) 2020. Nuts community
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,13 +30,14 @@ import (
 
 // NewRegistryClient creates a new Local- or RemoteClient for the nuts registry
 func NewRegistryClient() pkg.RegistryClient {
-	registry := pkg.RegistryInstance()
+	return initialize(pkg.RegistryInstance())
+}
 
+func initialize(registry *pkg.Registry) pkg.RegistryClient {
 	if registry.Config.Mode == core.ServerEngineMode {
 		if err := registry.Configure(); err != nil {
 			logrus.Panic(err)
 		}
-
 		return registry
 	} else {
 		return api.HttpClient{

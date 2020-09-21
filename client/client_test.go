@@ -16,16 +16,30 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
-package domain
+package client
 
 import (
+	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-registry/api"
+	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func TestGetEventTypes(t *testing.T) {
-	assert.NotEmpty(t, GetEventTypes())
-	for _, eventType := range GetEventTypes() {
-		assert.NotEqual(t, "", string(eventType))
-	}
+func TestInitialize(t *testing.T) {
+	t.Run("server mode", func(t *testing.T) {
+		instance := pkg.RegistryInstance()
+		instance.Config.Mode = core.ServerEngineMode
+		assert.IsType(t, &pkg.Registry{}, initialize(instance))
+	})
+	t.Run("client mode", func(t *testing.T) {
+		instance := pkg.RegistryInstance()
+		instance.Config.Mode = core.ClientEngineMode
+		assert.IsType(t, api.HttpClient{}, initialize(instance))
+	})
+}
+
+func TestNewRegistryClient(t *testing.T) {
+	client := NewRegistryClient()
+	assert.NotNil(t, client)
 }
