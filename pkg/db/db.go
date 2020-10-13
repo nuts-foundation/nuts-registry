@@ -24,12 +24,13 @@ import (
 	crypto2 "crypto"
 	"crypto/x509"
 	"errors"
+	"time"
+
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/types"
-	"time"
 )
 
 // StatusActive represents the "active" status
@@ -48,6 +49,7 @@ type Endpoint struct {
 // Organization defines component schema for Organization.
 type Organization struct {
 	Identifier core.PartyID `json:"identifier"`
+	Vendor     core.PartyID `json:"vendor"`
 	Name       string       `json:"name"`
 	// Deprecated: use Keys or helper functions to retrieve the current key in use by the organization
 	PublicKey *string       `json:"publicKey,omitempty"`

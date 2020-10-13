@@ -23,12 +23,13 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	errors2 "github.com/pkg/errors"
-	"strings"
 )
 
 type MemoryDb struct {
@@ -52,6 +53,7 @@ type endpoint struct {
 func (o org) toDb() Organization {
 	result := Organization{
 		Identifier: o.OrganizationID,
+		Vendor:     o.VendorID,
 		Name:       o.OrgName,
 		Keys:       o.OrgKeys,
 		Endpoints:  o.toDbEndpoints(),
