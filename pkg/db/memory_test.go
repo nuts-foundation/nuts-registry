@@ -21,6 +21,8 @@ package db
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	test2 "github.com/nuts-foundation/nuts-crypto/test"
@@ -28,7 +30,6 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // Test data:
@@ -528,5 +529,13 @@ func Test_org_toDb(t *testing.T) {
 		}
 		pubKey, _ := cert.PemToPublicKey([]byte(*publicKey))
 		assert.Equal(t, rsaKey.PublicKey, *pubKey)
+	})
+
+	t.Run("Vendor identifier is copied", func(t *testing.T) {
+		p := test.VendorID("v1")
+		o := org{VendorClaimEvent: domain.VendorClaimEvent{
+			VendorID: p,
+		}}
+		assert.Equal(t, p, o.toDb().Vendor)
 	})
 }
