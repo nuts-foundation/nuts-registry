@@ -25,8 +25,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-network/pkg"
-	"github.com/nuts-foundation/nuts-registry/pkg/network"
 	"io"
 	"net/http"
 	"os"
@@ -35,6 +33,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/nuts-foundation/nuts-network/pkg"
+	"github.com/nuts-foundation/nuts-registry/pkg/network"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/nuts-foundation/nuts-crypto/client"
@@ -117,6 +118,9 @@ type RegistryClient interface {
 
 	// VendorCAs returns all registered vendors as list of chains, PEM encoded. The first entry in a chain will be the leaf and the last one the root.
 	VendorCAs() [][]*x509.Certificate
+
+	// VendorById find a vendor by it's ID
+	VendorById(vID core.PartyID) (*db.Vendor, error)
 }
 
 // RegistryConfig holds the config
@@ -267,6 +271,17 @@ func (r *Registry) VendorCAs() [][]*x509.Certificate {
 
 	intermediates := r.crypto.TrustStore().GetCertificates(rootChains, now, true)
 	return r.crypto.TrustStore().GetCertificates(intermediates, now, true)
+}
+
+// ErrVendorNotFound is returned when a vendor is not found based on its ID
+var ErrVendorNotFound = errors.New("vendor not found")
+
+func (r *Registry) VendorById(id core.PartyID) (*db.Vendor, error) {
+	v := r.Db.VendorByID(id)
+	if v == nil {
+		return nil, ErrVendorNotFound
+	}
+	return v, nil
 }
 
 // Start initiates the routines for auto-updating the data

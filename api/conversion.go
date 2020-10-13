@@ -21,6 +21,7 @@ package api
 
 import (
 	"fmt"
+
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/types"
 
@@ -37,6 +38,14 @@ func (e Endpoint) fromDb(db db.Endpoint) Endpoint {
 	return e
 }
 
+func toEndpointProperties(properties map[string]string) *EndpointProperties {
+	props := EndpointProperties{}
+	for key, value := range properties {
+		props[key] = value
+	}
+	return &props
+}
+
 func (o Organization) fromDb(db db.Organization) Organization {
 	e := endpointsFromDb(db.Endpoints)
 	o.Identifier = Identifier(db.Identifier.String())
@@ -51,7 +60,7 @@ func (o Organization) fromDb(db db.Organization) Organization {
 	keys := make([]JWK, len(db.Keys))
 
 	for i, k := range db.Keys {
-		keys[i] = JWK{AdditionalProperties: k.(map[string]interface{})}
+		keys[i] = k.(map[string]interface{})
 	}
 
 	o.Keys = &keys
@@ -78,6 +87,27 @@ func (o Organization) toDb() db.Organization {
 	return org
 }
 
+func (v Vendor) fromDB(db db.Vendor) Vendor {
+	id := Identifier(db.Identifier.String())
+	v.Identifier = &id
+	v.Name = db.Name
+	v.Domain = Domain(db.Domain)
+
+	return v
+}
+
+func (v Vendor) toDb() db.Vendor {
+	vendor := db.Vendor{
+		Name:   v.Name,
+		Domain: string(v.Domain),
+	}
+	if v.Identifier != nil {
+		id, _ := core.ParsePartyID(v.Identifier.String())
+		vendor.Identifier = id
+	}
+	return vendor
+}
+
 func (e Endpoint) toDb() db.Endpoint {
 	organizationID, _ := core.ParsePartyID(e.Organization.String())
 	return db.Endpoint{
@@ -93,19 +123,11 @@ func (e Endpoint) toDb() db.Endpoint {
 func fromEndpointProperties(endpointProperties *EndpointProperties) map[string]string {
 	props := make(map[string]string, 0)
 	if endpointProperties != nil {
-		for key, value := range endpointProperties.AdditionalProperties {
+		for key, value := range *endpointProperties {
 			props[key] = fmt.Sprintf("%s", value)
 		}
 	}
 	return props
-}
-
-func toEndpointProperties(properties map[string]string) *EndpointProperties {
-	props := map[string]string{}
-	for key, value := range properties {
-		props[key] = value
-	}
-	return &EndpointProperties{AdditionalProperties: props}
 }
 
 func jwkToMap(jwk []JWK) []interface{} {

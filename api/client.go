@@ -25,12 +25,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 
@@ -220,7 +221,7 @@ func (hb HttpClient) VendorClaim(orgID core.PartyID, orgName string, orgKeys []i
 	var keys = make([]JWK, 0)
 	if orgKeys != nil {
 		for _, key := range orgKeys {
-			keys = append(keys, JWK{AdditionalProperties: key.(map[string]interface{})})
+			keys = append(keys, key.(map[string]interface{}))
 		}
 	}
 	res, err := hb.client().VendorClaim(ctx, VendorClaimJSONRequestBody{
@@ -253,7 +254,7 @@ func (hb HttpClient) OrganizationById(id core.PartyID) (*db.Organization, error)
 
 	res, err := hb.client().OrganizationById(ctx, id.String())
 	if err != nil {
-		logrus.Error("error while getting endpoints by organization", err)
+		logrus.Error("error while getting organization by id", err)
 		return nil, core.Wrap(err)
 	}
 	if err := testResponseCode(http.StatusOK, res); err != nil {
@@ -278,6 +279,36 @@ func (hb HttpClient) OrganizationById(id core.PartyID) (*db.Organization, error)
 	}
 
 	o := organization.toDb()
+	return &o, nil
+}
+
+// VendorById is the client Api implementation for getting a vendor based on its Id.
+func (hb HttpClient) VendorById(id core.PartyID) (*db.Vendor, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), hb.Timeout)
+	defer cancel()
+
+	res, err := hb.client().VendorById(ctx, id.String())
+	if err != nil {
+		logrus.Error("error while getting vendor by id", err)
+		return nil, core.Wrap(err)
+	}
+	if err := testResponseCode(http.StatusOK, res); err != nil {
+		return nil, err
+	}
+
+	parsed, err := ParseVendorByIdResponse(res)
+	if err != nil {
+		logrus.Error("error while reading response body", err)
+		return nil, err
+	}
+
+	var vendor Vendor
+	if err := json.Unmarshal(parsed.Body, &vendor); err != nil {
+		logrus.Errorf("could not unmarshal response body: %v", err)
+		return nil, err
+	}
+
+	o := vendor.toDb()
 	return &o, nil
 }
 

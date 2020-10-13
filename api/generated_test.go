@@ -91,6 +91,12 @@ func (e RestInterfaceStub) OrganizationById(ctx echo.Context, id string) error {
 	return err
 }
 
+func (e RestInterfaceStub) VendorById(ctx echo.Context, id string) error {
+	var err error
+
+	return err
+}
+
 func (e RestInterfaceStub) MTLSCAs(ctx echo.Context) error {
 	var err error
 

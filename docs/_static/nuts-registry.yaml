@@ -28,6 +28,33 @@ paths:
                 $ref: '#/components/schemas/Event'
         '400':
           description: "incorrect PEM file"
+  /api/vendor/{id}:
+    get:
+      summary: "Get vendor by id"
+      operationId: vendorById
+      tags:
+        - vendors
+      parameters:
+        - name: id
+          in: path
+          description: "URL encoded identifier"
+          required: true
+          example: "urn:oid:2.16.840.1.113883.2.4.6.1:00000007"
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK response with vendor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vendor'
+        '404':
+          description: Unknown organization
+          content:
+            text/plain:
+              schema:
+                type: string
   /api/vendor/{id}/claim:
     post:
       deprecated: true
@@ -158,9 +185,9 @@ paths:
             type: string
       responses:
         '200':
-          description: OK response with list of valid organizations, list may be empty
+          description: OK response with organization
           content:
-            text/plain:
+            application/json:
               schema:
                 $ref: '#/components/schemas/Organization'
         '404':
@@ -380,6 +407,8 @@ components:
         - name
         - domain
       properties:
+        identifier:
+          $ref: "#/components/schemas/Identifier"
         name:
           type: string
           description: the well-known name for the vendor

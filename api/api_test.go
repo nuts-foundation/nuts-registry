@@ -28,12 +28,13 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-registry/pkg/types"
-	"github.com/nuts-foundation/nuts-registry/test"
 	"net/url"
 	"strings"
 	"time"
+
+	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-registry/pkg/types"
+	"github.com/nuts-foundation/nuts-registry/test"
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
@@ -712,7 +713,7 @@ func TestApiResource_VendorClaim(t *testing.T) {
 			b, _ := json.Marshal(Organization{
 				Identifier: Identifier(orgID.String()),
 				Name:       "def",
-				Keys:       &[]JWK{{AdditionalProperties: map[string]interface{}{}}},
+				Keys:       &[]JWK{},
 			})
 
 			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
@@ -733,7 +734,7 @@ func TestApiResource_VendorClaim(t *testing.T) {
 			b, _ := json.Marshal(Organization{
 				Identifier: Identifier(orgID.String()),
 				Name:       "def",
-				Keys:       &[]JWK{{AdditionalProperties: map[string]interface{}{}}},
+				Keys:       &[]JWK{},
 			})
 
 			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
@@ -860,13 +861,13 @@ func TestApiResource_RegisterEndpoint(t *testing.T) {
 			orgID := test.OrganizationID("1234")
 			registryClient.EXPECT().RegisterEndpoint(orgID, "", "foo:bar", "fhir", "", map[string]string{"key": "value"})
 
-			props := map[string]string{}
+			props := EndpointProperties{}
 			props["key"] = "value"
 			b, _ := json.Marshal(Endpoint{
 				Identifier:   "",
 				URL:          "foo:bar",
 				EndpointType: "fhir",
-				Properties:   &EndpointProperties{AdditionalProperties: props},
+				Properties:   &props,
 			})
 
 			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
