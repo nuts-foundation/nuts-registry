@@ -63,17 +63,22 @@ func (e *testError) Error() string {
 }
 
 type MockDb struct {
+	vendors        []db.Vendor
 	endpoints      []db.Endpoint
 	organizations  []db.Organization
 	endpointsError error
 }
 
-func (mdb *MockDb) OrganizationsByVendorID(id core.PartyID) []*db.Organization {
+func (mdb *MockDb) OrganizationsByVendorID(_ core.PartyID) []*db.Organization {
 	panic("implement me")
 }
 
-func (mdb *MockDb) VendorByID(id core.PartyID) *db.Vendor {
-	panic("implement me")
+func (mdb *MockDb) VendorByID(_ core.PartyID) *db.Vendor {
+	if len(mdb.vendors) > 0 {
+		return &mdb.vendors[0]
+	}
+
+	return nil
 }
 
 func (mdb *MockDb) RegisterEventHandlers(fn events.EventRegistrar) {
@@ -150,6 +155,12 @@ var organizations = []db.Organization{
 		},
 	},
 }
+var vendors = []db.Vendor{
+	{
+		Identifier: test.VendorID("value"),
+		Name:       "test",
+	},
+}
 
 func initEcho(db *MockDb) (*echo.Echo, *ServerInterfaceWrapper) {
 	e := echo.New()
@@ -199,6 +210,17 @@ func deserializeOrganizations(data *bytes.Buffer) ([]Organization, error) {
 
 func deserializeOrganization(data *bytes.Buffer) (*Organization, error) {
 	stub := &Organization{}
+	err := json.Unmarshal(data.Bytes(), stub)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return stub, err
+}
+
+func deserializeVendor(data *bytes.Buffer) (*Vendor, error) {
+	stub := &Vendor{}
 	err := json.Unmarshal(data.Bytes(), stub)
 
 	if err != nil {
@@ -581,6 +603,67 @@ func TestApiResource_OrganizationById(t *testing.T) {
 			return
 		}
 		result, err := deserializeOrganization(rec.Body)
+		if !assert.NoError(t, err) {
+			return
+		}
+		if !assert.NotNil(t, result) {
+			return
+		}
+		assert.Equal(t, "test", result.Name)
+	})
+}
+
+func TestApiResource_VendorById(t *testing.T) {
+	t.Run("404 when not found", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{vendors: []db.Vendor{}})
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/vendor/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("urn:oid:1.2.3:value")
+
+		err := wrapper.VendorById(c)
+
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+	t.Run("400 invalid PartyID", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{vendors: []db.Vendor{}})
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/vendor/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("https%3A//system%23value")
+
+		err := wrapper.VendorById(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+	t.Run("200", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{vendors: vendors})
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/vendor/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("urn:oid:1.2.3:value")
+
+		err := wrapper.VendorById(c)
+		if !assert.NoError(t, err) {
+			return
+		}
+		if !assert.Equal(t, http.StatusOK, rec.Code) {
+			return
+		}
+		result, err := deserializeVendor(rec.Body)
 		if !assert.NoError(t, err) {
 			return
 		}
