@@ -415,6 +415,10 @@ components:
           example: Medicare Software for People B.V.
         domain:
           $ref: "#/components/schemas/Domain"
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/JWK"
     Organization:
       required:
         - name

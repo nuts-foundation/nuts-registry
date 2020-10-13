@@ -145,6 +145,7 @@ type Vendor struct {
 
 	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
 	Identifier *Identifier `json:"identifier,omitempty"`
+	Keys       *[]JWK      `json:"keys,omitempty"`
 
 	// the well-known name for the vendor
 	Name string `json:"name"`

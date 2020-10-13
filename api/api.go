@@ -206,7 +206,7 @@ func (apiResource ApiWrapper) VendorById(ctx echo.Context, id string) error {
 	if result == nil {
 		return ctx.JSON(http.StatusNotFound, fmt.Sprintf("Could not find vendor with id %s", vendorID))
 	}
-	return ctx.JSON(http.StatusOK, Vendor{}.fromDB(*result))
+	return ctx.JSON(http.StatusOK, Vendor{}.fromDb(*result))
 }
 
 // EndpointsByOrganisationId is the Api implementation for getting all or certain types of endpoints for an organization

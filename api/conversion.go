@@ -87,11 +87,23 @@ func (o Organization) toDb() db.Organization {
 	return org
 }
 
-func (v Vendor) fromDB(db db.Vendor) Vendor {
+func (v Vendor) fromDb(db db.Vendor) Vendor {
 	id := Identifier(db.Identifier.String())
 	v.Identifier = &id
 	v.Name = db.Name
 	v.Domain = Domain(db.Domain)
+
+	if len(db.Keys) == 0 {
+		return v
+	}
+
+	keys := make([]JWK, len(db.Keys))
+
+	for i, k := range db.Keys {
+		keys[i] = k.(map[string]interface{})
+	}
+
+	v.Keys = &keys
 
 	return v
 }
@@ -105,6 +117,11 @@ func (v Vendor) toDb() db.Vendor {
 		id, _ := core.ParsePartyID(v.Identifier.String())
 		vendor.Identifier = id
 	}
+
+	if v.Keys != nil {
+		vendor.Keys = jwkToMap(*v.Keys)
+	}
+
 	return vendor
 }
 

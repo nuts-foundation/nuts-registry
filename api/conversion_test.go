@@ -45,3 +45,23 @@ func TestOrganizationConversion(t *testing.T) {
 		assert.Equal(t, "EC", o.Keys[0].(JWK)["kty"].(string))
 	})
 }
+
+func TestVendorConversion(t *testing.T) {
+	t.Run("JWK is converted correctly from DB", func(t *testing.T) {
+		em := make([]interface{}, 1)
+		em[0] = map[string]interface{}{"kty": "EC"}
+
+		o := Vendor{}.fromDb(db.Vendor{Keys: em})
+
+		assert.Len(t, *o.Keys, 1)
+		assert.Equal(t, "EC", (*o.Keys)[0]["kty"].(string))
+	})
+
+	t.Run("JWK is converted correctly to DB", func(t *testing.T) {
+		em := []JWK{{"kty": "EC"}}
+		o := Vendor{Keys: &em}.toDb()
+
+		assert.Len(t, o.Keys, 1)
+		assert.Equal(t, "EC", o.Keys[0].(JWK)["kty"].(string))
+	})
+}
