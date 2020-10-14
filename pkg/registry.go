@@ -119,7 +119,7 @@ type RegistryClient interface {
 	// VendorCAs returns all registered vendors as list of chains, PEM encoded. The first entry in a chain will be the leaf and the last one the root.
 	VendorCAs() [][]*x509.Certificate
 
-	// VendorById find a vendor by it's ID
+	// VendorById finds a vendor by its ID. When not found it returns an ErrVendorNotFound error and a nil result.
 	VendorById(vID core.PartyID) (*db.Vendor, error)
 }
 

@@ -67,6 +67,7 @@ type MockDb struct {
 	endpoints      []db.Endpoint
 	organizations  []db.Organization
 	endpointsError error
+	vendorError    error
 }
 
 func (mdb *MockDb) OrganizationsByVendorID(_ core.PartyID) []*db.Organization {
@@ -631,6 +632,9 @@ func TestApiResource_VendorById(t *testing.T) {
 		}
 
 		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+	t.Run("500", func(t *testing.T) {
+		t.Skip("Currently not possible due to in-memory db")
 	})
 	t.Run("400 invalid PartyID", func(t *testing.T) {
 		e, wrapper := initEcho(&MockDb{vendors: []db.Vendor{}})

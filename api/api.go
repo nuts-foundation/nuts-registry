@@ -200,8 +200,9 @@ func (apiResource ApiWrapper) VendorById(ctx echo.Context, id string) error {
 		return nil
 	}
 	result, err := apiResource.R.VendorById(vendorID)
-	if err != nil {
+	if err != nil && !errors.Is(err, pkg.ErrVendorNotFound) {
 		logrus.Errorf("Error getting vendor %s: %v", vendorID, err)
+		return ctx.String(http.StatusInternalServerError, "an internal server error occurred")
 	}
 	if result == nil {
 		return ctx.JSON(http.StatusNotFound, fmt.Sprintf("Could not find vendor with id %s", vendorID))

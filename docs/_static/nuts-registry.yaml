@@ -49,6 +49,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Vendor'
+        '400':
+          description: "incorrect vendor id"
+          content:
+            text/plain:
+              schema:
+                type: string
         '404':
           description: Unknown organization
           content:
