@@ -7,9 +7,10 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"github.com/nuts-foundation/nuts-crypto/test"
 	"math/big"
 	"time"
+
+	"github.com/nuts-foundation/nuts-crypto/test"
 
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
@@ -103,4 +104,8 @@ type noopCertificateVerifier struct{}
 
 func (n noopCertificateVerifier) Verify(certificate *x509.Certificate, t time.Time) error {
 	return nil
+}
+
+func (n noopCertificateVerifier) VerifiedChain(certificate *x509.Certificate, t time.Time) ([][]*x509.Certificate, error) {
+	return nil, nil
 }

@@ -21,12 +21,13 @@ package domain
 import (
 	"crypto/x509"
 	"fmt"
+	"time"
+
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	cert2 "github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	errors2 "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"time"
 )
 
 type certificateEventHandler struct {
@@ -66,6 +67,10 @@ func (t certificateEventHandler) verify(certificate *x509.Certificate, moment ti
 	}
 	// We're not supporting multiple chains
 	return chains[0], nil
+}
+
+func (t certificateEventHandler) VerifiedChain(certificate *x509.Certificate, moment time.Time) ([][]*x509.Certificate, error) {
+	return certificate.Verify(x509.VerifyOptions{Roots: t.trustStore.Pool(), CurrentTime: moment})
 }
 
 func (t *certificateEventHandler) handleEvent(event events.Event, _ events.EventLookup) error {

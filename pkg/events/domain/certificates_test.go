@@ -24,9 +24,10 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
-	"github.com/nuts-foundation/nuts-registry/pkg/types"
 	"testing"
 	"time"
+
+	"github.com/nuts-foundation/nuts-registry/pkg/types"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -203,6 +204,10 @@ func (n memoryTrustStore) AddCertificate(certificate *x509.Certificate) error {
 
 func (n memoryTrustStore) Verify(c *x509.Certificate, t time.Time) error {
 	return errors.New("irrelevant func")
+}
+
+func (t memoryTrustStore) VerifiedChain(certificate *x509.Certificate, moment time.Time) ([][]*x509.Certificate, error) {
+	return nil, errors.New("irrelevant func")
 }
 
 func (n memoryTrustStore) RegisterEventHandlers(func(events.EventType, events.EventHandler)) {
