@@ -46,6 +46,14 @@ func (t *certificateEventHandler) RegisterEventHandlers(fn func(events.EventType
 	}
 }
 
+func (t *certificateEventHandler) VerifiedChain(certificate *x509.Certificate, t2 time.Time) ([][]*x509.Certificate, error) {
+	chain, err := t.verify(certificate, t2)
+	if err != nil {
+		return nil, err
+	}
+	return [][]*x509.Certificate{chain}, nil
+}
+
 // Verify verifies the given certificate against the truststore. In addition it also verifies the correctness of the
 // "Nuts Domain" in the cerertificate tree.
 func (t certificateEventHandler) Verify(certificate *x509.Certificate, moment time.Time) error {

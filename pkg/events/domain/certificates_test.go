@@ -184,6 +184,10 @@ type memoryTrustStore struct {
 	certPool *x509.CertPool
 }
 
+func (n memoryTrustStore) VerifiedChain(certificate *x509.Certificate, t time.Time) ([][]*x509.Certificate, error) {
+	panic("implement me")
+}
+
 func (n memoryTrustStore) GetRoots(t time.Time) []*x509.Certificate {
 	return nil
 }
