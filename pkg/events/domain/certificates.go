@@ -69,6 +69,8 @@ func (t certificateEventHandler) verify(certificate *x509.Certificate, moment ti
 	return chains[0], nil
 }
 
+// VerifiedChain verifies the given certificate against the trustStore and returns all the chains that could verify the certificate.
+// The func does not allow for a truststore with intermediates!
 func (t certificateEventHandler) VerifiedChain(certificate *x509.Certificate, moment time.Time) ([][]*x509.Certificate, error) {
 	return certificate.Verify(x509.VerifyOptions{Roots: t.trustStore.Pool(), CurrentTime: moment})
 }

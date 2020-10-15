@@ -56,7 +56,7 @@ paths:
               schema:
                 type: string
         '404':
-          description: Unknown organization
+          description: Unknown vendor
           content:
             text/plain:
               schema:
