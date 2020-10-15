@@ -10,8 +10,8 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0
-	github.com/lestrrat-go/jwx v0.9.2
-	github.com/nuts-foundation/nuts-crypto v0.15.1-0.20201009062953-f3b551897b53
+	github.com/lestrrat-go/jwx v1.0.5
+	github.com/nuts-foundation/nuts-crypto v0.15.1-0.20201015073554-cbeeb24605c8
 	github.com/nuts-foundation/nuts-go-core v0.15.0
 	github.com/nuts-foundation/nuts-go-test v0.15.0
 	github.com/nuts-foundation/nuts-network v0.15.1

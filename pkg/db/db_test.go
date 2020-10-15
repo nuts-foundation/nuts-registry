@@ -145,11 +145,16 @@ func TestOrganization_CurrentPublicKey(t *testing.T) {
 			return
 		}
 		o := Organization{Keys: []interface{}{jwkAsMap}}
-		key, err := o.CurrentPublicKey()
+		keyAsJwk, err := o.CurrentPublicKey()
 		if !assert.NoError(t, err) {
 			return
 		}
-		actualPublicKey, _ := (key.(*jwk.RSAPublicKey)).Materialize()
+		var rawKey interface{}
+		err = keyAsJwk.Raw(&rawKey)
+		if !assert.NoError(t, err) {
+			return
+		}
+		actualPublicKey := rawKey.(*rsa.PublicKey)
 		assert.Equal(t, expectedCert.PublicKey, actualPublicKey)
 	})
 

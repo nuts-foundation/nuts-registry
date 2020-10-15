@@ -62,11 +62,13 @@ func (o org) toDb() Organization {
 	for _, k := range o.OrgKeys {
 		keyAsJwk, _ := cert.MapToJwk(k.(map[string]interface{}))
 		if keyAsJwk != nil {
-			matKey, _ := keyAsJwk.Materialize()
-			pubKey, ok := matKey.(*rsa.PublicKey)
-			if ok {
-				p, _ := cert.PublicKeyToPem(pubKey)
-				result.PublicKey = &p
+			var matKey interface{}
+			if keyAsJwk.Raw(&matKey) == nil {
+				pubKey, ok := matKey.(*rsa.PublicKey)
+				if ok {
+					p, _ := cert.PublicKeyToPem(pubKey)
+					result.PublicKey = &p
+				}
 			}
 		}
 	}
