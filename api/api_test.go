@@ -28,12 +28,13 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-registry/pkg/types"
-	"github.com/nuts-foundation/nuts-registry/test"
 	"net/url"
 	"strings"
 	"time"
+
+	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-registry/pkg/types"
+	"github.com/nuts-foundation/nuts-registry/test"
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
@@ -62,17 +63,23 @@ func (e *testError) Error() string {
 }
 
 type MockDb struct {
+	vendors        []db.Vendor
 	endpoints      []db.Endpoint
 	organizations  []db.Organization
 	endpointsError error
+	vendorError    error
 }
 
-func (mdb *MockDb) OrganizationsByVendorID(id core.PartyID) []*db.Organization {
+func (mdb *MockDb) OrganizationsByVendorID(_ core.PartyID) []*db.Organization {
 	panic("implement me")
 }
 
-func (mdb *MockDb) VendorByID(id core.PartyID) *db.Vendor {
-	panic("implement me")
+func (mdb *MockDb) VendorByID(_ core.PartyID) *db.Vendor {
+	if len(mdb.vendors) > 0 {
+		return &mdb.vendors[0]
+	}
+
+	return nil
 }
 
 func (mdb *MockDb) RegisterEventHandlers(fn events.EventRegistrar) {
@@ -149,6 +156,12 @@ var organizations = []db.Organization{
 		},
 	},
 }
+var vendors = []db.Vendor{
+	{
+		Identifier: test.VendorID("value"),
+		Name:       "test",
+	},
+}
 
 func initEcho(db *MockDb) (*echo.Echo, *ServerInterfaceWrapper) {
 	e := echo.New()
@@ -198,6 +211,17 @@ func deserializeOrganizations(data *bytes.Buffer) ([]Organization, error) {
 
 func deserializeOrganization(data *bytes.Buffer) (*Organization, error) {
 	stub := &Organization{}
+	err := json.Unmarshal(data.Bytes(), stub)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return stub, err
+}
+
+func deserializeVendor(data *bytes.Buffer) (*Vendor, error) {
+	stub := &Vendor{}
 	err := json.Unmarshal(data.Bytes(), stub)
 
 	if err != nil {
@@ -590,6 +614,70 @@ func TestApiResource_OrganizationById(t *testing.T) {
 	})
 }
 
+func TestApiResource_VendorById(t *testing.T) {
+	t.Run("404 when not found", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{vendors: []db.Vendor{}})
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/vendor/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("urn:oid:1.2.3:value")
+
+		err := wrapper.VendorById(c)
+
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+	t.Run("500", func(t *testing.T) {
+		t.Skip("Currently not possible due to in-memory db")
+	})
+	t.Run("400 invalid PartyID", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{vendors: []db.Vendor{}})
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/vendor/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("https%3A//system%23value")
+
+		err := wrapper.VendorById(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+	t.Run("200", func(t *testing.T) {
+		e, wrapper := initEcho(&MockDb{vendors: vendors})
+
+		req := httptest.NewRequest(echo.GET, "/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/vendor/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("urn:oid:1.2.3:value")
+
+		err := wrapper.VendorById(c)
+		if !assert.NoError(t, err) {
+			return
+		}
+		if !assert.Equal(t, http.StatusOK, rec.Code) {
+			return
+		}
+		result, err := deserializeVendor(rec.Body)
+		if !assert.NoError(t, err) {
+			return
+		}
+		if !assert.NotNil(t, result) {
+			return
+		}
+		assert.Equal(t, "test", result.Name)
+	})
+}
+
 func TestApiResource_Verify(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -712,7 +800,7 @@ func TestApiResource_VendorClaim(t *testing.T) {
 			b, _ := json.Marshal(Organization{
 				Identifier: Identifier(orgID.String()),
 				Name:       "def",
-				Keys:       &[]JWK{{AdditionalProperties: map[string]interface{}{}}},
+				Keys:       &[]JWK{},
 			})
 
 			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
@@ -733,7 +821,7 @@ func TestApiResource_VendorClaim(t *testing.T) {
 			b, _ := json.Marshal(Organization{
 				Identifier: Identifier(orgID.String()),
 				Name:       "def",
-				Keys:       &[]JWK{{AdditionalProperties: map[string]interface{}{}}},
+				Keys:       &[]JWK{},
 			})
 
 			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))
@@ -860,13 +948,13 @@ func TestApiResource_RegisterEndpoint(t *testing.T) {
 			orgID := test.OrganizationID("1234")
 			registryClient.EXPECT().RegisterEndpoint(orgID, "", "foo:bar", "fhir", "", map[string]string{"key": "value"})
 
-			props := map[string]string{}
+			props := EndpointProperties{}
 			props["key"] = "value"
 			b, _ := json.Marshal(Endpoint{
 				Identifier:   "",
 				URL:          "foo:bar",
 				EndpointType: "fhir",
-				Properties:   &EndpointProperties{AdditionalProperties: props},
+				Properties:   &props,
 			})
 
 			req := httptest.NewRequest(echo.POST, "/", bytes.NewReader(b))

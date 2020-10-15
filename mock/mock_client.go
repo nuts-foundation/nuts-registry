@@ -7,7 +7,7 @@ package mock
 import (
 	x509 "crypto/x509"
 	gomock "github.com/golang/mock/gomock"
-	core "github.com/nuts-foundation/nuts-go-core"
+	nuts_go_core "github.com/nuts-foundation/nuts-go-core"
 	db "github.com/nuts-foundation/nuts-registry/pkg/db"
 	events "github.com/nuts-foundation/nuts-registry/pkg/events"
 	reflect "reflect"
@@ -37,7 +37,7 @@ func (m *MockRegistryClient) EXPECT() *MockRegistryClientMockRecorder {
 }
 
 // EndpointsByOrganizationAndType mocks base method
-func (m *MockRegistryClient) EndpointsByOrganizationAndType(organizationIdentifier core.PartyID, endpointType *string) ([]db.Endpoint, error) {
+func (m *MockRegistryClient) EndpointsByOrganizationAndType(organizationIdentifier nuts_go_core.PartyID, endpointType *string) ([]db.Endpoint, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EndpointsByOrganizationAndType", organizationIdentifier, endpointType)
 	ret0, _ := ret[0].([]db.Endpoint)
@@ -67,7 +67,7 @@ func (mr *MockRegistryClientMockRecorder) SearchOrganizations(query interface{})
 }
 
 // OrganizationById mocks base method
-func (m *MockRegistryClient) OrganizationById(id core.PartyID) (*db.Organization, error) {
+func (m *MockRegistryClient) OrganizationById(id nuts_go_core.PartyID) (*db.Organization, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "OrganizationById", id)
 	ret0, _ := ret[0].(*db.Organization)
@@ -97,7 +97,7 @@ func (mr *MockRegistryClientMockRecorder) ReverseLookup(name interface{}) *gomoc
 }
 
 // RegisterEndpoint mocks base method
-func (m *MockRegistryClient) RegisterEndpoint(organizationID core.PartyID, id, url, endpointType, status string, properties map[string]string) (events.Event, error) {
+func (m *MockRegistryClient) RegisterEndpoint(organizationID nuts_go_core.PartyID, id, url, endpointType, status string, properties map[string]string) (events.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RegisterEndpoint", organizationID, id, url, endpointType, status, properties)
 	ret0, _ := ret[0].(events.Event)
@@ -112,7 +112,7 @@ func (mr *MockRegistryClientMockRecorder) RegisterEndpoint(organizationID, id, u
 }
 
 // VendorClaim mocks base method
-func (m *MockRegistryClient) VendorClaim(orgID core.PartyID, orgName string, orgKeys []interface{}) (events.Event, error) {
+func (m *MockRegistryClient) VendorClaim(orgID nuts_go_core.PartyID, orgName string, orgKeys []interface{}) (events.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VendorClaim", orgID, orgName, orgKeys)
 	ret0, _ := ret[0].(events.Event)
@@ -142,7 +142,7 @@ func (mr *MockRegistryClientMockRecorder) RegisterVendor(certificate interface{}
 }
 
 // RefreshOrganizationCertificate mocks base method
-func (m *MockRegistryClient) RefreshOrganizationCertificate(organizationID core.PartyID) (events.Event, error) {
+func (m *MockRegistryClient) RefreshOrganizationCertificate(organizationID nuts_go_core.PartyID) (events.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RefreshOrganizationCertificate", organizationID)
 	ret0, _ := ret[0].(events.Event)
@@ -184,4 +184,19 @@ func (m *MockRegistryClient) VendorCAs() [][]*x509.Certificate {
 func (mr *MockRegistryClientMockRecorder) VendorCAs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VendorCAs", reflect.TypeOf((*MockRegistryClient)(nil).VendorCAs))
+}
+
+// VendorById mocks base method
+func (m *MockRegistryClient) VendorById(vID nuts_go_core.PartyID) (*db.Vendor, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VendorById", vID)
+	ret0, _ := ret[0].(*db.Vendor)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// VendorById indicates an expected call of VendorById
+func (mr *MockRegistryClientMockRecorder) VendorById(vID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VendorById", reflect.TypeOf((*MockRegistryClient)(nil).VendorById), vID)
 }

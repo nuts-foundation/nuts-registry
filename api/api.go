@@ -25,11 +25,12 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
+	core "github.com/nuts-foundation/nuts-go-core"
 
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 
@@ -190,6 +191,23 @@ func (apiResource ApiWrapper) OrganizationById(ctx echo.Context, id string) erro
 		return ctx.JSON(http.StatusNotFound, fmt.Sprintf("Could not find organization with id %s", organizationID))
 	}
 	return ctx.JSON(http.StatusOK, Organization{}.fromDb(*result))
+}
+
+// VendorById is the Api implementation for getting a vendor based on its Id.
+func (apiResource ApiWrapper) VendorById(ctx echo.Context, id string) error {
+	vendorID := tryParsePartyID(id, ctx)
+	if vendorID.IsZero() {
+		return nil
+	}
+	result, err := apiResource.R.VendorById(vendorID)
+	if err != nil && !errors.Is(err, pkg.ErrVendorNotFound) {
+		logrus.Errorf("Error getting vendor %s: %v", vendorID, err)
+		return ctx.String(http.StatusInternalServerError, "an internal server error occurred")
+	}
+	if result == nil {
+		return ctx.JSON(http.StatusNotFound, fmt.Sprintf("Could not find vendor with id %s", vendorID))
+	}
+	return ctx.JSON(http.StatusOK, Vendor{}.fromDb(*result))
 }
 
 // EndpointsByOrganisationId is the Api implementation for getting all or certain types of endpoints for an organization

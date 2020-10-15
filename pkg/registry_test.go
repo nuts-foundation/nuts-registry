@@ -26,9 +26,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
-	"github.com/nuts-foundation/nuts-crypto/pkg"
-	"github.com/nuts-foundation/nuts-go-test/io"
-	pkg2 "github.com/nuts-foundation/nuts-network/pkg"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -36,6 +33,10 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-go-test/io"
+	pkg2 "github.com/nuts-foundation/nuts-network/pkg"
 
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"github.com/spf13/cobra"
@@ -332,6 +333,30 @@ func TestRegistry_Verify(t *testing.T) {
 		assert.NoError(t, err)
 		assert.False(t, fix)
 		assert.Empty(t, evts)
+	})
+}
+
+func TestRegistry_VendorById(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	mockDb := mock.NewMockDb(mockCtrl)
+	registry := Registry{Db: mockDb}
+	defer mockCtrl.Finish()
+
+	t.Run("unknown ID returns err", func(t *testing.T) {
+		testVendor := test.VendorID("unknown")
+		mockDb.EXPECT().VendorByID(testVendor).Return(nil)
+		_, err := registry.VendorById(testVendor)
+		assert.Equal(t, ErrVendorNotFound, err)
+	})
+
+	t.Run("vendor is returned", func(t *testing.T) {
+		mockDb.EXPECT().VendorByID(vendorId).Return(&db.Vendor{
+			Identifier: vendorId,
+		})
+		v, err := registry.VendorById(vendorId)
+		if assert.NoError(t, err) {
+			assert.Equal(t, vendorId, v.Identifier)
+		}
 	})
 }
 

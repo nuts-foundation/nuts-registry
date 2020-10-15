@@ -25,13 +25,14 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
-	"github.com/nuts-foundation/nuts-registry/test"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
+	"github.com/nuts-foundation/nuts-registry/test"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -79,6 +80,31 @@ func TestHttpClient_OrganizationById(t *testing.T) {
 		event, err := c.OrganizationById(test.OrganizationID("id"))
 		assert.Contains(t, err.Error(), "connection refused")
 		assert.Nil(t, event)
+	})
+}
+
+func TestHttpClient_VendorById(t *testing.T) {
+	t.Run("not found", func(t *testing.T) {
+		s := httptest.NewServer(handler{statusCode: http.StatusNotFound, responseData: genericError})
+		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
+
+		_, err := c.VendorById(test.VendorID("id"))
+
+		assert.EqualError(t, err, "registry returned HTTP 404 (expected: 200), response: error reason", "error")
+	})
+
+	t.Run("200", func(t *testing.T) {
+		org, _ := json.Marshal(vendors[0])
+		s := httptest.NewServer(handler{statusCode: http.StatusOK, responseData: org})
+		c := HttpClient{ServerAddress: s.URL, Timeout: time.Second}
+
+		res, err := c.VendorById(test.VendorID("id"))
+
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		assert.Equal(t, vendors[0].Identifier, res.Identifier)
 	})
 }
 
