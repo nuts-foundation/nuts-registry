@@ -23,8 +23,14 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/base64"
 	"errors"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"sort"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -32,19 +38,14 @@ import (
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/assert"
+
 	certutil "github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/nuts-foundation/nuts-registry/pkg/network"
 	"github.com/nuts-foundation/nuts-registry/test"
-	"github.com/spf13/cobra"
-	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"sort"
-	"testing"
-	"time"
 )
 
 var vendorId core.PartyID
@@ -175,15 +176,15 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 		if !assert.Len(t, payload.OrgKeys, 1) {
 			return
 		}
-		jwk, err := cert.MapToJwk(payload.OrgKeys[0].(map[string]interface{}))
+		keyAsJwk, err := cert.MapToJwk(payload.OrgKeys[0].(map[string]interface{}))
 		if !assert.NoError(t, err) {
 			return
 		}
 		assert.False(t, payload.Start.IsZero())
 		assert.Nil(t, payload.End)
 		// Check certificate
-		chainInterf, _ := jwk.Get("x5c")
-		chain := chainInterf.([]*x509.Certificate)
+		chainInterf, _ := keyAsJwk.Get("x5c")
+		chain := chainInterf.(jwk.CertificateChain).Get()
 		if !assert.Len(t, chain, 1) {
 			return
 		}
@@ -217,7 +218,7 @@ func TestRegistryAdministration_VendorClaim(t *testing.T) {
 		// Feed it to VendorClaim()
 		orgCertAsJWK, _ := cert.CertificateToJWK(orgCertificate)
 		jwkAsMap, _ := cert.JwkToMap(orgCertAsJWK)
-		jwkAsMap[jwk.X509CertChainKey] = base64.StdEncoding.EncodeToString(orgCertificate.Raw)
+		//jwkAsMap[jwk.X509CertChainKey] = base64.StdEncoding.EncodeToString(orgCertificate.Raw)
 		event, err := cxt.registry.VendorClaim(org, orgName, []interface{}{jwkAsMap})
 		if !assert.NoError(t, err) {
 			return

@@ -112,7 +112,7 @@ func (o Organization) HasKey(key jwk.Key, validAtMoment time.Time) (bool, error)
 			// Found the key
 			chainInterf, chainExists := k.Get("x5c")
 			if chainExists {
-				certificate := chainInterf.([]*x509.Certificate)[0]
+				certificate := chainInterf.(jwk.CertificateChain).Get()[0]
 				// JWK has a certificate attached, check if it's valid at the specified time
 				if validAtMoment.Before(certificate.NotBefore) || validAtMoment.After(certificate.NotAfter) {
 					return false, nil
