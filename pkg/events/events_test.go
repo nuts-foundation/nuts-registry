@@ -75,6 +75,35 @@ func TestEventsFromJSON(t *testing.T) {
 	})
 }
 
+func TestEventFromJSONWithIssuedAt(t *testing.T) {
+	t.Run("ok - issuedAt not present", func(t *testing.T) {
+		data, err := readTestEvent()
+		if !assert.NoError(t, err) {
+			return
+		}
+		expected := time.Now()
+		event, err := EventFromJSONWithIssuedAt(data, expected)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, expected, event.IssuedAt())
+	})
+	t.Run("ok - issuedAt present", func(t *testing.T) {
+		unexpected := time.Date(2020, 10, 20, 20, 30, 0, 0, time.UTC)
+		event, err := EventFromJSONWithIssuedAt(CreateEvent("someType", "Hello, World!", nil).Marshal(), unexpected)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.NotEqual(t, unexpected, event.IssuedAt())
+		assert.False(t, event.IssuedAt().IsZero())
+	})
+	t.Run("error - unable to unmarshal event", func(t *testing.T) {
+		event, err := EventFromJSONWithIssuedAt([]byte("not JSON"), time.Now())
+		assert.Nil(t, event)
+		assert.Error(t, err)
+	})
+}
+
 func TestEventFromJSON(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		t.Run("v0", func(t *testing.T) {
@@ -87,6 +116,8 @@ func TestEventFromJSON(t *testing.T) {
 				return
 			}
 			assert.Equal(t, "VendorClaimEvent", string(event.Type()))
+			// v0 events have no issuedAt field, so using EventFromJSON should lead to a zero timestamp.
+			assert.True(t, event.IssuedAt().IsZero())
 		})
 		t.Run("v1", func(t *testing.T) {
 			input := `{

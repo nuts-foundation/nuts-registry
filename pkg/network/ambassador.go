@@ -102,9 +102,11 @@ func (n *ambassador) processDocument(document *model.Document) {
 		log.Logger().Errorf("Unable read document data from Nuts Network (hash=%s): %v", document.Hash, err)
 		return
 	}
-	if event, err := events.EventFromJSON(buf.Bytes()); err != nil {
+	if event, err := events.EventFromJSONWithIssuedAt(buf.Bytes(), document.Timestamp); err != nil {
 		log.Logger().Errorf("Unable parse event from Nuts Network (hash=%s): %v", document.Hash, err)
 	} else {
-		_ = n.eventSystem.ProcessEvent(event)
+		if err = n.eventSystem.ProcessEvent(event); err != nil {
+			log.Logger().Warnf("Error while processing event from Nuts Network (hash=%s): %v", document.Hash, err)
+		}
 	}
 }

@@ -214,6 +214,20 @@ func EventFromJSON(data []byte) (Event, error) {
 	return &e, nil
 }
 
+// EventFromJSONWithIssuedAt functions exactly as EventFromJSON but allows the caller to set issuedAt if it's not
+// present in the event which is the case for v0 events. If it's present, the supplied issuedAt is ignored.
+func EventFromJSONWithIssuedAt(data []byte, issuedAt time.Time) (Event, error) {
+	if event, err := EventFromJSON(data); err != nil {
+		return nil, err
+	} else {
+		jEvent := event.(*jsonEvent)
+		if jEvent.IssuedAt().IsZero() {
+			jEvent.EventIssuedAt = issuedAt
+		}
+		return jEvent, nil
+	}
+}
+
 func validateEvent(evt jsonEvent) error {
 	if evt.EventType == "" {
 		return ErrMissingEventType
