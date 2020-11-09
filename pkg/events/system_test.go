@@ -21,6 +21,7 @@ package events
 
 import (
 	"errors"
+	"fmt"
 	"github.com/nuts-foundation/nuts-go-test/io"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
@@ -82,40 +83,81 @@ func TestDiagnostics(t *testing.T) {
 
 func TestProcessEventsOutOfOrder(t *testing.T) {
 	eventType := EventType("increment")
-	value := 0
-	eventsHandled := 0
-	system := NewEventSystem(eventType)
-	system.Configure(io.TestDirectory(t))
-	system.RegisterEventHandler(eventType, func(event Event, lookup EventLookup) error {
-		newValue := 0
-		if err := event.Unmarshal(&newValue); err != nil {
-			return err
+	t.Run("all events are there, random order", func(t *testing.T) {
+		value := 0
+		eventsHandled := 0
+		system := NewEventSystem(eventType)
+		system.Configure(io.TestDirectory(t))
+		system.RegisterEventHandler(eventType, func(event Event, lookup EventLookup) error {
+			if !event.PreviousRef().IsZero() && lookup.Get(event.PreviousRef()) == nil {
+				return fmt.Errorf("previous event not processed: %s", event.PreviousRef())
+			}
+			newValue := 0
+			if err := event.Unmarshal(&newValue); err != nil {
+				return err
+			}
+			if newValue != value+1 {
+				return errors.New("can't apply value")
+			}
+			value = newValue
+			eventsHandled++
+			return nil
+		})
+		events := make([]Event, 0)
+		var prevEvent Ref
+		for i := 0; i < 100; i++ {
+			event := CreateTestEvent(eventType, i+1, prevEvent, time.Unix(int64(10000+i), 0))
+			events = append(events, event)
+			prevEvent = event.Ref()
 		}
-		if newValue != value + 1 {
-			return errors.New("can't apply value")
+		// Sort random order
+		sort.Slice(events, func(i, j int) bool {
+			return rand.Intn(2) == 1
+		})
+		for i := 0; i < len(events); i++ {
+			if err := system.ProcessEvent(events[i]); err != nil {
+				if !assert.NoError(t, err) {
+					return
+				}
+			}
 		}
-		value = newValue
-		eventsHandled++
-		return nil
+		assert.Equal(t, len(events), eventsHandled)
+		assert.Empty(t, (system.(*diskEventSystem)).eventsToBeRetried)
 	})
-	events := make([]Event, 0)
-	var prevEvent Ref
-	for i := 0; i < 100; i++ {
-		event := CreateTestEvent(eventType, i + 1, prevEvent, time.Unix(int64(10000 + i), 0))
-		events = append(events, event)
-		prevEvent = event.Ref()
-	}
-	// Sort random order
-	sort.Slice(events, func(i, j int) bool {
-		return rand.Intn(2) == 1
-	})
-	for i := 0; i < len(events); i++ {
-		if err := system.ProcessEvent(events[i]); err != nil {
-			println(err.Error())
+	t.Run("missing event halfway, shouldn't retry", func(t *testing.T) {
+		event1 := CreateEvent(eventType, "1", nil)
+		event2 := CreateEvent(eventType, "2", event1.Ref())
+		event3 := CreateEvent(eventType, "3", event2.Ref())
+
+		system := NewEventSystem(eventType)
+		system.Configure(io.TestDirectory(t))
+		handledEvents := make(map[string]bool, 0)
+		system.RegisterEventHandler(eventType, func(event Event, lookup EventLookup) error {
+			if !event.PreviousRef().IsZero() && lookup.Get(event.PreviousRef()) == nil {
+				t.Fatal("previous event not processed")
+			}
+			var payload string
+			event.Unmarshal(&payload)
+			handledEvents[payload] = true
+			return nil
+		})
+
+		err := system.ProcessEvent(event3)
+		if !assert.NoError(t, err) {
+			return
 		}
-	}
-	assert.Equal(t, len(events), eventsHandled)
-	assert.Empty(t, (system.(*diskEventSystem)).eventsToBeRetried)
+		// Event 2 is missing, so event 3 shouldn't be retried
+		err = system.ProcessEvent(event1)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Len(t, handledEvents, 1)
+		err = system.ProcessEvent(event2)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Len(t, handledEvents, 3)
+	})
 }
 
 func TestLoadAndApplyEvents(t *testing.T) {
