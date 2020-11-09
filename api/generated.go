@@ -226,7 +226,9 @@ type HttpRequestDoer interface {
 // Client which conforms to the OpenAPI3 specification for this service.
 type Client struct {
 	// The endpoint of the server conforming to this interface, with scheme,
-	// https://api.deepmap.com for example.
+	// https://api.deepmap.com for example. This can contain a path relative
+	// to the server, such as https://api.deepmap.com/dev-test, and all the
+	// paths in the swagger spec will be appended to the server.
 	Server string
 
 	// Doer for performing requests, typically a *http.Client with any
@@ -2085,23 +2087,29 @@ type EchoRouter interface {
 
 // RegisterHandlers adds each server route to the EchoRouter.
 func RegisterHandlers(router EchoRouter, si ServerInterface) {
+	RegisterHandlersWithBaseURL(router, si, "")
+}
+
+// Registers handlers, and prepends BaseURL to the paths, so that the paths
+// can be served under a prefix.
+func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL string) {
 
 	wrapper := ServerInterfaceWrapper{
 		Handler: si,
 	}
 
-	router.POST("/api/admin/verify", wrapper.Verify)
-	router.GET("/api/endpoints", wrapper.EndpointsByOrganisationId)
-	router.GET("/api/mtls/cas", wrapper.MTLSCAs)
-	router.GET("/api/mtls/certificates", wrapper.MTLSCertificates)
-	router.POST("/api/organization", wrapper.VendorClaim)
-	router.GET("/api/organization/:id", wrapper.OrganizationById)
-	router.POST("/api/organization/:id/endpoints", wrapper.RegisterEndpoint)
-	router.POST("/api/organization/:id/refresh-cert", wrapper.RefreshOrganizationCertificate)
-	router.GET("/api/organizations", wrapper.SearchOrganizations)
-	router.GET("/api/vendor/:id", wrapper.VendorById)
-	router.POST("/api/vendor/:id/claim", wrapper.DeprecatedVendorClaim)
-	router.POST("/api/vendors", wrapper.RegisterVendor)
+	router.POST(baseURL+"/api/admin/verify", wrapper.Verify)
+	router.GET(baseURL+"/api/endpoints", wrapper.EndpointsByOrganisationId)
+	router.GET(baseURL+"/api/mtls/cas", wrapper.MTLSCAs)
+	router.GET(baseURL+"/api/mtls/certificates", wrapper.MTLSCertificates)
+	router.POST(baseURL+"/api/organization", wrapper.VendorClaim)
+	router.GET(baseURL+"/api/organization/:id", wrapper.OrganizationById)
+	router.POST(baseURL+"/api/organization/:id/endpoints", wrapper.RegisterEndpoint)
+	router.POST(baseURL+"/api/organization/:id/refresh-cert", wrapper.RefreshOrganizationCertificate)
+	router.GET(baseURL+"/api/organizations", wrapper.SearchOrganizations)
+	router.GET(baseURL+"/api/vendor/:id", wrapper.VendorById)
+	router.POST(baseURL+"/api/vendor/:id/claim", wrapper.DeprecatedVendorClaim)
+	router.POST(baseURL+"/api/vendors", wrapper.RegisterVendor)
 
 }
 

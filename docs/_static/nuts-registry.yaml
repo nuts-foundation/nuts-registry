@@ -548,10 +548,7 @@ components:
       example: health
     EndpointProperties:
       type: object
-      additionalProperties:
-        type: string
       description: A property bag, containing extra properties for endpoints
     JWK:
       description: as described by https://tools.ietf.org/html/rfc7517. Modelled as object so libraries can parse the tokens themselves.
-      additionalProperties: {}
       type: object
