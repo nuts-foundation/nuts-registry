@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"os"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -51,26 +52,54 @@ func Test_ambassador_Send(t *testing.T) {
 }
 
 func Test_ambassador_Receive(t *testing.T) {
-	eventSystem, networkInstance := createInstance(t)
-	var eventsHandled sync.WaitGroup
-	eventsHandled.Add(1)
-	eventSystem.RegisterEventHandler(eventType, func(event events.Event, lookup events.EventLookup) error {
-		eventsHandled.Done()
-		return nil
+	t.Run("ok", func(t *testing.T) {
+		eventSystem, networkInstance := createInstance(t)
+		var eventsHandled sync.WaitGroup
+		eventsHandled.Add(1)
+		eventSystem.RegisterEventHandler(eventType, func(event events.Event, lookup events.EventLookup) error {
+			eventsHandled.Done()
+			return nil
+		})
+		event := events.CreateEvent(eventType, "Hello from Network!", nil)
+		_, err := networkInstance.AddDocumentWithContents(time.Now(), documentType, event.Marshal())
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventsHandled.Wait()
 	})
-	event := events.CreateEvent(eventType, "Hello from Network!", nil)
-	_, err := networkInstance.AddDocumentWithContents(time.Now(), documentType, event.Marshal())
-	if !assert.NoError(t, err) {
-		return
-	}
-	eventsHandled.Wait()
+	t.Run("ok - v0 event without issuedAt field, use document time", func(t *testing.T) {
+		eventSystem, networkInstance := createInstance(t)
+		var eventsHandled sync.WaitGroup
+		eventsHandled.Add(1)
+		var handledEvent atomic.Value
+		eventSystem.RegisterEventHandler("RegisterVendorEvent", func(event events.Event, lookup events.EventLookup) error {
+			eventsHandled.Done()
+			handledEvent.Store(event)
+			return nil
+		})
+		eventData := `{
+  "type": "RegisterVendorEvent",
+  "payload": {
+    "name": "BecauseWeCare Software Inc.",
+    "identifier": "urn:oid:1.2.3:08013836"
+  }
+}`
+		documentTime := time.Date(2020, 10, 20, 20, 30, 0, 0, time.UTC)
+		_, err := networkInstance.AddDocumentWithContents(documentTime, documentType, []byte(eventData))
+		if !assert.NoError(t, err) {
+			return
+		}
+		eventsHandled.Wait()
+		// Assert that the timestamp from the document is used for issuedAt
+		assert.Equal(t, documentTime, handledEvent.Load().(events.Event).IssuedAt())
+	})
 }
 
 func createInstance(t *testing.T) (events.EventSystem, *pkg2.Network) {
 	os.Setenv("NUTS_IDENTITY", test.VendorID("4").String())
 	core.NutsConfig().Load(&cobra.Command{})
 	testDirectory := io.TestDirectory(t)
-	eventSystem := events.NewEventSystem(eventType)
+	eventSystem := events.NewEventSystem(eventType, "RegisterVendorEvent")
 	eventSystem.Configure(testDirectory)
 	networkInstance := pkg2.NewTestNetworkInstance(testDirectory)
 	ambassador := NewAmbassador(networkInstance, pkg.NewTestCryptoInstance(testDirectory), eventSystem)

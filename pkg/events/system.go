@@ -141,7 +141,7 @@ func (system *diskEventSystem) ProcessEvent(event Event) error {
 		return nil
 	}
 	// If there is a previous event which hasn't been processed yet, we set it aside to be processed later.
-	if !event.PreviousRef().IsZero() && system.lut.Get(event.PreviousRef()) == nil {
+	if !system.isPreviousEventProcessed(event) {
 		log.Logger().Infof("Event %s refers to previous event %s which hasn't been processed yet, setting it aside.", event.Ref(), event.PreviousRef())
 		system.eventsToBeRetried[event.Ref().String()] = event
 		return nil
@@ -150,6 +150,13 @@ func (system *diskEventSystem) ProcessEvent(event Event) error {
 	// There might be unprocessed (received out of order) events that depend on this event, so we retry events which failed earlier
 	system.retryEvents()
 	return err
+}
+
+func (system diskEventSystem) isPreviousEventProcessed(event Event) bool {
+	if event.PreviousRef().IsZero() {
+		return true
+	}
+	return system.lut.Get(event.PreviousRef()) != nil
 }
 
 func (system *diskEventSystem) retryEvents() {
@@ -163,6 +170,10 @@ func (system *diskEventSystem) retryEvents() {
 		return events[i].IssuedAt().Before(events[j].IssuedAt())
 	})
 	for _, event := range events {
+		if !system.isPreviousEventProcessed(event) {
+			// Previous event not processed yet, skipping
+			continue
+		}
 		if err := system.processEvent(event); err != nil {
 			log.Logger().Debugf("Error while processing set-aside event %s, will retry later: %v", event.Ref(), err)
 		}
