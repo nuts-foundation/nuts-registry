@@ -20,6 +20,7 @@ package domain
 
 import (
 	"fmt"
+	"github.com/lestrrat-go/jwx/jws"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	core "github.com/nuts-foundation/nuts-go-core"
 	cert2 "github.com/nuts-foundation/nuts-registry/pkg/cert"
@@ -39,10 +40,17 @@ type RegisterVendorEvent struct {
 	Keys       []interface{} `json:"keys,omitempty"`
 }
 
-func (r *RegisterVendorEvent) PostProcessUnmarshal(event events.Event) error {
+func (r *RegisterVendorEvent) PostProcessUnmarshal(_ events.Event) error {
 	// Default fallback to 'healthcare' domain when none is set, for handling legacy data when 'domain' didn't exist.
 	if r.Domain == "" {
 		r.Domain = types.FallbackDomain
+	}
+	// Backwards compatibility for registry entries with a JWK containing a string x5c field instead of []string
+	for _, key := range r.Keys {
+		keyAsMap := key.(map[string]interface{})
+		if x5c, ok := keyAsMap[jws.X509CertChainKey].(string); ok {
+			keyAsMap[jws.X509CertChainKey] = []string{x5c}
+		}
 	}
 	if err := cert.ValidateJWK(r.Keys...); err != nil {
 		return err
