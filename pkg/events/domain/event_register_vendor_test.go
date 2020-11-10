@@ -19,6 +19,8 @@
 package domain
 
 import (
+	"encoding/base64"
+	"github.com/lestrrat-go/jwx/jwk"
 	cert2 "github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/types"
@@ -84,6 +86,21 @@ func TestRegisterVendorEvent_PostProcessUnmarshal(t *testing.T) {
 		}
 		err := event.PostProcessUnmarshal(events.CreateEvent(RegisterVendor, event, nil))
 		assert.EqualError(t, err, "vendor ID in certificate (urn:oid:1.3.6.1.4.1.54851.4:def) doesn't match event (urn:oid:1.3.6.1.4.1.54851.4:abc)")
+	})
+	t.Run("backwards compatibility for string x5c instead of []string", func(t *testing.T) {
+		csr, _ := cert2.VendorCertificateRequest(test.VendorID("abc"), "Vendor", "CA", types.HealthcareDomain)
+		cert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
+		// Craft event with a string x5c instead of []string
+		event := RegisterVendorEvent{
+			Identifier: test.VendorID("abc"),
+			Keys:       []interface{}{certToMap(cert)},
+		}
+		keyAsMap := event.Keys[0].(map[string]interface{})
+		keyAsMap["x5c"] = base64.StdEncoding.EncodeToString(keyAsMap["x5c"].(jwk.CertificateChain).Get()[0].Raw)
+		err := event.PostProcessUnmarshal(nil)
+		if !assert.NoError(t, err) {
+			return
+		}
 	})
 }
 
