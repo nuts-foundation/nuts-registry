@@ -20,12 +20,11 @@ package network
 
 import (
 	"bytes"
-	log "github.com/nuts-foundation/nuts-crypto/log"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	network "github.com/nuts-foundation/nuts-network/pkg"
 	"github.com/nuts-foundation/nuts-network/pkg/model"
+	"github.com/nuts-foundation/nuts-registry/logging"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"github.com/sirupsen/logrus"
 )
 
 const documentType = "nuts.registry-event"
@@ -84,29 +83,29 @@ func (n *ambassador) sendEventToNetwork(event events.Event) {
 	eventData := event.Marshal()
 	document, err := n.networkClient.AddDocumentWithContents(event.IssuedAt(), documentType, eventData)
 	if err != nil {
-		log.Logger().Errorf("Error registering event on the network (event=%s): %v", event.IssuedAt(), err)
+		logging.Log().Errorf("Error registering event on the network (event=%s): %v", event.IssuedAt(), err)
 		return
 	}
-	logrus.Infof("Event registered on network (event=%s,hash=%s)", event.IssuedAt(), document.Hash)
+	logging.Log().Infof("Event registered on network (event=%s,hash=%s)", event.IssuedAt(), document.Hash)
 }
 
 func (n *ambassador) processDocument(document *model.Document) {
-	log.Logger().Infof("Received event through Nuts Network: %s", document.Hash)
+	logging.Log().Infof("Received event through Nuts Network: %s", document.Hash)
 	reader, err := n.networkClient.GetDocumentContents(document.Hash)
 	if err != nil {
-		log.Logger().Errorf("Unable to retrieve document from Nuts Network (hash=%s): %v", document.Hash, err)
+		logging.Log().Errorf("Unable to retrieve document from Nuts Network (hash=%s): %v", document.Hash, err)
 		return
 	}
 	buf := new(bytes.Buffer)
 	if _, err = buf.ReadFrom(reader); err != nil {
-		log.Logger().Errorf("Unable read document data from Nuts Network (hash=%s): %v", document.Hash, err)
+		logging.Log().Errorf("Unable read document data from Nuts Network (hash=%s): %v", document.Hash, err)
 		return
 	}
 	if event, err := events.EventFromJSONWithIssuedAt(buf.Bytes(), document.Timestamp); err != nil {
-		log.Logger().Errorf("Unable parse event from Nuts Network (hash=%s): %v", document.Hash, err)
+		logging.Log().Errorf("Unable parse event from Nuts Network (hash=%s): %v", document.Hash, err)
 	} else {
 		if err = n.eventSystem.ProcessEvent(event); err != nil {
-			log.Logger().Warnf("Error while processing event from Nuts Network (hash=%s): %v", document.Hash, err)
+			logging.Log().Warnf("Error while processing event from Nuts Network (hash=%s): %v", document.Hash, err)
 		}
 	}
 }

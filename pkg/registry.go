@@ -25,6 +25,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-registry/logging"
 	"io"
 	"net/http"
 	"os"
@@ -187,7 +188,7 @@ func NewRegistryInstance(config RegistryConfig, cryptoClient crypto.Client, netw
 		Config:  config,
 		crypto:  cryptoClient,
 		network: networkClient,
-		_logger: logrus.StandardLogger().WithField("module", ModuleName),
+		_logger: logging.Log(),
 	}
 }
 
@@ -224,12 +225,12 @@ func (r *Registry) Configure() error {
 			}
 			r.networkAmbassador.RegisterEventHandlers(r.EventSystem.RegisterEventHandler, domain.GetEventTypes())
 			if err = r.EventSystem.Configure(r.getEventsDir()); err != nil {
-				r.logger().WithError(err).Warn("Unable to configure event system")
+				logging.Log().WithError(err).Warn("Unable to configure event system")
 				return
 			}
 			// Apply stored events
 			if err = r.EventSystem.LoadAndApplyEvents(); err != nil {
-				r.logger().WithError(err).Warn("Unable to load registry files")
+				logging.Log().WithError(err).Warn("Unable to load registry files")
 			}
 		}
 	})
@@ -289,7 +290,7 @@ func (r *Registry) Start() error {
 	if r.Config.Mode == core.ServerEngineMode {
 		_, _, err := r.verify(*core.NutsConfig(), false)
 		if err != nil {
-			logrus.Error("Error occurred during registry data verification: ", err)
+			logging.Log().Error("Error occurred during registry data verification: ", err)
 		}
 		r.networkAmbassador.Start()
 		switch cm := r.Config.SyncMode; cm {
@@ -307,11 +308,11 @@ func (r *Registry) Start() error {
 // Shutdown cleans up any leftover go routines
 func (r *Registry) Shutdown() error {
 	if r.Config.Mode == core.ServerEngineMode {
-		r.logger().Debug("Sending close signal to all routines")
+		logging.Log().Debug("Sending close signal to all routines")
 		for _, ch := range r.closers {
 			ch <- struct{}{}
 		}
-		r.logger().Info("All routines closed")
+		logging.Log().Info("All routines closed")
 	}
 	return nil
 }
@@ -355,7 +356,7 @@ func (r *Registry) startFileSystemWatcher() error {
 					return
 				}
 
-				r.logger().Debugf("Received file watcher event: %s", event.String())
+				logging.Log().Debugf("Received file watcher event: %s", event.String())
 				if strings.HasSuffix(event.Name, ".json") &&
 					(event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create) {
 					// When copying or extracting files, we have no guarantees that the filewatcher notifies us about
@@ -368,16 +369,16 @@ func (r *Registry) startFileSystemWatcher() error {
 			case <-reloadRegistryTimer.C:
 				if r.Db != nil {
 					if err := r.Load(); err != nil {
-						r.logger().WithError(err).Error("error during reloading of registry files")
+						logging.Log().WithError(err).Error("error during reloading of registry files")
 					}
 				}
 			case err, ok := <-w.Errors:
 				if !ok {
 					return
 				}
-				r.logger().WithError(err).Error("Received file watcher error")
+				logging.Log().WithError(err).Error("Received file watcher error")
 			case <-closer:
-				r.logger().Debug("Stopping file watcher")
+				logging.Log().Debug("Stopping file watcher")
 				return
 			}
 		}
@@ -395,7 +396,7 @@ func (r *Registry) startFileSystemWatcher() error {
 
 func (r *Registry) startGithubSync() error {
 	if err := r.startFileSystemWatcher(); err != nil {
-		r.logger().WithError(err).Error("Github sync not started due to file watcher problem")
+		logging.Log().WithError(err).Error("Github sync not started due to file watcher problem")
 		return err
 	}
 
@@ -406,14 +407,14 @@ func (r *Registry) startGithubSync() error {
 		for {
 			var err error
 
-			r.logger().Debugf("Downloading registry files from %s to %s", r.Config.SyncAddress, r.getEventsDir())
+			logging.Log().Debugf("Downloading registry files from %s to %s", r.Config.SyncAddress, r.getEventsDir())
 			if eTag, err = r.downloadAndUnzip(eTag); err != nil {
-				r.logger().WithError(err).Error("Error downloading registry files")
+				logging.Log().WithError(err).Error("Error downloading registry files")
 			}
 
 			select {
 			case <-ch:
-				r.logger().Debug("Stopping github download")
+				logging.Log().Debug("Stopping github download")
 				return
 			case <-time.After(time.Duration(int64(r.Config.SyncInterval) * time.Minute.Nanoseconds())):
 
@@ -424,7 +425,7 @@ func (r *Registry) startGithubSync() error {
 	// register close channel
 	r.closers = append(r.closers, close)
 
-	r.logger().Info("Github sync started")
+	logging.Log().Info("Github sync started")
 
 	return nil
 }
@@ -437,7 +438,7 @@ func (r *Registry) downloadAndUnzip(eTag string) (string, error) {
 	}
 
 	if newTag == eTag {
-		r.logger().Debug("Latest version on github is the same as local, skipping")
+		logging.Log().Debug("Latest version on github is the same as local, skipping")
 		return eTag, nil
 	}
 
@@ -534,11 +535,4 @@ func (r *Registry) unzip() error {
 		}
 	}
 	return os.Remove(tarGzFile)
-}
-
-func (r *Registry) logger() *logrus.Entry {
-	if r._logger == nil {
-		r._logger = logrus.StandardLogger().WithField("module", ModuleName)
-	}
-	return r._logger
 }

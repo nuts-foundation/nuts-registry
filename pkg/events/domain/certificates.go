@@ -21,13 +21,13 @@ package domain
 import (
 	"crypto/x509"
 	"fmt"
+	"github.com/nuts-foundation/nuts-registry/logging"
 	"time"
 
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	cert2 "github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	errors2 "github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 type certificateEventHandler struct {
@@ -63,7 +63,7 @@ func (t certificateEventHandler) verify(certificate *x509.Certificate, moment ti
 	if err = verifyCertChainNutsDomain(chains[0]); err != nil {
 		// TODO: Nuts Domain is in PoC state, should be made mandatory later
 		// https://github.com/nuts-foundation/nuts-registry/issues/120
-		logrus.Debugf("Nuts domain verification failed: %v", err)
+		logging.Log().Debugf("Nuts domain verification failed: %v", err)
 	}
 	// We're not supporting multiple chains
 	return chains[0], nil

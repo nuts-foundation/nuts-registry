@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	"github.com/nuts-foundation/nuts-registry/logging"
 	"github.com/sirupsen/logrus"
 	"io"
 	"time"
@@ -152,8 +153,8 @@ func (j jsonEvent) Ref() Ref {
 	}
 	strippedJSON, _ := json.Marshal(eventAsMap)
 	canonicalizedJSON, err := canonicalizeJSON(strippedJSON)
-	if logrus.IsLevelEnabled(logrus.DebugLevel) {
-		logrus.WithFields(map[string]interface{}{
+	if logging.Log().Logger.IsLevelEnabled(logrus.DebugLevel) {
+		logging.Log().WithFields(map[string]interface{}{
 			"event":         string(eventAsJSON),
 			"canonicalized": string(canonicalizedJSON),
 		}).Trace("Calculating event ref")

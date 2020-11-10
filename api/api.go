@@ -25,6 +25,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-registry/logging"
 	"net/http"
 	"net/url"
 	"strings"
@@ -39,7 +40,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
-	"github.com/sirupsen/logrus"
 )
 
 // String converts an identifier to string
@@ -185,7 +185,7 @@ func (apiResource ApiWrapper) OrganizationById(ctx echo.Context, id string) erro
 	}
 	result, err := apiResource.R.OrganizationById(organizationID)
 	if err != nil {
-		logrus.Errorf("Error getting organization %s: %v", organizationID, err)
+		logging.Log().Errorf("Error getting organization %s: %v", organizationID, err)
 	}
 	if result == nil {
 		return ctx.JSON(http.StatusNotFound, fmt.Sprintf("Could not find organization with id %s", organizationID))
@@ -201,7 +201,7 @@ func (apiResource ApiWrapper) VendorById(ctx echo.Context, id string) error {
 	}
 	result, err := apiResource.R.VendorById(vendorID)
 	if err != nil && !errors.Is(err, pkg.ErrVendorNotFound) {
-		logrus.Errorf("Error getting vendor %s: %v", vendorID, err)
+		logging.Log().Errorf("Error getting vendor %s: %v", vendorID, err)
 		return ctx.String(http.StatusInternalServerError, "an internal server error occurred")
 	}
 	if result == nil {
@@ -222,7 +222,7 @@ func (apiResource ApiWrapper) EndpointsByOrganisationId(ctx echo.Context, params
 		dbEndpoints, err := apiResource.R.EndpointsByOrganizationAndType(organizationID, params.Type)
 
 		if err != nil {
-			logrus.Warning(err.Error())
+			logging.Log().Warning(err.Error())
 		} else {
 			foundEPs = append(endpointsFromDb(dbEndpoints), foundEPs...)
 		}
