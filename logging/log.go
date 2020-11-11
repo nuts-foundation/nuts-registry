@@ -24,6 +24,8 @@ import (
 
 var _logger = logrus.StandardLogger().WithField("module", "Registry")
 
+// Log returns a logger which should be used for logging in this engine. It adds fields so
+// log entries from this engine can be recognized as such.
 func Log() *logrus.Entry {
 	return _logger
 }
