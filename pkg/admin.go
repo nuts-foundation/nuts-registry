@@ -23,6 +23,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-registry/logging"
 	types2 "github.com/nuts-foundation/nuts-registry/pkg/types"
 	"time"
 
@@ -36,7 +37,6 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	dom "github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	errors2 "github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // ErrJWKConstruction indicates that a JWK couldn't be constructed
@@ -57,9 +57,9 @@ func (r *Registry) RegisterVendor(certificate *x509.Certificate) (events.Event, 
 		return nil, err
 	}
 	if previousEvent == nil {
-		r.logger().Infof("Registering vendor: %s", certificate.Subject)
+		logging.Log().Infof("Registering vendor: %s", certificate.Subject)
 	} else {
-		r.logger().Infof("Updating vendor: %s", certificate.Subject)
+		logging.Log().Infof("Updating vendor: %s", certificate.Subject)
 	}
 	name := certificate.Subject.Organization[0]
 	domain, err := certutil.NewNutsCertificate(certificate).GetDomain()
@@ -91,7 +91,7 @@ func (r *Registry) RegisterVendor(certificate *x509.Certificate) (events.Event, 
 // If not specified, a new key pair is generated.
 func (r *Registry) VendorClaim(orgID core.PartyID, orgName string, orgKeys []interface{}) (events.Event, error) {
 	vendorID := core.NutsConfig().VendorID()
-	logrus.Infof("Vendor claiming organization, vendor=%s, organization=%s, name=%s, keys=%d",
+	logging.Log().Infof("Vendor claiming organization, vendor=%s, organization=%s, name=%s, keys=%d",
 		vendorID, orgID, orgName, len(orgKeys))
 
 	vendor, err := r.getVendor()
@@ -101,7 +101,7 @@ func (r *Registry) VendorClaim(orgID core.PartyID, orgName string, orgKeys []int
 
 	// If no keys are supplied, make sure there's a key in the crypto module for the organisation
 	if len(orgKeys) == 0 {
-		logrus.Infof("No keys specified for organisation (id=%s). Keys will be generated or loaded from crypto module.", orgID)
+		logging.Log().Infof("No keys specified for organisation (id=%s). Keys will be generated or loaded from crypto module.", orgID)
 		_, err := r.loadOrGenerateKey(orgID)
 		if err != nil {
 			return nil, err
@@ -163,7 +163,7 @@ func (r *Registry) issueOrganizationCertificate(vendor *db.Vendor, orgID core.Pa
 }
 
 func (r *Registry) RefreshOrganizationCertificate(organizationID core.PartyID) (events.Event, error) {
-	logrus.Infof("Issuing new certificate for organization using existing private key (if present) (id=%s)", organizationID)
+	logging.Log().Infof("Issuing new certificate for organization using existing private key (if present) (id=%s)", organizationID)
 	vendor, err := r.getVendor()
 	if err != nil {
 		return nil, err
@@ -192,7 +192,7 @@ func (r *Registry) RefreshOrganizationCertificate(organizationID core.PartyID) (
 
 // RegisterEndpoint registers an endpoint for an organization
 func (r *Registry) RegisterEndpoint(organizationID core.PartyID, id string, url string, endpointType string, status string, properties map[string]string) (events.Event, error) {
-	logrus.Infof("Registering/updating endpoint, organization=%s, id=%s, type=%s, url=%s, status=%s",
+	logging.Log().Infof("Registering/updating endpoint, organization=%s, id=%s, type=%s, url=%s, status=%s",
 		organizationID, id, endpointType, url, status)
 	if id == "" {
 		id = uuid.New().String()
@@ -229,7 +229,7 @@ func (r *Registry) RegisterEndpoint(organizationID core.PartyID, id string, url 
 func (r *Registry) loadOrGenerateKey(party core.PartyID) (map[string]interface{}, error) {
 	key := types.KeyForEntity(types.LegalEntity{URI: party.String()})
 	if !r.crypto.PrivateKeyExists(key) {
-		logrus.Infof("No keys found for entity (%s), will generate a new key pair.", party)
+		logging.Log().Infof("No keys found for entity (%s), will generate a new key pair.", party)
 		if _, err := r.crypto.GenerateKeyPair(key, false); err != nil {
 			return nil, err
 		}
@@ -306,7 +306,7 @@ func (r *Registry) signAsOrganization(orgID core.PartyID, orgName string, payloa
 	// Or maybe this check should be changed (by then) to let it return an error since the vendor
 	// should first make sure to have an active certificate.
 	if hasCerts {
-		logrus.Debug("Signing event as organization")
+		logging.Log().Debug("Signing event as organization")
 		csr, err := certutil.OrganisationCertificateRequest(vendor.Name, orgID, orgName, vendor.Domain)
 		if err != nil {
 			return nil, errors2.Wrap(err, "unable to create CSR for JWS signing")

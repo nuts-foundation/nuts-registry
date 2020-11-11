@@ -20,8 +20,8 @@ package events
 
 import (
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
+	"github.com/nuts-foundation/nuts-registry/logging"
 	errors2 "github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // SignatureValidator validates event signatures.
@@ -45,7 +45,7 @@ func (v SignatureValidator) RegisterEventHandlers(fn EventRegistrar, eventType [
 func (v SignatureValidator) validate(event Event, _ EventLookup) error {
 	if len(event.Signature()) == 0 {
 		// https://github.com/nuts-foundation/nuts-registry/issues/84
-		logrus.Warnf("Event not signed, this is accepted for now but it will be rejected in future (event = %v).", event.IssuedAt())
+		logging.Log().Warnf("Event not signed, this is accepted for now but it will be rejected in future (event = %v).", event.IssuedAt())
 	} else {
 		// TODO: event.IssuedAt is not signed, what extra safety does it add checking it against the certificate validity?
 		// TODO: is the event signed by the expected entity (correct vendor/organization)?
@@ -55,7 +55,7 @@ func (v SignatureValidator) validate(event Event, _ EventLookup) error {
 				return errors2.Wrapf(err, "event signature verification failed, it will not be processed (event = %v)", event.IssuedAt())
 			}
 		} else {
-			logrus.Warnf("Unsupported signature version (%d), unable to validate signature. This should be fixed in the future using canonicalization (event = %v).", event.Version(), event.IssuedAt())
+			logging.Log().Warnf("Unsupported signature version (%d), unable to validate signature. This should be fixed in the future using canonicalization (event = %v).", event.Version(), event.IssuedAt())
 		}
 	}
 	return nil

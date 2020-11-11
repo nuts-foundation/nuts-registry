@@ -23,16 +23,16 @@ import (
 	"fmt"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-registry/logging"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	errors2 "github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // verify verifies the data in the registry, migrating data whenever required (e.g. issue missing certificates) when autoFix=true.
 // The events that result from fixing tge data are returned.
 func (r *Registry) verify(config core.NutsConfigValues, autoFix bool) ([]events.Event, bool, error) {
-	r.logger().Infof("Verifying registry integrity (autofix issues=%v)...", autoFix)
+	logging.Log().Infof("Verifying registry integrity (autofix issues=%v)...", autoFix)
 	resultingEvents := make([]events.Event, 0)
 	// Assert vendor is registered
 	identity := config.VendorID()
@@ -59,12 +59,12 @@ func (r *Registry) verify(config core.NutsConfigValues, autoFix bool) ([]events.
 		}
 	}
 	if fixRequired {
-		r.logger().Warn("Your registry data needs fixing/upgrading. Please run the following administrative command: `registry verify -f`")
+		logging.Log().Warn("Your registry data needs fixing/upgrading. Please run the following administrative command: `registry verify -f`")
 	} else {
 		if len(resultingEvents) > 0 {
-			r.logger().Infof("Registry data fixed/upgraded (%d events were emitted).", len(resultingEvents))
+			logging.Log().Infof("Registry data fixed/upgraded (%d events were emitted).", len(resultingEvents))
 		} else {
-			r.logger().Info("Registry verification done.")
+			logging.Log().Info("Registry verification done.")
 		}
 	}
 	return resultingEvents, fixRequired, err
@@ -73,7 +73,7 @@ func (r *Registry) verify(config core.NutsConfigValues, autoFix bool) ([]events.
 func (r *Registry) verifyVendorCertificate(vendor *db.Vendor, identity core.PartyID) (events.Event, bool, error) {
 	certificates := vendor.GetActiveCertificates()
 	if len(certificates) == 0 {
-		r.logger().Warn("No active certificates found for configured vendor.")
+		logging.Log().Warn("No active certificates found for configured vendor.")
 		return nil, false, nil
 	} else {
 		if !r.crypto.PrivateKeyExists(types.KeyForEntity(types.LegalEntity{URI: identity.String()})) {
@@ -86,7 +86,7 @@ func (r *Registry) verifyVendorCertificate(vendor *db.Vendor, identity core.Part
 func (r *Registry) verifyOrganisation(org *db.Organization, autoFix bool) (events.Event, bool, error) {
 	certificates := org.GetActiveCertificates()
 	if len(certificates) == 0 {
-		logrus.Warnf("No active certificates found for organisation (id = %s).", org.Identifier)
+		logging.Log().Warnf("No active certificates found for organisation (id = %s).", org.Identifier)
 		if autoFix {
 			event, err := r.RefreshOrganizationCertificate(org.Identifier)
 			if err != nil {

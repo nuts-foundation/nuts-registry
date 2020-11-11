@@ -22,7 +22,7 @@ package cmd
 import (
 	cfg "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/engine"
-	"github.com/sirupsen/logrus"
+	"github.com/nuts-foundation/nuts-registry/logging"
 )
 
 var e = engine.NewRegistryEngine()
@@ -37,7 +37,7 @@ func Execute() {
 	}
 
 	cfg.RegisterEngine(e)
-	c.PrintConfig(logrus.StandardLogger())
+	c.PrintConfig(logging.Log().Logger)
 
 	if err := c.InjectIntoEngine(e); err != nil {
 		panic(err)

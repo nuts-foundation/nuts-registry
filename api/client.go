@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-registry/logging"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -37,7 +38,6 @@ import (
 
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
-	"github.com/sirupsen/logrus"
 )
 
 // HttpClient holds the server address and other basic settings for the http client
@@ -64,7 +64,7 @@ func (hb HttpClient) Verify(fix bool) ([]events.Event, bool, error) {
 	defer cancel()
 	response, err := hb.client().Verify(ctx, &VerifyParams{Fix: &fix})
 	if err != nil {
-		logrus.Error("Error while running verify: ", err)
+		logging.Log().Error("Error while running verify: ", err)
 		return nil, false, err
 	}
 	if err := testResponseCode(http.StatusOK, response); err != nil {
@@ -72,12 +72,12 @@ func (hb HttpClient) Verify(fix bool) ([]events.Event, bool, error) {
 	}
 	responseData, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		logrus.Error("Error while parsing verify response: ", err)
+		logging.Log().Error("Error while parsing verify response: ", err)
 		return nil, false, err
 	}
 	verifyResponse := altVerifyResponse{}
 	if err := json.Unmarshal(responseData, &verifyResponse); err != nil {
-		logrus.Error("Error while unmarshalling verify response: ", err)
+		logging.Log().Error("Error while unmarshalling verify response: ", err)
 		return nil, false, err
 	}
 	return verifyResponse.Events, verifyResponse.Fix, nil
@@ -104,13 +104,13 @@ func (hb HttpClient) EndpointsByOrganizationAndType(organizationID core.PartyID,
 	}
 	res, err := hb.client().EndpointsByOrganisationId(ctx, params)
 	if err != nil {
-		logrus.Error("error while getting endpoints by organization", err)
+		logging.Log().Error("error while getting endpoints by organization", err)
 		return nil, core.Wrap(err)
 	}
 
 	parsed, err := ParseEndpointsByOrganisationIdResponse(res)
 	if err != nil {
-		logrus.Error("error while reading response body", err)
+		logging.Log().Error("error while reading response body", err)
 		return nil, err
 	}
 
@@ -120,7 +120,7 @@ func (hb HttpClient) EndpointsByOrganizationAndType(organizationID core.PartyID,
 	}
 
 	if err := json.Unmarshal(parsed.Body, &endpoints); err != nil {
-		logrus.Error("could not unmarshal response body")
+		logging.Log().Error("could not unmarshal response body")
 		return nil, err
 	}
 
@@ -149,7 +149,7 @@ func (hb HttpClient) ReverseLookup(name string) (*db.Organization, error) {
 
 	// should not be reachable
 	if len(orgs) != 1 {
-		logrus.Error("Reverse lookup returned more than 1 match")
+		logging.Log().Error("Reverse lookup returned more than 1 match")
 		return nil, ErrOrganizationNotFound
 	}
 
@@ -162,13 +162,13 @@ func (hb HttpClient) searchOrganization(params SearchOrganizationsParams) ([]db.
 
 	res, err := hb.client().SearchOrganizations(ctx, &params)
 	if err != nil {
-		logrus.Error("error while searching for organizations", err)
+		logging.Log().Error("error while searching for organizations", err)
 		return nil, core.Wrap(err)
 	}
 
 	parsed, err := ParseSearchOrganizationsResponse(res)
 	if err != nil {
-		logrus.Error("error while reading response body", err)
+		logging.Log().Error("error while reading response body", err)
 		return nil, err
 	}
 
@@ -182,7 +182,7 @@ func (hb HttpClient) searchOrganization(params SearchOrganizationsParams) ([]db.
 	var organizations []Organization
 
 	if err := json.Unmarshal(parsed.Body, &organizations); err != nil {
-		logrus.Error("could not unmarshal response body")
+		logging.Log().Error("could not unmarshal response body")
 		return nil, err
 	}
 
@@ -241,7 +241,7 @@ func (hb HttpClient) RegisterVendor(certificate *x509.Certificate) (events.Event
 	defer cancel()
 	res, err := hb.client().RegisterVendorWithBody(ctx, "application/x-pem-file", strings.NewReader(cert.CertificateToPEM(certificate)))
 	if err != nil {
-		logrus.Error("error while registering vendor", err)
+		logging.Log().Error("error while registering vendor", err)
 		return nil, core.Wrap(err)
 	}
 	return testAndParseEventResponse(res)
@@ -254,7 +254,7 @@ func (hb HttpClient) OrganizationById(id core.PartyID) (*db.Organization, error)
 
 	res, err := hb.client().OrganizationById(ctx, id.String())
 	if err != nil {
-		logrus.Error("error while getting organization by id", err)
+		logging.Log().Error("error while getting organization by id", err)
 		return nil, core.Wrap(err)
 	}
 	if err := testResponseCode(http.StatusOK, res); err != nil {
@@ -263,13 +263,13 @@ func (hb HttpClient) OrganizationById(id core.PartyID) (*db.Organization, error)
 
 	parsed, err := ParseOrganizationByIdResponse(res)
 	if err != nil {
-		logrus.Error("error while reading response body", err)
+		logging.Log().Error("error while reading response body", err)
 		return nil, err
 	}
 
 	var organization Organization
 	if err := json.Unmarshal(parsed.Body, &organization); err != nil {
-		logrus.Errorf("could not unmarshal response body: %v", err)
+		logging.Log().Errorf("could not unmarshal response body: %v", err)
 		return nil, err
 	}
 	// parse the newlines in the public key
@@ -289,7 +289,7 @@ func (hb HttpClient) VendorById(id core.PartyID) (*db.Vendor, error) {
 
 	res, err := hb.client().VendorById(ctx, id.String())
 	if err != nil {
-		logrus.Error("error while getting vendor by id", err)
+		logging.Log().Error("error while getting vendor by id", err)
 		return nil, core.Wrap(err)
 	}
 	if err := testResponseCode(http.StatusOK, res); err != nil {
@@ -298,13 +298,13 @@ func (hb HttpClient) VendorById(id core.PartyID) (*db.Vendor, error) {
 
 	parsed, err := ParseVendorByIdResponse(res)
 	if err != nil {
-		logrus.Error("error while reading response body", err)
+		logging.Log().Error("error while reading response body", err)
 		return nil, err
 	}
 
 	var vendor Vendor
 	if err := json.Unmarshal(parsed.Body, &vendor); err != nil {
-		logrus.Errorf("could not unmarshal response body: %v", err)
+		logging.Log().Errorf("could not unmarshal response body: %v", err)
 		return nil, err
 	}
 

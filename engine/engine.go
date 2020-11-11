@@ -22,6 +22,7 @@ package engine
 import (
 	"crypto/x509"
 	"fmt"
+	"github.com/nuts-foundation/nuts-registry/logging"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -39,7 +40,6 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -94,7 +94,7 @@ func cmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print the version number of the Nuts registry",
 		Run: func(cmd *cobra.Command, args []string) {
-			logrus.Errorf("version 0.0.0")
+			logging.Log().Errorf("version 0.0.0")
 		},
 	})
 
@@ -106,7 +106,7 @@ func cmd() *cobra.Command {
 			cl := registryClientCreator()
 			os, _ := cl.SearchOrganizations(args[0])
 
-			logrus.Errorf("Found %d organizations\n", len(os))
+			logging.Log().Errorf("Found %d organizations\n", len(os))
 		},
 	})
 
@@ -153,10 +153,10 @@ func cmd() *cobra.Command {
 			}
 			event, err := cl.RegisterVendor(certificate)
 			if err != nil {
-				logrus.Errorf("Unable to register vendor: %v", err)
+				logging.Log().Errorf("Unable to register vendor: %v", err)
 				return err
 			}
-			logrus.Info("Vendor registered.")
+			logging.Log().Info("Vendor registered.")
 			logEventToConsole(event)
 			return nil
 		},
@@ -174,20 +174,20 @@ func cmd() *cobra.Command {
 			}
 			event, err := cl.RefreshOrganizationCertificate(organizationID)
 			if err != nil {
-				logrus.Errorf("Unable to refresh organization certificate: %v", err)
+				logging.Log().Errorf("Unable to refresh organization certificate: %v", err)
 				return err
 			}
 			payload := domain.VendorClaimEvent{}
 			err = event.Unmarshal(&payload)
 			if err != nil {
-				logrus.Error("Unable to parse event payload.", err)
+				logging.Log().Error("Unable to parse event payload.", err)
 			}
 			certificates := cert.GetActiveCertificates(payload.OrgKeys, time.Now())
 			if len(certificates) == 0 {
-				logrus.Error("Certificate refresh succeeded, but couldn't find any activate certificate.")
+				logging.Log().Error("Certificate refresh succeeded, but couldn't find any activate certificate.")
 			} else {
 				// GetActiveCertificates returns the certificate with the longest validity first.
-				logrus.Infof("Organization certificate refreshed, new certificate is valid until %v", certificates[0].NotAfter)
+				logging.Log().Infof("Organization certificate refreshed, new certificate is valid until %v", certificates[0].NotAfter)
 			}
 			logEventToConsole(event)
 			return nil
@@ -207,10 +207,10 @@ func cmd() *cobra.Command {
 			}
 			event, err := cl.VendorClaim(organizationID, args[1], nil)
 			if err != nil {
-				logrus.Errorf("Unable to register vendor organisation claim: %v", err)
+				logging.Log().Errorf("Unable to register vendor organisation claim: %v", err)
 				return err
 			}
-			logrus.Info("Vendor organisation claim registered.")
+			logging.Log().Info("Vendor organisation claim registered.")
 			logEventToConsole(event)
 			return nil
 		},
@@ -224,19 +224,19 @@ func cmd() *cobra.Command {
 			Long:  "Verifies the vendor's own data in the registry, use --fix or -f to fix/upgrade data.",
 			RunE: func(cmd *cobra.Command, args []string) error {
 				cl := registryClientCreator()
-				logrus.Info("Verifying...")
+				logging.Log().Info("Verifying...")
 				resultingEvents, needsFixing, err := cl.Verify(*fix)
 				if err != nil {
-					logrus.Errorf("Verification error: %v", err)
+					logging.Log().Errorf("Verification error: %v", err)
 					return err
 				}
 				if needsFixing {
-					logrus.Warn("Verification complete, data must be fixed. Please rerun command with --fix or -f")
+					logging.Log().Warn("Verification complete, data must be fixed. Please rerun command with --fix or -f")
 				} else {
-					logrus.Info("Verification complete")
+					logging.Log().Info("Verification complete")
 				}
 				if len(resultingEvents) > 0 {
-					logrus.Infof("Data was fixed and %d events were emitted:", len(resultingEvents))
+					logging.Log().Infof("Data was fixed and %d events were emitted:", len(resultingEvents))
 					for _, event := range resultingEvents {
 						logEventToConsole(event)
 					}
@@ -266,10 +266,10 @@ func cmd() *cobra.Command {
 				}
 				event, err := cl.RegisterEndpoint(partyID, *id, args[2], args[1], db.StatusActive, parseCLIProperties(*properties))
 				if err != nil {
-					logrus.Errorf("Unable to register endpoint: %v", err)
+					logging.Log().Errorf("Unable to register endpoint: %v", err)
 					return err
 				}
-				logrus.Info("Endpoint registered.")
+				logging.Log().Info("Endpoint registered.")
 				logEventToConsole(event)
 				return nil
 			},

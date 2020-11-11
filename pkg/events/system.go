@@ -22,11 +22,10 @@ package events
 import (
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-crypto/log"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-registry/logging"
 	errors2 "github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -142,7 +141,7 @@ func (system *diskEventSystem) ProcessEvent(event Event) error {
 	}
 	// If there is a previous event which hasn't been processed yet, we set it aside to be processed later.
 	if !system.isPreviousEventProcessed(event) {
-		log.Logger().Infof("Event %s refers to previous event %s which hasn't been processed yet, setting it aside.", event.Ref(), event.PreviousRef())
+		logging.Log().Infof("Event %s refers to previous event %s which hasn't been processed yet, setting it aside.", event.Ref(), event.PreviousRef())
 		system.eventsToBeRetried[event.Ref().String()] = event
 		return nil
 	}
@@ -175,7 +174,7 @@ func (system *diskEventSystem) retryEvents() {
 			continue
 		}
 		if err := system.processEvent(event); err != nil {
-			log.Logger().Debugf("Error while processing set-aside event %s, will retry later: %v", event.Ref(), err)
+			logging.Log().Debugf("Error while processing set-aside event %s, will retry later: %v", event.Ref(), err)
 		}
 	}
 }
@@ -187,7 +186,7 @@ func (system *diskEventSystem) processEvent(event Event) error {
 	}
 	for _, handler := range handlers {
 		if err := handler(event, system.lut); err != nil {
-			log.Logger().Warnf("Error while processing event %s, event will set aside to be processed later: %v", event.Ref(), err)
+			logging.Log().Warnf("Error while processing event %s, event will set aside to be processed later: %v", event.Ref(), err)
 			system.eventsToBeRetried[event.Ref().String()] = event
 			return err
 		}
@@ -195,7 +194,7 @@ func (system *diskEventSystem) processEvent(event Event) error {
 	if err := system.lut.register(event); err != nil {
 		return err
 	}
-	logrus.WithFields(map[string]interface{}{
+	logging.Log().WithFields(map[string]interface{}{
 		"ref":      event.Ref(),
 		"prev":     event.PreviousRef(),
 		"type":     event.Type(),
@@ -243,7 +242,7 @@ func (system *diskEventSystem) LoadAndApplyEvents() error {
 		if !isJSONFile(entry) {
 			continue
 		}
-		logrus.Debugf("Parsing event: %s", entry.Name())
+		logging.Log().Debugf("Parsing event: %s", entry.Name())
 
 		matches := eventFileRegex.FindStringSubmatch(entry.Name())
 		if len(matches) != 3 {

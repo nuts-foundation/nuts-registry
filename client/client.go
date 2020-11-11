@@ -21,11 +21,11 @@ package client
 
 import (
 	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-registry/logging"
 	"time"
 
 	"github.com/nuts-foundation/nuts-registry/api"
 	"github.com/nuts-foundation/nuts-registry/pkg"
-	"github.com/sirupsen/logrus"
 )
 
 // NewRegistryClient creates a new Local- or RemoteClient for the nuts registry
@@ -36,7 +36,7 @@ func NewRegistryClient() pkg.RegistryClient {
 func initialize(registry *pkg.Registry) pkg.RegistryClient {
 	if registry.Config.Mode == core.ServerEngineMode {
 		if err := registry.Configure(); err != nil {
-			logrus.Panic(err)
+			logging.Log().Panic(err)
 		}
 		return registry
 	} else {
