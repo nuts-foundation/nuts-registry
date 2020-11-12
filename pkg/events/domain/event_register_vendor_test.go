@@ -19,8 +19,6 @@
 package domain
 
 import (
-	"encoding/base64"
-	"github.com/lestrrat-go/jwx/jwk"
 	cert2 "github.com/nuts-foundation/nuts-registry/pkg/cert"
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/types"
@@ -96,7 +94,7 @@ func TestRegisterVendorEvent_PostProcessUnmarshal(t *testing.T) {
 			Keys:       []interface{}{certToMap(cert)},
 		}
 		keyAsMap := event.Keys[0].(map[string]interface{})
-		keyAsMap["x5c"] = base64.StdEncoding.EncodeToString(keyAsMap["x5c"].(jwk.CertificateChain).Get()[0].Raw)
+		keyAsMap["x5c"] = keyAsMap["x5c"].([]string)[0]
 		err := event.PostProcessUnmarshal(nil)
 		if !assert.NoError(t, err) {
 			return
