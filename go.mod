@@ -14,7 +14,7 @@ require (
 	github.com/nuts-foundation/nuts-crypto v0.15.1-0.20201015073554-cbeeb24605c8
 	github.com/nuts-foundation/nuts-go-core v0.15.0
 	github.com/nuts-foundation/nuts-go-test v0.15.0
-	github.com/nuts-foundation/nuts-network v0.15.4
+	github.com/nuts-foundation/nuts-network v0.15.2-0.20201112112527-c2ac6712586d
 	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.7.0
