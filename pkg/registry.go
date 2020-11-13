@@ -25,7 +25,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-registry/logging"
 	"io"
 	"net/http"
 	"os"
@@ -34,6 +33,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/nuts-foundation/nuts-registry/logging"
 
 	"github.com/nuts-foundation/nuts-network/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/network"
@@ -263,7 +264,7 @@ func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
 func (r *Registry) VendorCAs() [][]*x509.Certificate {
 	now := time.Now()
 
-	roots := r.crypto.TrustStore().GetRoots(now)
+	roots, _ := r.crypto.TrustStore().Roots()
 	var rootChains [][]*x509.Certificate
 
 	for _, r := range roots {

@@ -20,6 +20,7 @@
 package db
 
 import (
+	"crypto/rsa"
 	"errors"
 	"testing"
 
@@ -528,7 +529,8 @@ func Test_org_toDb(t *testing.T) {
 			return
 		}
 		pubKey, _ := cert.PemToPublicKey([]byte(*publicKey))
-		assert.Equal(t, rsaKey.PublicKey, *pubKey)
+		rpb := pubKey.(*rsa.PublicKey)
+		assert.Equal(t, rsaKey.PublicKey, *rpb)
 	})
 
 	t.Run("Vendor identifier is copied", func(t *testing.T) {

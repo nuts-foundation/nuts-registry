@@ -21,8 +21,9 @@ package domain
 import (
 	"crypto/x509"
 	"fmt"
-	"github.com/nuts-foundation/nuts-registry/logging"
 	"time"
+
+	"github.com/nuts-foundation/nuts-registry/logging"
 
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	cert2 "github.com/nuts-foundation/nuts-registry/pkg/cert"
@@ -55,7 +56,10 @@ func (t certificateEventHandler) Verify(certificate *x509.Certificate, moment ti
 }
 
 func (t certificateEventHandler) verify(certificate *x509.Certificate, moment time.Time) ([]*x509.Certificate, error) {
-	chains, err := certificate.Verify(x509.VerifyOptions{Roots: t.trustStore.Pool(), CurrentTime: moment})
+	_, rootPool := t.trustStore.Roots()
+	_, intermediatePool := t.trustStore.Intermediates()
+
+	chains, err := certificate.Verify(x509.VerifyOptions{Roots: rootPool, Intermediates: intermediatePool, CurrentTime: moment})
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +76,10 @@ func (t certificateEventHandler) verify(certificate *x509.Certificate, moment ti
 // VerifiedChain verifies the given certificate against the trustStore and returns all the chains that could verify the certificate.
 // The func does not allow for a truststore with intermediates!
 func (t certificateEventHandler) VerifiedChain(certificate *x509.Certificate, moment time.Time) ([][]*x509.Certificate, error) {
-	return certificate.Verify(x509.VerifyOptions{Roots: t.trustStore.Pool(), CurrentTime: moment})
+	_, rootPool := t.trustStore.Roots()
+	_, intermediatePool := t.trustStore.Intermediates()
+
+	return certificate.Verify(x509.VerifyOptions{Roots: rootPool, Intermediates: intermediatePool, CurrentTime: moment})
 }
 
 func (t *certificateEventHandler) handleEvent(event events.Event, _ events.EventLookup) error {
