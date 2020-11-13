@@ -503,7 +503,7 @@ func init() {
 		Subject: pkix.Name{
 			CommonName: "Root CA",
 		},
-	}, time.Now(), 365 * 10, nil, nutsCAKey)
+	}, time.Now(), 365*10, nil, nutsCAKey)
 }
 
 func (cxt *testContext) empty() {
@@ -529,6 +529,7 @@ func (cxt *testContext) issueVendorCACertificate() *x509.Certificate {
 	if err := cryptoStorage.SavePrivateKey(cryptoTypes.KeyForEntity(caEntity), nutsCAKey); err != nil {
 		panic(err)
 	}
+	cxt.registry.crypto.TrustStore().AddCertificate(nutsCACertificate)
 
 	csr, _ := cxt.registry.crypto.GenerateVendorCACSR(vendorName)
 	vendorCACertificate, err := cxt.registry.crypto.SignCertificate(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{vendorId.String()}), cryptoTypes.KeyForEntity(caEntity), csr, crypto.CertificateProfile{

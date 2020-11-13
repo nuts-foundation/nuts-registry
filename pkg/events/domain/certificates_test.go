@@ -58,7 +58,8 @@ func Test_CertificateEventHandler_HandleEvent(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		assert.Len(t, handler.trustStore.Pool().Subjects(), 1)
+		_, pool := handler.trustStore.Roots()
+		assert.Len(t, pool.Subjects(), 1)
 	})
 	t.Run("ok - register vendor - self-signed", func(t *testing.T) {
 		handler := NewCertificateEventHandler(memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)
@@ -73,7 +74,8 @@ func Test_CertificateEventHandler_HandleEvent(t *testing.T) {
 		}
 		err := handler.handleEvent(events.CreateEvent(RegisterVendor, event, nil), nil)
 		assert.NoError(t, err)
-		assert.Len(t, handler.trustStore.Pool().Subjects(), 1)
+		_, pool := handler.trustStore.Roots()
+		assert.Len(t, pool.Subjects(), 1)
 	})
 	t.Run("ok - vendor claim", func(t *testing.T) {
 		handler := NewCertificateEventHandler(memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)
@@ -116,7 +118,8 @@ func Test_CertificateEventHandler_HandleEvent(t *testing.T) {
 		}
 		err := handler.handleEvent(events.CreateEvent(VendorClaim, event, nil), nil)
 		assert.EqualError(t, err, "certificate problem in VendorClaim event: certificate not trusted: CN=Org Name,O=Vendor,C=NL (issuer: CN=Org Name,O=Vendor,C=NL, serial: 1): x509: certificate signed by unknown authority")
-		assert.Len(t, handler.trustStore.Pool().Subjects(), 0)
+		roots, _ := handler.trustStore.Roots()
+		assert.Len(t, roots, 0)
 	})
 }
 
@@ -185,16 +188,16 @@ type memoryTrustStore struct {
 	certPool *x509.CertPool
 }
 
-func (n memoryTrustStore) GetRoots(t time.Time) []*x509.Certificate {
-	return nil
+func (n memoryTrustStore) Roots() ([]*x509.Certificate, *x509.CertPool) {
+	return nil, n.certPool
+}
+
+func (n memoryTrustStore) Intermediates() ([]*x509.Certificate, *x509.CertPool) {
+	return nil, n.certPool
 }
 
 func (n memoryTrustStore) GetCertificates(i [][]*x509.Certificate, t time.Time, b bool) [][]*x509.Certificate {
 	return nil
-}
-
-func (n memoryTrustStore) Pool() *x509.CertPool {
-	return n.certPool
 }
 
 func (n memoryTrustStore) AddCertificate(certificate *x509.Certificate) error {
