@@ -80,7 +80,7 @@ func (r eventLookupTable) findPath(event Event) []Event {
 	var path []Event
 	current := r.findHeadOfPath(event)
 	path = append(path, current)
-	for ; r.refs[current] != nil; {
+	for r.refs[current] != nil {
 		current = r.refs[current]
 		path = append(path, current)
 	}
