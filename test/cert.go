@@ -102,10 +102,10 @@ var NoopCertificateVerifier cert.Verifier = &noopCertificateVerifier{}
 
 type noopCertificateVerifier struct{}
 
-func (n noopCertificateVerifier) Verify(certificate *x509.Certificate, t time.Time) error {
+func (n noopCertificateVerifier) Verify(certificate *x509.Certificate, t time.Time, usage []x509.ExtKeyUsage) error {
 	return nil
 }
 
-func (n noopCertificateVerifier) VerifiedChain(certificate *x509.Certificate, t time.Time) ([][]*x509.Certificate, error) {
+func (n noopCertificateVerifier) VerifiedChain(certificate *x509.Certificate, t time.Time, usage []x509.ExtKeyUsage) ([][]*x509.Certificate, error) {
 	return nil, nil
 }

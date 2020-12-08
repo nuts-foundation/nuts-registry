@@ -138,10 +138,10 @@ func Test_CertificateEventHandler_Verify(t *testing.T) {
 		caCert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
 		eventHandler := NewCertificateEventHandler(memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)
 		eventHandler.trustStore.AddCertificate(caCert)
-		chain, err := eventHandler.verify(caCert, time.Now())
+		chain, err := eventHandler.verify(caCert, time.Now(), []x509.ExtKeyUsage{x509.ExtKeyUsageAny})
 		assert.NoError(t, err)
 		assert.Len(t, chain, 1)
-		err = eventHandler.Verify(caCert, time.Now())
+		err = eventHandler.Verify(caCert, time.Now(), []x509.ExtKeyUsage{x509.ExtKeyUsageAny})
 		assert.NoError(t, err)
 	})
 	t.Run("error - incorrect domain", func(t *testing.T) {
@@ -152,7 +152,7 @@ func Test_CertificateEventHandler_Verify(t *testing.T) {
 		cert := test.SignCertificateFromCSRWithKey(csr, time.Now(), 2, caCert, caPrivKey)
 		handler := NewCertificateEventHandler(memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)
 		handler.trustStore.AddCertificate(caCert)
-		_, err := handler.verify(cert, time.Now())
+		_, err := handler.verify(cert, time.Now(), []x509.ExtKeyUsage{x509.ExtKeyUsageAny})
 		// No error for now, just a warning
 		assert.NoError(t, err)
 	})
@@ -162,7 +162,7 @@ func Test_CertificateEventHandler_Verify(t *testing.T) {
 		cert, _ := x509.ParseCertificate(asn1Data)
 		handler := NewCertificateEventHandler(memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)
 		handler.trustStore.AddCertificate(cert)
-		_, err := handler.verify(cert, time.Now())
+		_, err := handler.verify(cert, time.Now(), []x509.ExtKeyUsage{x509.ExtKeyUsageAny})
 		// No error for now, just a warning
 		assert.NoError(t, err)
 	})
@@ -172,7 +172,7 @@ func Test_CertificateEventHandler_Verify(t *testing.T) {
 		cert, _ := x509.ParseCertificate(asn1cert)
 		handler := NewCertificateEventHandler(&memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)
 		handler.trustStore.AddCertificate(cert)
-		_, err := handler.verify(cert, time.Now())
+		_, err := handler.verify(cert, time.Now(), []x509.ExtKeyUsage{x509.ExtKeyUsageAny})
 		assert.Contains(t, err.Error(), "x509: certificate has expired or is not yet valid")
 	})
 }
@@ -205,11 +205,11 @@ func (n memoryTrustStore) AddCertificate(certificate *x509.Certificate) error {
 	return nil
 }
 
-func (n memoryTrustStore) Verify(c *x509.Certificate, t time.Time) error {
+func (n memoryTrustStore) Verify(c *x509.Certificate, t time.Time, usage []x509.ExtKeyUsage) error {
 	return errors.New("irrelevant func")
 }
 
-func (t memoryTrustStore) VerifiedChain(certificate *x509.Certificate, moment time.Time) ([][]*x509.Certificate, error) {
+func (t memoryTrustStore) VerifiedChain(certificate *x509.Certificate, moment time.Time, usage []x509.ExtKeyUsage) ([][]*x509.Certificate, error) {
 	return nil, errors.New("irrelevant func")
 }
 
