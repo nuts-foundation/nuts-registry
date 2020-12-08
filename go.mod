@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0
-	github.com/leodido/go-urn v1.2.1-0.20201207081027-996485e2f5f1
+	github.com/leodido/go-urn v1.2.1-0.20201207182545-66fa6ee96763
 	github.com/lestrrat-go/jwx v1.0.5
 	github.com/magiconair/properties v1.8.4
 	github.com/nuts-foundation/nuts-crypto v0.15.1-0.20201113103650-0107d387c2e2
@@ -24,5 +24,3 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 )
-
-replace github.com/leodido/go-urn => github.com/nuts-foundation/go-urn v1.2.1-0.20201207081027-996485e2f5f1

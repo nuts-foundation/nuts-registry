@@ -35,7 +35,7 @@ func TestOIDURN_UnmarshalJSON(t *testing.T) {
 		input := `"urn:oid:1.3.6.1.NotANumber.1.54851.2:foobar"`
 		actual := OIDURNValue{}
 		err := json.Unmarshal([]byte(input), &actual)
-		assert.EqualError(t, err, "invalid OID URN: urn:oid:1.3.6.1.NotANumber.1.54851.2:foobar")
+		assert.EqualError(t, err, "OID is invalid: 1.3.6.1.NotANumber.1.54851.2")
 		assert.Empty(t, actual.String())
 	})
 	t.Run("error - invalid OID URN (no value)", func(t *testing.T) {

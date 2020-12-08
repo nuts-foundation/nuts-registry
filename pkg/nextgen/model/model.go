@@ -7,10 +7,11 @@ import (
 	"time"
 )
 
+// Proof is a container for a cryptographic proof (TODO)
 type Proof interface {
-	// TODO
 }
 
+// Vendor is a JSON marshalable implementation of a vendor as specified by RFC006 Distributed Registry.
 type Vendor struct {
 	// Certificates contains the CA certificates of the organization
 	Certificates []*cert.NutsCertificate `json:"certs"`
@@ -18,6 +19,7 @@ type Vendor struct {
 	Proofs []Proof `json:"prfs,omitempty"`
 }
 
+// Organization is a JSON marshalable implementation of an organization as specified by RFC006 Distributed Registry.
 type Organization struct {
 	// ID of the organization
 	ID core.PartyID `json:"id"`
@@ -29,6 +31,7 @@ type Organization struct {
 	Proofs []Proof `json:"prfs,omitempty"`
 }
 
+// Endpoint is a JSON marshalable implementation of an endpoint as specified by RFC006 Distributed Registry.
 type Endpoint struct {
 	// ID contains the ID of this endpoint. It must be unique for the vendor.
 	ID types.EndpointID `json:"id"`
@@ -44,6 +47,7 @@ type Endpoint struct {
 	Type OIDURNValue `json:"type"`
 }
 
+// Service is a JSON marshalable implementation of an service as specified by RFC006 Distributed Registry.
 type Service struct {
 	// VendorID contains the ID of the vendor which defined this service.
 	VendorID core.PartyID `json:"vid"`

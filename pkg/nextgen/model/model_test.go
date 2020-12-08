@@ -17,7 +17,7 @@ import (
 
 var vendorId, _ = core.NewPartyID("1.2.3.4", "vendorId")
 var organizationId, _ = core.NewPartyID("4.3.1.1", "organizationId")
-var endpointType, _ = NewOIDURN("1.2.3.4", "http")
+var endpointType, _ = NewOIDURNValue("1.2.3.4", "http")
 var location, _ = url.Parse("https://nuts.nl")
 var notBefore = time.Date(2020, 10, 20, 20, 30, 0, 0, time.UTC)
 
