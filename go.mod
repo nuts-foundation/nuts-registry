@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/labstack/gommon v0.3.0
+	github.com/leodido/go-urn v1.2.1-0.20201207182545-66fa6ee96763
 	github.com/lestrrat-go/jwx v1.0.5
 	github.com/magiconair/properties v1.8.4
 	github.com/nuts-foundation/nuts-crypto v0.15.1-0.20201113103650-0107d387c2e2

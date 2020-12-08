@@ -52,7 +52,7 @@ func TestServer(t *testing.T) {
 		command.SetArgs([]string{"server"})
 		go func() {
 			println("Waiting for server to start...")
-			for ;; {
+			for {
 				conn, _ := net.Dial("tcp", pkg.DefaultRegistryConfig().Address)
 				if conn != nil {
 					println("Started!")

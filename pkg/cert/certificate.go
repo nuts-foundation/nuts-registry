@@ -21,6 +21,8 @@ package cert
 import (
 	"crypto/x509"
 	"encoding/asn1"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -87,4 +89,27 @@ func (c NutsCertificate) getPartyIDFromSAN(oid asn1.ObjectIdentifier) (core.Part
 		}
 	}
 	return core.PartyID{}, nil
+}
+
+// MarshalJSON marshals the ASN.1 representation of the certificate as base64 JSON string.
+func (c NutsCertificate) MarshalJSON() ([]byte, error) {
+	return json.Marshal(base64.StdEncoding.EncodeToString(c.Raw))
+}
+
+// UnmarshalJSON unmarshals a JSON string containing a base64 encoded ASN.1 certificate into a x509.Certificate.
+func (c *NutsCertificate) UnmarshalJSON(bytes []byte) error {
+	var str string
+	if err := json.Unmarshal(bytes, &str); err != nil {
+		return err
+	}
+	asn1Bytes, err := base64.StdEncoding.DecodeString(str)
+	if err != nil {
+		return err
+	}
+	certificate, err := x509.ParseCertificate(asn1Bytes)
+	if err != nil {
+		return err
+	}
+	*c = *NewNutsCertificate(certificate)
+	return nil
 }

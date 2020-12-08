@@ -24,11 +24,16 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/json"
 	"github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
+
+var certAsBase64 = "MIIFjjCCA3agAwIBAgIIExaSHgjVVKcwDQYJKoZIhvcNAQELBQAwRzELMAkGA1UEBhMCTkwxEzARBgNVBAoTCk5lZGFwIE4uVi4xIzAhBgNVBAMTGk5lZGFwIE4uVi4gQ0EgSW50ZXJtZWRpYXRlMB4XDTIwMDUyODA3NTgxN1oXDTIxMDUyODA3NTgxN1owRzELMAkGA1UEBhMCTkwxEzARBgNVBAoTCk5lZGFwIE4uVi4xIzAhBgNVBAMTGk5lZGFwIE4uVi4gQ0EgSW50ZXJtZWRpYXRlMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAkNsazayY2LeQrwfoeHtYaUQTF1dzW5M6kME3KMVNqzD6zS1ElqtWhhEnncrDFml2LHmhqgYjNbCvuJl8r6mUHsxk8LnfDkqJzsmhV3Lgv3iSyFYsKicTL0xldJmTacmr4VN2nQ9d/EJHTKtmz4s8b3Tc6ZG9rSXHHa0a94zdHzG2AABcHIeOh234VzYht9qnoAXtOOkr2zdA9zSbWbnzHC90MLjp/xV7AS2UI/tgbCM0dLI2OkioA4FFWg+tM20T+tEI5oi9Y9v5rNkSvR5Qwwz4nQUmOxZKiTGM+/ApDrF8/gf/eWwDny75jt1OGZ4/X2ga+3lNO9cv/iED+uJqP3bz4Qg/5oynSfP7iol4lpOWBHV30u//e2Eb1NXKogsrmfysjdN2gcSb3xzFokmDjYy7czfvLCLyO97NbIZvSYCMGNuQds7Kc63vNOBu0t/f+UICt4UVuWlZqOOZiQw9XIPLkX3VrigzGQLeFLPf8l5SQ1641lLbUE9fvP9hzcox3Z7nbm1WRNGdBHZnv1AOQSa0kBzDsXOWezfiUAjMJxS6v1E+mRrn5scdePpNrpPSFqTnsre4QrPKInGg+nnCAenNKde04SrWzk5EkkzZworwPyMtGSkoGCmkZM5XAprECQJegS+1thz/sJSt8GnKPs0ZOmUe0sFTglSreLHxxxECAwEAAaN+MHwwDgYDVR0PAQH/BAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wPgYDVR0RBDcwNaAzBgkrBgEEAYOsQwSgJgwkdXJuOm9pZDoxLjMuNi4xLjQuMS41NDg1MS40OjA4MDEzODM2MBkGCSsGAQQBg6xDAwQMDApoZWFsdGhjYXJlMA0GCSqGSIb3DQEBCwUAA4ICAQATYZG92fcffCGrHTMMCaWBm+SZ50yTDKyPiHe+ff+3grVvn2U2LGirP6C4hQzrdkBLr8CyBfXgQhKNfvtIRSUUriM5JpEAvrdKtcWqM8/22yMPxaFqxSW/9JGNdog0e1B/oa4dk2Nx4gHId8HAiY/HYPwMnZMuKH4m9h+RlicZkmDEIkIWBA5eWz7ESgxfEKWQDrh8Z5oV/sbRfqWprZk/8w9TSv6GPk8gN8RsEkXYWcVC4Md9B1GF6I8HJ+H9bh7eZiufriZb/2myxgv2Y7VljmESRGDkP4PV3WnK0dBDH54r3EIaB9RlB2iY00z8yaGt8c+NuOQ+T/Yniru7WL1q8QKWxZNbbmDoNZ2hQDAZ7PTOq96PuCJXbG2PgGmJ2Zrx62nnNCxvyFsA16Cj+CZ0AA4GTkj2mt+QQpU6GlMi9n0TiQzh85k3U5y1cJ5PvkQUcOlvN0ZnaqSA4zm+dHHxto3NgHQFHYTbSI4AAVizIcKQoqV1ctms5xLdsbAHGOUGkgt+Ivi0tKat8NfQwOMLK+LXc72MXrWpb25uW3qHpY8Y+lkxEu28Tram2NrAXOSxTv7peimd+PAf0AfYoV2tZTHAuCkmXouxCe9G9tjyDxIiBK1Z0s/QfwPb9DF+M6km+Bvk62sk+ILWfLLUAava9qQ7VuLaEncXabLdzdBclQ=="
+var certAsBytes, _ = base64.StdEncoding.DecodeString(certAsBase64)
+var certificate, _ = x509.ParseCertificate(certAsBytes)
 
 func TestNutsCertificate_GetDomain(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
@@ -76,21 +81,48 @@ func TestNutsCertificate_GetVendorID(t *testing.T) {
 	t.Run("ok - certificate contains e-mail address SAN", func(t *testing.T) {
 		privateKey, _ := rsa.GenerateKey(rand.Reader, 1024)
 		cert := test.SignCertificateFromCSRWithKey(x509.CertificateRequest{
-			PublicKey:                privateKey.Public(),
-			Subject:                  pkix.Name{CommonName: "Foobar"},
-			EmailAddresses:           []string{"foo@bar.nl"},
+			PublicKey:      privateKey.Public(),
+			Subject:        pkix.Name{CommonName: "Foobar"},
+			EmailAddresses: []string{"foo@bar.nl"},
 		}, time.Now(), 2, nil, privateKey)
 		actual, err := NutsCertificate(*cert).GetVendorID()
 		assert.NoError(t, err)
 		assert.True(t, actual.IsZero())
 	})
 	t.Run("ok - v0.14 self-signed certificate", func(t *testing.T) {
-		certAsBase64 := "MIIFjjCCA3agAwIBAgIIExaSHgjVVKcwDQYJKoZIhvcNAQELBQAwRzELMAkGA1UEBhMCTkwxEzARBgNVBAoTCk5lZGFwIE4uVi4xIzAhBgNVBAMTGk5lZGFwIE4uVi4gQ0EgSW50ZXJtZWRpYXRlMB4XDTIwMDUyODA3NTgxN1oXDTIxMDUyODA3NTgxN1owRzELMAkGA1UEBhMCTkwxEzARBgNVBAoTCk5lZGFwIE4uVi4xIzAhBgNVBAMTGk5lZGFwIE4uVi4gQ0EgSW50ZXJtZWRpYXRlMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAkNsazayY2LeQrwfoeHtYaUQTF1dzW5M6kME3KMVNqzD6zS1ElqtWhhEnncrDFml2LHmhqgYjNbCvuJl8r6mUHsxk8LnfDkqJzsmhV3Lgv3iSyFYsKicTL0xldJmTacmr4VN2nQ9d/EJHTKtmz4s8b3Tc6ZG9rSXHHa0a94zdHzG2AABcHIeOh234VzYht9qnoAXtOOkr2zdA9zSbWbnzHC90MLjp/xV7AS2UI/tgbCM0dLI2OkioA4FFWg+tM20T+tEI5oi9Y9v5rNkSvR5Qwwz4nQUmOxZKiTGM+/ApDrF8/gf/eWwDny75jt1OGZ4/X2ga+3lNO9cv/iED+uJqP3bz4Qg/5oynSfP7iol4lpOWBHV30u//e2Eb1NXKogsrmfysjdN2gcSb3xzFokmDjYy7czfvLCLyO97NbIZvSYCMGNuQds7Kc63vNOBu0t/f+UICt4UVuWlZqOOZiQw9XIPLkX3VrigzGQLeFLPf8l5SQ1641lLbUE9fvP9hzcox3Z7nbm1WRNGdBHZnv1AOQSa0kBzDsXOWezfiUAjMJxS6v1E+mRrn5scdePpNrpPSFqTnsre4QrPKInGg+nnCAenNKde04SrWzk5EkkzZworwPyMtGSkoGCmkZM5XAprECQJegS+1thz/sJSt8GnKPs0ZOmUe0sFTglSreLHxxxECAwEAAaN+MHwwDgYDVR0PAQH/BAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wPgYDVR0RBDcwNaAzBgkrBgEEAYOsQwSgJgwkdXJuOm9pZDoxLjMuNi4xLjQuMS41NDg1MS40OjA4MDEzODM2MBkGCSsGAQQBg6xDAwQMDApoZWFsdGhjYXJlMA0GCSqGSIb3DQEBCwUAA4ICAQATYZG92fcffCGrHTMMCaWBm+SZ50yTDKyPiHe+ff+3grVvn2U2LGirP6C4hQzrdkBLr8CyBfXgQhKNfvtIRSUUriM5JpEAvrdKtcWqM8/22yMPxaFqxSW/9JGNdog0e1B/oa4dk2Nx4gHId8HAiY/HYPwMnZMuKH4m9h+RlicZkmDEIkIWBA5eWz7ESgxfEKWQDrh8Z5oV/sbRfqWprZk/8w9TSv6GPk8gN8RsEkXYWcVC4Md9B1GF6I8HJ+H9bh7eZiufriZb/2myxgv2Y7VljmESRGDkP4PV3WnK0dBDH54r3EIaB9RlB2iY00z8yaGt8c+NuOQ+T/Yniru7WL1q8QKWxZNbbmDoNZ2hQDAZ7PTOq96PuCJXbG2PgGmJ2Zrx62nnNCxvyFsA16Cj+CZ0AA4GTkj2mt+QQpU6GlMi9n0TiQzh85k3U5y1cJ5PvkQUcOlvN0ZnaqSA4zm+dHHxto3NgHQFHYTbSI4AAVizIcKQoqV1ctms5xLdsbAHGOUGkgt+Ivi0tKat8NfQwOMLK+LXc72MXrWpb25uW3qHpY8Y+lkxEu28Tram2NrAXOSxTv7peimd+PAf0AfYoV2tZTHAuCkmXouxCe9G9tjyDxIiBK1Z0s/QfwPb9DF+M6km+Bvk62sk+ILWfLLUAava9qQ7VuLaEncXabLdzdBclQ=="
-		data, _ := base64.StdEncoding.DecodeString(certAsBase64)
-		certificate, _ := x509.ParseCertificate(data)
 		nutsCertificate := NewNutsCertificate(certificate)
 		vendorID, err := nutsCertificate.GetVendorID()
 		assert.NoError(t, err)
 		assert.Equal(t, "urn:oid:1.3.6.1.4.1.54851.4:08013836", vendorID.String())
+	})
+}
+
+func TestNutsCertificate_MarshalJSON(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		expected := NewNutsCertificate(certificate)
+		var certAsJSON []byte
+		var err error
+		t.Run("marshal", func(t *testing.T) {
+			certAsJSON, err = expected.MarshalJSON()
+			assert.NoError(t, err)
+		})
+		t.Run("unmarshal", func(t *testing.T) {
+			var actual NutsCertificate
+			err = json.Unmarshal(certAsJSON, &actual)
+			assert.NoError(t, err)
+			assert.Equal(t, expected.Raw, actual.Raw)
+		})
+	})
+	t.Run("error - data is not base64 encoded", func(t *testing.T) {
+		var actual NutsCertificate
+		err := json.Unmarshal([]byte(`"not base64"`), &actual)
+		assert.Error(t, err)
+		assert.Empty(t, actual.Raw)
+	})
+	t.Run("error - data is not a certificate", func(t *testing.T) {
+		var actual NutsCertificate
+		err := json.Unmarshal([]byte(`"CAFEBABE"`), &actual)
+		assert.Error(t, err)
+		assert.Empty(t, actual.Raw)
 	})
 }

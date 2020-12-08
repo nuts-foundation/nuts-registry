@@ -268,7 +268,7 @@ func (j jsonEvent) Unmarshal(out interface{}) error {
 		data := j.Marshal()
 		decoder := json.NewDecoder(bytes.NewReader(data))
 		// Look for "payload" field
-		for ; ; {
+		for {
 			token, err := decoder.Token()
 			if err == io.EOF {
 				return errors.New("event has no payload")

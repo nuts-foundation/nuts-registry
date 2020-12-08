@@ -304,6 +304,10 @@ github.com/labstack/echo/v4 v4.1.17 h1:PQIBaRplyRy3OjwILGkPg89JRtH2x5bssi59G2EL3
 github.com/labstack/echo/v4 v4.1.17/go.mod h1:Tn2yRQL/UclUalpb5rPdXDevbkJ+lp/2svdyFBg6CHQ=
 github.com/labstack/gommon v0.3.0 h1:JEeO0bvc78PKdyHxloTKiF8BD5iGrH8T6MSeGvSgob0=
 github.com/labstack/gommon v0.3.0/go.mod h1:MULnywXg0yavhxWKc+lOruYdAhDwPK9wf0OL7NoOu+k=
+github.com/leodido/go-urn v1.2.0 h1:hpXL4XnriNwQ/ABnpepYM/1vCLWNDfUNts8dX3xTG6Y=
+github.com/leodido/go-urn v1.2.0/go.mod h1:+8+nEpDfqqsY+g338gtMEUOtuK+4dEMhiQEgxpxOKII=
+github.com/leodido/go-urn v1.2.1-0.20201207182545-66fa6ee96763 h1:GjTfAKFM+KE83gTDd+luXUiv3iiQHU6o5+JJI1YXwzw=
+github.com/leodido/go-urn v1.2.1-0.20201207182545-66fa6ee96763/go.mod h1:+8+nEpDfqqsY+g338gtMEUOtuK+4dEMhiQEgxpxOKII=
 github.com/lestrrat-go/iter v0.0.0-20200422075355-fc1769541911 h1:FvnrqecqX4zT0wOIbYK1gNgTm0677INEWiFY8UEYggY=
 github.com/lestrrat-go/iter v0.0.0-20200422075355-fc1769541911/go.mod h1:zIdgO1mRKhn8l9vrZJZz9TUMMFbQbLeTsbqPDrJ/OJc=
 github.com/lestrrat-go/jwx v0.9.1/go.mod h1:iEoxlYfZjvoGpuWwxUz+eR5e6KTJGsaRcy/YNA/UnBk=
@@ -374,6 +378,8 @@ github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRW
 github.com/nakagami/firebirdsql v0.0.0-20190310045651-3c02a58cfed8/go.mod h1:86wM1zFnC6/uDBfZGNwB65O+pR2OFi5q/YQaEUid1qA=
 github.com/neo4j-drivers/gobolt v1.7.4/go.mod h1:O9AUbip4Dgre+CD3p40dnMD4a4r52QBIfblg5k7CTbE=
 github.com/neo4j/neo4j-go-driver v1.7.4/go.mod h1:aPO0vVr+WnhEJne+FgFjfsjzAnssPFLucHgGZ76Zb/U=
+github.com/nuts-foundation/go-urn v1.2.1-0.20201207081027-996485e2f5f1 h1:PXmSbzK/pqBaga1J34T6xWyPzPF+6VfC6pWXYABSw9g=
+github.com/nuts-foundation/go-urn v1.2.1-0.20201207081027-996485e2f5f1/go.mod h1:+8+nEpDfqqsY+g338gtMEUOtuK+4dEMhiQEgxpxOKII=
 github.com/nuts-foundation/nuts-crypto v0.13.1 h1:c3B9vrFX7WINToLHUAC7mdjfzahVMqlnjcXWLR7LMKE=
 github.com/nuts-foundation/nuts-crypto v0.13.1/go.mod h1:A+8TA3p+b73Bc1Hx8TFods389I3hWmJ9oXMtS7KE1w0=
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200710131507-8f3cf7e71409/go.mod h1:KSWwwrekQjuHMFk/HyckOyMSN134odVHESyDIV2PVig=
