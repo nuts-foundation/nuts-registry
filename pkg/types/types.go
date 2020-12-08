@@ -30,4 +30,3 @@ const (
 	// FallbackDomain is a const for the fallback domain in case there's no domain set, which can be the case for legacy data.
 	FallbackDomain = HealthcareDomain
 )
-

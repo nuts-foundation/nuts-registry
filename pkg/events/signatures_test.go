@@ -27,7 +27,6 @@ import (
 	"time"
 )
 
-
 func TestSignatureValidator_RegisterEventHandlers(t *testing.T) {
 	fn := func(eventType EventType, _ EventHandler) {
 		assert.Equal(t, string(eventType), "foo")

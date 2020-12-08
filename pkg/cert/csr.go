@@ -69,7 +69,7 @@ func VendorCertificateRequest(vendorID core.PartyID, vendorName string, qualifie
 		// Depending on how the resulting CSR object is used (directly or marshalled to ASN.1 and then unmarshalled)
 		// we need to either set Extensions or ExtraExtensions, so we'll set them both.
 		ExtraExtensions: extensions,
-		Extensions: extensions,
+		Extensions:      extensions,
 	}, nil
 }
 
@@ -109,7 +109,6 @@ func OrganisationCertificateRequest(vendorName string, organisationID core.Party
 		// Depending on how the resulting CSR object is used (directly or marshalled to ASN.1 and then unmarshalled)
 		// we need to either set Extensions or ExtraExtensions, so we'll set them both.
 		ExtraExtensions: extensions,
-		Extensions: extensions,
+		Extensions:      extensions,
 	}, nil
 }
-

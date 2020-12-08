@@ -102,7 +102,7 @@ func (c *NutsCertificate) UnmarshalJSON(bytes []byte) error {
 	if err := json.Unmarshal(bytes, &str); err != nil {
 		return err
 	}
-	asn1Bytes, err := base64.StdEncoding.DecodeString(str);
+	asn1Bytes, err := base64.StdEncoding.DecodeString(str)
 	if err != nil {
 		return err
 	}

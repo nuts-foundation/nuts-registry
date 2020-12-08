@@ -36,7 +36,6 @@ import (
 	"time"
 )
 
-
 // Test_Functional_OutOfOrder_Registrations tests that events that are created in chronological order but processed
 // out of order (which can be the case when received through Nuts Network) are still processed later on.
 func Test_Functional_OutOfOrder_Registrations(t *testing.T) {
