@@ -50,12 +50,12 @@ func (t *certificateEventHandler) RegisterEventHandlers(fn func(events.EventType
 
 // Verify verifies the given certificate against the truststore. In addition it also verifies the correctness of the
 // "Nuts Domain" in the cerertificate tree.
-func (t certificateEventHandler) Verify(certificate *x509.Certificate, moment time.Time, usage []x509.ExtKeyUsage) error {
-	_, err := t.verify(certificate, moment, usage)
+func (t certificateEventHandler) Verify(certificate *x509.Certificate, moment time.Time) error {
+	_, err := t.verify(certificate, moment)
 	return err
 }
 
-func (t certificateEventHandler) verify(certificate *x509.Certificate, moment time.Time, usage []x509.ExtKeyUsage) ([]*x509.Certificate, error) {
+func (t certificateEventHandler) verify(certificate *x509.Certificate, moment time.Time) ([]*x509.Certificate, error) {
 	_, rootPool := t.trustStore.Roots()
 	_, intermediatePool := t.trustStore.Intermediates()
 
@@ -63,7 +63,7 @@ func (t certificateEventHandler) verify(certificate *x509.Certificate, moment ti
 		Intermediates: intermediatePool,
 		Roots:         rootPool,
 		CurrentTime:   moment,
-		KeyUsages:     usage,
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 	})
 	if err != nil {
 		return nil, err
@@ -76,20 +76,6 @@ func (t certificateEventHandler) verify(certificate *x509.Certificate, moment ti
 	}
 	// We're not supporting multiple chains
 	return chains[0], nil
-}
-
-// VerifiedChain verifies the given certificate against the trustStore and returns all the chains that could verify the certificate.
-// The func does not allow for a truststore with intermediates!
-func (t certificateEventHandler) VerifiedChain(certificate *x509.Certificate, moment time.Time, usage []x509.ExtKeyUsage) ([][]*x509.Certificate, error) {
-	_, rootPool := t.trustStore.Roots()
-	_, intermediatePool := t.trustStore.Intermediates()
-
-	return certificate.Verify(x509.VerifyOptions{
-		Intermediates: intermediatePool,
-		Roots:         rootPool,
-		CurrentTime:   moment,
-		KeyUsages:     usage,
-	})
 }
 
 func (t *certificateEventHandler) handleEvent(event events.Event, _ events.EventLookup) error {
@@ -133,7 +119,7 @@ func (t *certificateEventHandler) getCertificatesToBeTrusted(jwks []interface{},
 			continue
 		}
 		if mustVerify {
-			if verifiedChain, err := t.verify(chain[0], moment, []x509.ExtKeyUsage{x509.ExtKeyUsageAny}); err != nil {
+			if verifiedChain, err := t.verify(chain[0], moment); err != nil {
 				return nil, errors2.Wrapf(err, "certificate not trusted: %s (issuer: %s, serial: %d)", chain[0].Subject, chain[0].Issuer, chain[0].SerialNumber)
 			} else {
 				chain = verifiedChain

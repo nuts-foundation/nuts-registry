@@ -138,10 +138,10 @@ func Test_CertificateEventHandler_Verify(t *testing.T) {
 		caCert, _ := test.SelfSignCertificateFromCSR(csr, time.Now(), 2)
 		eventHandler := NewCertificateEventHandler(memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)
 		eventHandler.trustStore.AddCertificate(caCert)
-		chain, err := eventHandler.verify(caCert, time.Now(), []x509.ExtKeyUsage{x509.ExtKeyUsageAny})
+		chain, err := eventHandler.verify(caCert, time.Now())
 		assert.NoError(t, err)
 		assert.Len(t, chain, 1)
-		err = eventHandler.Verify(caCert, time.Now(), []x509.ExtKeyUsage{x509.ExtKeyUsageAny})
+		err = eventHandler.Verify(caCert, time.Now())
 		assert.NoError(t, err)
 	})
 	t.Run("error - incorrect domain", func(t *testing.T) {
@@ -152,7 +152,7 @@ func Test_CertificateEventHandler_Verify(t *testing.T) {
 		cert := test.SignCertificateFromCSRWithKey(csr, time.Now(), 2, caCert, caPrivKey)
 		handler := NewCertificateEventHandler(memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)
 		handler.trustStore.AddCertificate(caCert)
-		_, err := handler.verify(cert, time.Now(), []x509.ExtKeyUsage{x509.ExtKeyUsageAny})
+		_, err := handler.verify(cert, time.Now())
 		// No error for now, just a warning
 		assert.NoError(t, err)
 	})
@@ -162,7 +162,7 @@ func Test_CertificateEventHandler_Verify(t *testing.T) {
 		cert, _ := x509.ParseCertificate(asn1Data)
 		handler := NewCertificateEventHandler(memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)
 		handler.trustStore.AddCertificate(cert)
-		_, err := handler.verify(cert, time.Now(), []x509.ExtKeyUsage{x509.ExtKeyUsageAny})
+		_, err := handler.verify(cert, time.Now())
 		// No error for now, just a warning
 		assert.NoError(t, err)
 	})
@@ -172,7 +172,7 @@ func Test_CertificateEventHandler_Verify(t *testing.T) {
 		cert, _ := x509.ParseCertificate(asn1cert)
 		handler := NewCertificateEventHandler(&memoryTrustStore{certPool: x509.NewCertPool()}).(*certificateEventHandler)
 		handler.trustStore.AddCertificate(cert)
-		_, err := handler.verify(cert, time.Now(), []x509.ExtKeyUsage{x509.ExtKeyUsageAny})
+		_, err := handler.verify(cert, time.Now())
 		assert.Contains(t, err.Error(), "x509: certificate has expired or is not yet valid")
 	})
 }
