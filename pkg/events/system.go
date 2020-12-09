@@ -20,18 +20,20 @@
 package events
 
 import (
+	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
-	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-registry/logging"
-	errors2 "github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
+	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-registry/logging"
+	errors2 "github.com/pkg/errors"
 )
 
 var eventFileRegex *regexp.Regexp
@@ -272,7 +274,8 @@ func (system diskEventSystem) assertConfigured() error {
 }
 
 type TrustStore interface {
-	cert.Verifier
+	// Verify verifies the given certificate. The validity of the certificate is checked against the given moment in time.
+	Verify(*x509.Certificate, time.Time) error
 	RegisterEventHandlers(func(EventType, EventHandler))
 }
 

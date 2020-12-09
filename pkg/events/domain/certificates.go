@@ -59,7 +59,12 @@ func (t certificateEventHandler) verify(certificate *x509.Certificate, moment ti
 	_, rootPool := t.trustStore.Roots()
 	_, intermediatePool := t.trustStore.Intermediates()
 
-	chains, err := certificate.Verify(x509.VerifyOptions{Roots: rootPool, Intermediates: intermediatePool, CurrentTime: moment})
+	chains, err := certificate.Verify(x509.VerifyOptions{
+		Intermediates: intermediatePool,
+		Roots:         rootPool,
+		CurrentTime:   moment,
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -71,15 +76,6 @@ func (t certificateEventHandler) verify(certificate *x509.Certificate, moment ti
 	}
 	// We're not supporting multiple chains
 	return chains[0], nil
-}
-
-// VerifiedChain verifies the given certificate against the trustStore and returns all the chains that could verify the certificate.
-// The func does not allow for a truststore with intermediates!
-func (t certificateEventHandler) VerifiedChain(certificate *x509.Certificate, moment time.Time) ([][]*x509.Certificate, error) {
-	_, rootPool := t.trustStore.Roots()
-	_, intermediatePool := t.trustStore.Intermediates()
-
-	return certificate.Verify(x509.VerifyOptions{Roots: rootPool, Intermediates: intermediatePool, CurrentTime: moment})
 }
 
 func (t *certificateEventHandler) handleEvent(event events.Event, _ events.EventLookup) error {

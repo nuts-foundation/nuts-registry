@@ -534,6 +534,7 @@ func (cxt *testContext) issueVendorCACertificate() *x509.Certificate {
 	csr, _ := cxt.registry.crypto.GenerateVendorCACSR(vendorName)
 	vendorCACertificate, err := cxt.registry.crypto.SignCertificate(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{vendorId.String()}), cryptoTypes.KeyForEntity(caEntity), csr, crypto.CertificateProfile{
 		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		IsCA:         true,
 		NumDaysValid: 365 * 3,
 	})

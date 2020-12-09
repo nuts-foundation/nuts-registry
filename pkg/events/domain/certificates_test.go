@@ -205,11 +205,11 @@ func (n memoryTrustStore) AddCertificate(certificate *x509.Certificate) error {
 	return nil
 }
 
-func (n memoryTrustStore) Verify(c *x509.Certificate, t time.Time) error {
+func (n memoryTrustStore) Verify(c *x509.Certificate, t time.Time, usage []x509.ExtKeyUsage) error {
 	return errors.New("irrelevant func")
 }
 
-func (t memoryTrustStore) VerifiedChain(certificate *x509.Certificate, moment time.Time) ([][]*x509.Certificate, error) {
+func (t memoryTrustStore) VerifiedChain(certificate *x509.Certificate, moment time.Time, usage []x509.ExtKeyUsage) ([][]*x509.Certificate, error) {
 	return nil, errors.New("irrelevant func")
 }
 
