@@ -346,6 +346,8 @@ github.com/nuts-foundation/go-did v0.0.0-20210112131502-e19b569f5f24 h1:DGxlyks4
 github.com/nuts-foundation/go-did v0.0.0-20210112131502-e19b569f5f24/go.mod h1:wpgiNMle93QRhzm2Oh4J+yGgbSpw1LoBAcsoUqNr2Bo=
 github.com/nuts-foundation/go-did v0.0.0-20210112131856-14c1adef355a h1:j1WTQ+KoS/7Z2hCfYreuuDQZhMfDA6CXn+m288CQCos=
 github.com/nuts-foundation/go-did v0.0.0-20210112131856-14c1adef355a/go.mod h1:wpgiNMle93QRhzm2Oh4J+yGgbSpw1LoBAcsoUqNr2Bo=
+github.com/nuts-foundation/go-did v0.0.0-20210112182032-e20c41498920 h1:deMl33PAvtQ1iAo2xGvIypgXdAe3OmCZvQBG+TrY89w=
+github.com/nuts-foundation/go-did v0.0.0-20210112182032-e20c41498920/go.mod h1:wpgiNMle93QRhzm2Oh4J+yGgbSpw1LoBAcsoUqNr2Bo=
 github.com/nuts-foundation/nuts-crypto v0.16.0 h1:PzNDcoawuGxl4KRoD3nKnz+1sFiMbEG/S95mYbbso6k=
 github.com/nuts-foundation/nuts-crypto v0.16.0/go.mod h1:NS4akgWLGO8RwtzMj2gXDEpucV0S6QDeyLxEkzGSyd4=
 github.com/nuts-foundation/nuts-go-core v0.16.0 h1:bHKH0eREWecXLWUexC676RACsLdz/B2tuhkNFzi21FM=
