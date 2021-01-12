@@ -284,10 +284,12 @@ github.com/lestrrat-go/httpcc v0.0.0-20210101035852-e7e8fea419e3 h1:e52qvXxpJPV/
 github.com/lestrrat-go/httpcc v0.0.0-20210101035852-e7e8fea419e3/go.mod h1:tGS/u00Vh5N6FHNkExqGGNId8e0Big+++0Gf8MBnAvE=
 github.com/lestrrat-go/iter v0.0.0-20200422075355-fc1769541911 h1:FvnrqecqX4zT0wOIbYK1gNgTm0677INEWiFY8UEYggY=
 github.com/lestrrat-go/iter v0.0.0-20200422075355-fc1769541911/go.mod h1:zIdgO1mRKhn8l9vrZJZz9TUMMFbQbLeTsbqPDrJ/OJc=
+github.com/lestrrat-go/jwx v1.0.5/go.mod h1:TPF17WiSFegZo+c20fdpw49QD+/7n4/IsGvEmCSWwT0=
 github.com/lestrrat-go/jwx v1.0.7 h1:wmd6LGb9mYPesObp7oipuZPE1aYYJ1VeUin8LTVNy24=
 github.com/lestrrat-go/jwx v1.0.7/go.mod h1:6XJ5sxHF5U116AxYxeHfTnfsZRMgmeKY214zwZDdvho=
 github.com/lestrrat-go/option v0.0.0-20210103042652-6f1ecfceda35 h1:lea8Wt+1ePkVrI2/WD+NgQT5r/XsLAzxeqtyFLcEs10=
 github.com/lestrrat-go/option v0.0.0-20210103042652-6f1ecfceda35/go.mod h1:5ZHFbivi4xwXxhxY9XHDe2FHo6/Z7WWmtT7T5nBBp3I=
+github.com/lestrrat-go/pdebug v0.0.0-20200204225717-4d6bd78da58d/go.mod h1:B06CSso/AWxiPejj+fheUINGeBKeeEZNt8w+EoU7+L8=
 github.com/lestrrat-go/pdebug/v3 v3.0.0-20210111091911-ec4f5c88c087 h1:T5Wh8C/p5nWoGuEUBQj+daEXkj1CScB9GshvvsBJhpg=
 github.com/lestrrat-go/pdebug/v3 v3.0.0-20210111091911-ec4f5c88c087/go.mod h1:za+m+Ve24yCxTEhR59N7UlnJomWwCiIqbJRmKeiADU4=
 github.com/lib/pq v1.0.0/go.mod h1:5WUZQaWbwv1U+lTReE5YruASi9Al49XbQIvNi/34Woo=
@@ -340,6 +342,10 @@ github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRW
 github.com/nakagami/firebirdsql v0.0.0-20190310045651-3c02a58cfed8/go.mod h1:86wM1zFnC6/uDBfZGNwB65O+pR2OFi5q/YQaEUid1qA=
 github.com/neo4j-drivers/gobolt v1.7.4/go.mod h1:O9AUbip4Dgre+CD3p40dnMD4a4r52QBIfblg5k7CTbE=
 github.com/neo4j/neo4j-go-driver v1.7.4/go.mod h1:aPO0vVr+WnhEJne+FgFjfsjzAnssPFLucHgGZ76Zb/U=
+github.com/nuts-foundation/go-did v0.0.0-20210112131502-e19b569f5f24 h1:DGxlyks4NYBnZwcLpEco/kvzieF2ggV4AvyrCPKEjVE=
+github.com/nuts-foundation/go-did v0.0.0-20210112131502-e19b569f5f24/go.mod h1:wpgiNMle93QRhzm2Oh4J+yGgbSpw1LoBAcsoUqNr2Bo=
+github.com/nuts-foundation/go-did v0.0.0-20210112131856-14c1adef355a h1:j1WTQ+KoS/7Z2hCfYreuuDQZhMfDA6CXn+m288CQCos=
+github.com/nuts-foundation/go-did v0.0.0-20210112131856-14c1adef355a/go.mod h1:wpgiNMle93QRhzm2Oh4J+yGgbSpw1LoBAcsoUqNr2Bo=
 github.com/nuts-foundation/nuts-crypto v0.16.0 h1:PzNDcoawuGxl4KRoD3nKnz+1sFiMbEG/S95mYbbso6k=
 github.com/nuts-foundation/nuts-crypto v0.16.0/go.mod h1:NS4akgWLGO8RwtzMj2gXDEpucV0S6QDeyLxEkzGSyd4=
 github.com/nuts-foundation/nuts-go-core v0.16.0 h1:bHKH0eREWecXLWUexC676RACsLdz/B2tuhkNFzi21FM=
@@ -348,6 +354,8 @@ github.com/nuts-foundation/nuts-go-test v0.16.0 h1:jfbh2z44FAsRSPXquTZWviOlB9xb9
 github.com/nuts-foundation/nuts-go-test v0.16.0/go.mod h1:aZ5Urj7v1lH8AD2TIejEiPhRX8t6YG9PVXhuRyNIAII=
 github.com/nuts-foundation/nuts-network v0.16.0 h1:JtSuHXoqB2rLHhTDBocyqDaS11mCpp/V32nF+XEbEk8=
 github.com/nuts-foundation/nuts-network v0.16.0/go.mod h1:oKrpBUpKoKSQRbEaHkp58yKEnYHkxb75CbJUXuVJSMg=
+github.com/ockam-network/did v0.1.3 h1:qJGdccOV4bLfsS/eFM+Aj+CdCRJKNMxbmJevQclw44k=
+github.com/ockam-network/did v0.1.3/go.mod h1:ZsbTIuVGt8OrQEbqWrSztUISN4joeMabdsinbLubbzw=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=

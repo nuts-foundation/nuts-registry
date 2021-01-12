@@ -22,39 +22,36 @@
 package pkg
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-go-test/io"
 	pkg2 "github.com/nuts-foundation/nuts-network/pkg"
+	"github.com/nuts-foundation/nuts-registry/pkg/network"
+	"github.com/nuts-foundation/nuts-registry/test"
 
-	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"github.com/spf13/cobra"
 
-	"github.com/golang/mock/gomock"
 	"github.com/labstack/gommon/random"
-	cryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
 	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-registry/mock"
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
-	"github.com/nuts-foundation/nuts-registry/test"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
 type ZipHandler struct {
+}
+
+var vendorId core.PartyID
+
+const vendorName = "Test Vendor"
+
+func init() {
+	vendorId = test.VendorID("4")
 }
 
 func (h *ZipHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -79,14 +76,6 @@ func TestRegistry_Instance(t *testing.T) {
 func TestRegistry_Start(t *testing.T) {
 	configureIdleTimeout()
 	configureIdentity()
-	t.Run("Start with an incorrect configuration returns error", func(t *testing.T) {
-		registry := NewTestRegistryInstance(io.TestDirectory(t))
-		registry.Config.SyncMode = "unknown"
-		err := registry.Start()
-
-		assert.EqualError(t, err, "invalid syncMode: unknown")
-	})
-
 	t.Run("Starting sets the file watcher", func(t *testing.T) {
 		registry := NewTestRegistryInstance(io.TestDirectory(t))
 		err := registry.Start()
@@ -148,8 +137,6 @@ func TestRegistry_Configure(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		// Make sure engine services aren't initialized when running in client mode
-		assert.Nil(t, registry.EventSystem)
 	})
 	t.Run("error - configuring event system", func(t *testing.T) {
 		registry := create(t)
@@ -168,274 +155,12 @@ func TestRegistry_Configure(t *testing.T) {
 		err = registry.Configure()
 		assert.Error(t, err)
 	})
-	t.Run("error - vendor CA certificate validity invalid", func(t *testing.T) {
-		registry := create(t)
-		registry.Config.VendorCACertificateValidity = 0
-		err := registry.Configure()
-		assert.EqualError(t, err, "vendor CA certificate validity must be at least 1 day")
-	})
-	t.Run("error - organisation certificate validity invalid", func(t *testing.T) {
-		registry := create(t)
-		registry.Config.OrganisationCertificateValidity = 0
-		err := registry.Configure()
-		assert.EqualError(t, err, "organisation certificate validity must be at least 1 day")
-	})
-}
-
-func TestRegistry_FileUpdate(t *testing.T) {
-	configureIdleTimeout()
-	configureIdentity()
-
-	t.Run("New files are loaded", func(t *testing.T) {
-		logrus.StandardLogger().SetLevel(logrus.DebugLevel)
-
-		eventHandled := false
-		cxt := createTestContext(t)
-		cxt.registry.EventSystem.RegisterEventHandler(domain.VendorClaim, func(event events.Event, lookup events.EventLookup) error {
-			eventHandled = true
-			return nil
-		})
-		defer cxt.close()
-		if err := cxt.registry.Configure(); err != nil {
-			t.Errorf("Expected no error, got [%v]", err)
-		}
-
-		if err := cxt.registry.Start(); err != nil {
-			t.Errorf("Expected no error, got [%v]", err)
-		}
-
-		if len(cxt.registry.Db.SearchOrganizations("")) != 0 {
-			t.Error("Expected empty db")
-		}
-
-		// copy valid files
-		err := test.TestRepo{Directory: cxt.registry.Config.Datadir}.ImportDir("../test_data/valid_files")
-		if !assert.NoError(t, err) {
-			return
-		}
-
-		for i := 0; i < 5; i++ {
-			if eventHandled {
-				// Events were loaded
-				return
-			}
-			time.Sleep(time.Second)
-		}
-		t.Fatal("No events were loaded")
-	})
-}
-
-func TestRegistry_GithubUpdate(t *testing.T) {
-	logrus.StandardLogger().SetLevel(logrus.DebugLevel)
-	configureIdleTimeout()
-	configureIdentity()
-
-	t.Run("New files are downloaded", func(t *testing.T) {
-		handler := &ZipHandler{}
-		server := httptest.NewServer(handler)
-		defer server.Close()
-
-		testDirectory := io.TestDirectory(t)
-		registry := Registry{
-			Config:      TestRegistryConfig(testDirectory),
-			crypto:      pkg.NewTestCryptoInstance(testDirectory),
-			network:     pkg2.NewTestNetworkInstance(testDirectory),
-			EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
-		}
-		registry.Config.SyncMode = "github"
-		registry.Config.SyncAddress = server.URL
-		defer registry.Shutdown()
-
-		if err := registry.Configure(); err != nil {
-			t.Errorf("Expected no error, got [%v]", err)
-		}
-
-		eventHandled := false
-		registry.EventSystem.RegisterEventHandler(domain.VendorClaim, func(event events.Event, lookup events.EventLookup) error {
-			eventHandled = true
-			return nil
-		})
-
-		if err := registry.Start(); err != nil {
-			t.Errorf("Expected no error, got [%v]", err)
-		}
-
-		for i := 0; i < 5; i++ {
-			if eventHandled {
-				// Events were loaded
-				return
-			}
-			time.Sleep(time.Second)
-		}
-		t.Fatal("No events were loaded")
-	})
-}
-
-func TestRegistry_EndpointsByOrganizationAndType(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-	t.Run("ok", func(t *testing.T) {
-		mockDb := mock.NewMockDb(mockCtrl)
-		orgID := test.OrganizationID("id")
-		mockDb.EXPECT().FindEndpointsByOrganizationAndType(orgID, nil)
-		(&Registry{Db: mockDb}).EndpointsByOrganizationAndType(orgID, nil)
-	})
 }
 
 func TestRegistry_Diagnostics(t *testing.T) {
 	registry := createTestContext(t).registry
 	diagnostics := registry.Diagnostics()
 	assert.NotEmpty(t, diagnostics)
-}
-
-func TestRegistry_SearchOrganizations(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-	t.Run("ok", func(t *testing.T) {
-		mockDb := mock.NewMockDb(mockCtrl)
-		mockDb.EXPECT().SearchOrganizations("query")
-		(&Registry{Db: mockDb}).SearchOrganizations("query")
-	})
-}
-
-func TestRegistry_OrganizationById(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-	t.Run("ok", func(t *testing.T) {
-		mockDb := mock.NewMockDb(mockCtrl)
-		orgID := test.OrganizationID("id")
-		mockDb.EXPECT().OrganizationById(orgID)
-		(&Registry{Db: mockDb}).OrganizationById(orgID)
-	})
-}
-
-func TestRegistry_ReverseLookup(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-	t.Run("ok", func(t *testing.T) {
-		mockDb := mock.NewMockDb(mockCtrl)
-		orgID := test.OrganizationID("id")
-		mockDb.EXPECT().ReverseLookup(orgID.String())
-		(&Registry{Db: mockDb}).ReverseLookup(orgID.String())
-	})
-}
-
-func TestRegistry_Verify(t *testing.T) {
-	configureIdentity()
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-	t.Run("ok", func(t *testing.T) {
-		mockDb := mock.NewMockDb(mockCtrl)
-		mockDb.EXPECT().VendorByID(vendorId).Return(&db.Vendor{Identifier: vendorId})
-		mockDb.EXPECT().OrganizationsByVendorID(vendorId).Return(nil)
-		defer os.Unsetenv("NUTS_IDENTITY")
-		evts, fix, err := (&Registry{Db: mockDb}).Verify(false)
-		assert.NoError(t, err)
-		assert.False(t, fix)
-		assert.Empty(t, evts)
-	})
-}
-
-func TestRegistry_VendorById(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	mockDb := mock.NewMockDb(mockCtrl)
-	registry := Registry{Db: mockDb}
-	defer mockCtrl.Finish()
-
-	t.Run("unknown ID returns err", func(t *testing.T) {
-		testVendor := test.VendorID("unknown")
-		mockDb.EXPECT().VendorByID(testVendor).Return(nil)
-		_, err := registry.VendorById(testVendor)
-		assert.Equal(t, ErrVendorNotFound, err)
-	})
-
-	t.Run("vendor is returned", func(t *testing.T) {
-		mockDb.EXPECT().VendorByID(vendorId).Return(&db.Vendor{
-			Identifier: vendorId,
-		})
-		v, err := registry.VendorById(vendorId)
-		if assert.NoError(t, err) {
-			assert.Equal(t, vendorId, v.Identifier)
-		}
-	})
-}
-
-func TestRegistry_VendorCAs(t *testing.T) {
-	configureIdentity()
-	pk1, _ := rsa.GenerateKey(rand.Reader, 1024)
-	pk2, _ := rsa.GenerateKey(rand.Reader, 1024)
-	pk3, _ := rsa.GenerateKey(rand.Reader, 1024)
-	certBytes := test.GenerateCertificateEx(time.Now().AddDate(0, 0, -1), 2, pk1)
-	root, _ := x509.ParseCertificate(certBytes)
-	certBytes = test.GenerateCertificateCA("Intermediate CA", root, pk2, pk1)
-	ca, _ := x509.ParseCertificate(certBytes)
-	certBytes = test.GenerateCertificateCA("Vendor CA 1", ca, pk3, pk2)
-	vca1, _ := x509.ParseCertificate(certBytes)
-	certBytes = test.GenerateCertificateCA("Vendor CA 2", ca, pk3, pk2)
-	vca2, _ := x509.ParseCertificate(certBytes)
-
-	t.Run("returns empty slice when truststore is empty", func(t *testing.T) {
-		mockCtrl := gomock.NewController(t)
-		defer mockCtrl.Finish()
-		repo, _ := test.NewTestRepo(t)
-		trustStore, err := cert.NewTrustStore(fmt.Sprintf("%s/truststore.pem", repo.Directory))
-		assert.NoError(t, err)
-
-		cMock := cryptoMock.NewMockClient(mockCtrl)
-		cMock.EXPECT().TrustStore().AnyTimes().Return(trustStore)
-		cas := (&Registry{crypto: cMock}).VendorCAs()
-		assert.Len(t, cas, 0)
-	})
-
-	t.Run("returns empty slice when truststore only contains a root", func(t *testing.T) {
-		mockCtrl := gomock.NewController(t)
-		defer mockCtrl.Finish()
-		repo, _ := test.NewTestRepo(t)
-		trustStore, err := cert.NewTrustStore(fmt.Sprintf("%s/truststore.pem", repo.Directory))
-		assert.NoError(t, err)
-		trustStore.AddCertificate(root)
-
-		cMock := cryptoMock.NewMockClient(mockCtrl)
-		cMock.EXPECT().TrustStore().AnyTimes().Return(trustStore)
-		cas := (&Registry{crypto: cMock}).VendorCAs()
-		assert.Len(t, cas, 0)
-	})
-
-	t.Run("returns empty slice when truststore only contains a root and 1 intermediate", func(t *testing.T) {
-		mockCtrl := gomock.NewController(t)
-		defer mockCtrl.Finish()
-		repo, _ := test.NewTestRepo(t)
-		trustStore, err := cert.NewTrustStore(fmt.Sprintf("%s/truststore.pem", repo.Directory))
-		assert.NoError(t, err)
-		trustStore.AddCertificate(root)
-		trustStore.AddCertificate(ca)
-
-		cMock := cryptoMock.NewMockClient(mockCtrl)
-		cMock.EXPECT().TrustStore().AnyTimes().Return(trustStore)
-		cas := (&Registry{crypto: cMock}).VendorCAs()
-		assert.Len(t, cas, 0)
-	})
-
-	t.Run("returns 2 chains when truststore contains a root, an intermediate and 2 vendor CAs", func(t *testing.T) {
-		mockCtrl := gomock.NewController(t)
-		defer mockCtrl.Finish()
-		repo, _ := test.NewTestRepo(t)
-		trustStore, err := cert.NewTrustStore(fmt.Sprintf("%s/truststore.pem", repo.Directory))
-		assert.NoError(t, err)
-		trustStore.AddCertificate(root)
-		trustStore.AddCertificate(ca)
-		trustStore.AddCertificate(vca1)
-		trustStore.AddCertificate(vca2)
-
-		cMock := cryptoMock.NewMockClient(mockCtrl)
-		cMock.EXPECT().TrustStore().AnyTimes().Return(trustStore)
-		cas := (&Registry{crypto: cMock}).VendorCAs()
-		assert.Len(t, cas, 2)
-		assert.Len(t, cas[0], 3)
-		assert.Len(t, cas[1], 3)
-		assert.NotEqual(t, cas[0][0], cas[1][0])
-		assert.Equal(t, cas[0][2], cas[1][2])
-	})
 }
 
 func configureIdentity() {
@@ -445,4 +170,49 @@ func configureIdentity() {
 
 func configureIdleTimeout() {
 	ReloadRegistryIdleTimeout = 100 * time.Millisecond
+}
+
+func createRegistry(repo *test.TestRepo) *Registry {
+	core.NutsConfig().Load(&cobra.Command{})
+	return NewTestRegistryInstance(repo.Directory)
+}
+
+type testContext struct {
+	identity          core.PartyID
+	vendorName        string
+	registry          *Registry
+	networkAmbassador *network.MockAmbassador
+	mockCtrl          *gomock.Controller
+	repo              *test.TestRepo
+}
+
+func (cxt *testContext) empty() {
+	cxt.repo.Cleanup()
+	os.MkdirAll(filepath.Join(cxt.repo.Directory, "crypto"), os.ModePerm)
+	os.MkdirAll(filepath.Join(cxt.repo.Directory, "events"), os.ModePerm)
+}
+
+func (cxt *testContext) close() {
+	defer cxt.mockCtrl.Finish()
+	defer os.Unsetenv("NUTS_IDENTITY")
+	defer cxt.registry.Shutdown()
+	defer cxt.repo.Cleanup()
+}
+
+func createTestContext(t *testing.T) testContext {
+	os.Setenv("NUTS_IDENTITY", vendorId.String())
+	repo, err := test.NewTestRepo(t)
+	if err != nil {
+		panic(err)
+	}
+	mockCtrl := gomock.NewController(t)
+	context := testContext{
+		identity:          vendorId,
+		vendorName:        vendorName,
+		registry:          createRegistry(repo),
+		mockCtrl:          mockCtrl,
+		networkAmbassador: network.NewMockAmbassador(mockCtrl),
+		repo:              repo,
+	}
+	return context
 }

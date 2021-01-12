@@ -20,19 +20,18 @@ package network
 
 import (
 	"bytes"
+
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	network "github.com/nuts-foundation/nuts-network/pkg"
 	"github.com/nuts-foundation/nuts-network/pkg/model"
 	"github.com/nuts-foundation/nuts-registry/logging"
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
 )
 
 const documentType = "nuts.registry-event"
 
 // Ambassador acts as integration point between the registry and network by sending registry events to the
-// network and (later on) process notifications of new documents on the network that might be of interest to the registyr.
+// network and (later on) process notifications of new documents on the network that might be of interest to the registry.
 type Ambassador interface {
-	RegisterEventHandlers(fn events.EventRegistrar, eventType []events.EventType)
 	// Start instructs the ambassador to start receiving events from the network.
 	Start()
 }
@@ -40,27 +39,15 @@ type Ambassador interface {
 type ambassador struct {
 	networkClient network.NetworkClient
 	cryptoClient  crypto.Client
-	eventSystem   events.EventSystem
 }
 
 // NewAmbassador creates a new Ambassador. Don't forget to call RegisterEventHandlers afterwards.
-func NewAmbassador(networkClient network.NetworkClient, cryptoClient crypto.Client, eventSystem events.EventSystem) Ambassador {
+func NewAmbassador(networkClient network.NetworkClient, cryptoClient crypto.Client) Ambassador {
 	instance := &ambassador{
 		networkClient: networkClient,
 		cryptoClient:  cryptoClient,
-		eventSystem:   eventSystem,
 	}
 	return instance
-}
-
-// RegisterEventHandlers this event handler which is required for it to actually work.
-func (n *ambassador) RegisterEventHandlers(fn events.EventRegistrar, eventType []events.EventType) {
-	for _, eventType := range eventType {
-		fn(eventType, func(event events.Event, lookup events.EventLookup) error {
-			go n.sendEventToNetwork(event)
-			return nil
-		})
-	}
 }
 
 // Start instructs the ambassador to start receiving events from the network.
@@ -77,16 +64,8 @@ func (n *ambassador) Start() {
 	}()
 }
 
-func (n *ambassador) sendEventToNetwork(event events.Event) {
-	// For now we just send every event to the network, event other node's events. They're signed so they can't be
-	// edited anyways and it assures the registry shadow copy on the network is populated ASAP.
-	eventData := event.Marshal()
-	document, err := n.networkClient.AddDocumentWithContents(event.IssuedAt(), documentType, eventData)
-	if err != nil {
-		logging.Log().Errorf("Error registering event on the network (event=%s): %v", event.IssuedAt(), err)
-		return
-	}
-	logging.Log().Infof("Event registered on network (event=%s,hash=%s)", event.IssuedAt(), document.Hash)
+func (n *ambassador) sendEventToNetwork() {
+	logging.Log().Infof("Event published on network")
 }
 
 func (n *ambassador) processDocument(document *model.Document) {
@@ -101,11 +80,5 @@ func (n *ambassador) processDocument(document *model.Document) {
 		logging.Log().Errorf("Unable read document data from Nuts Network (hash=%s): %v", document.Hash, err)
 		return
 	}
-	if event, err := events.EventFromJSONWithIssuedAt(buf.Bytes(), document.Timestamp); err != nil {
-		logging.Log().Errorf("Unable parse event from Nuts Network (hash=%s): %v", document.Hash, err)
-	} else {
-		if err = n.eventSystem.ProcessEvent(event); err != nil {
-			logging.Log().Warnf("Error while processing event from Nuts Network (hash=%s): %v", document.Hash, err)
-		}
-	}
+	// todo process
 }

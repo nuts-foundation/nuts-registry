@@ -13,6 +13,7 @@ require (
 	github.com/leodido/go-urn v1.2.1-0.20201207182545-66fa6ee96763
 	github.com/lestrrat-go/jwx v1.0.7
 	github.com/magiconair/properties v1.8.4
+	github.com/nuts-foundation/go-did v0.0.0-20210112131856-14c1adef355a
 	github.com/nuts-foundation/nuts-crypto v0.16.0
 	github.com/nuts-foundation/nuts-go-core v0.16.0
 	github.com/nuts-foundation/nuts-go-test v0.16.0

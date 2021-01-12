@@ -20,8 +20,6 @@
 package client
 
 import (
-	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-registry/logging"
 	"time"
 
 	"github.com/nuts-foundation/nuts-registry/api"
@@ -34,15 +32,8 @@ func NewRegistryClient() pkg.RegistryClient {
 }
 
 func initialize(registry *pkg.Registry) pkg.RegistryClient {
-	if registry.Config.Mode == core.ServerEngineMode {
-		if err := registry.Configure(); err != nil {
-			logging.Log().Panic(err)
-		}
-		return registry
-	} else {
-		return api.HttpClient{
-			ServerAddress: registry.Config.Address,
-			Timeout:       time.Duration(registry.Config.ClientTimeout) * time.Second,
-		}
+	return api.HttpClient{
+		ServerAddress: registry.Config.Address,
+		Timeout:       time.Duration(registry.Config.ClientTimeout) * time.Second,
 	}
 }

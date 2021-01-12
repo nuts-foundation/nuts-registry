@@ -20,34 +20,22 @@
 package pkg
 
 import (
-	"archive/tar"
-	"compress/gzip"
-	"crypto/x509"
-	"errors"
-	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
+	"github.com/nuts-foundation/go-did"
+	"github.com/nuts-foundation/nuts-network/pkg/model"
 	"github.com/nuts-foundation/nuts-registry/logging"
 
 	"github.com/nuts-foundation/nuts-network/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/network"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/nuts-foundation/nuts-crypto/client"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
 	networkClient "github.com/nuts-foundation/nuts-network/client"
 	networkPkg "github.com/nuts-foundation/nuts-network/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/sirupsen/logrus"
 )
 
@@ -85,69 +73,65 @@ const ModuleName = "Registry"
 // the registry is reloaded (from disk).
 var ReloadRegistryIdleTimeout time.Duration
 
-// RegistryClient is the interface to be implemented by any remote or local client
+// RegistryClient is an alias for the DIDStore so older code can still use it.
 type RegistryClient interface {
-	// EndpointsByOrganization returns all registered endpoints for an organization
-	EndpointsByOrganizationAndType(organizationIdentifier core.PartyID, endpointType *string) ([]db.Endpoint, error)
-
-	// SearchOrganizations searches the registry for any Organization matching the given query
-	SearchOrganizations(query string) ([]db.Organization, error)
-
-	// OrganizationById returns an Organization given the Id or an error if it doesn't exist
-	OrganizationById(id core.PartyID) (*db.Organization, error)
-
-	// ReverseLookup finds an exact match on name or returns an error if not found
-	ReverseLookup(name string) (*db.Organization, error)
-
-	// RegisterEndpoint registers an endpoint for an organization
-	RegisterEndpoint(organizationID core.PartyID, id string, url string, endpointType string, status string, properties map[string]string) (events.Event, error)
-
-	// VendorClaim registers an organization under a vendor. orgKeys are the organization's keys in JWK format
-	VendorClaim(orgID core.PartyID, orgName string, orgKeys []interface{}) (events.Event, error)
-
-	// RegisterVendor registers a vendor with the given id, name for the specified domain. If the vendor with this ID
-	// already exists, it functions as an update.
-	RegisterVendor(certificate *x509.Certificate) (events.Event, error)
-
-	// RefreshOrganizationCertificate issues a new certificate for the organization. The organization must be registered under the current vendor.
-	// If successful it returns the resulting event.
-	RefreshOrganizationCertificate(organizationID core.PartyID) (events.Event, error)
-
-	// Verify verifies the data in the registry owned by this node.
-	// If fix=true, data will be fixed/upgraded when necessary (e.g. issue certificates). Events resulting from fixing the data are returned.
-	// If the returned bool=true there's data to be fixed and Verify should be run with fix=true.
-	Verify(fix bool) ([]events.Event, bool, error)
-
-	// VendorCAs returns all registered vendors as list of chains, PEM encoded. The first entry in a chain will be the leaf and the last one the root.
-	VendorCAs() [][]*x509.Certificate
-
-	// VendorById finds a vendor by its ID. When not found it returns an ErrVendorNotFound error and a nil result.
-	VendorById(vID core.PartyID) (*db.Vendor, error)
+	DIDStore
 }
+
+// DIDStore is the interface for the low level DID operations.
+type DIDStore interface {
+	// Search searches for DID documents that match the given conditions;
+	// - onlyOwn: only return documents which contain a verificationMethod which' private key is present in this node.
+	// - tags: only return documents that match ALL of the given tags.
+	// If something goes wrong an error is returned.
+	Search(onlyOwn bool, tags []string) ([]did.Document, error)
+	// Create creates a new DID document and returns it. If something goes wrong an error is returned.
+	Create() (*did.Document, error)
+	// Get returns the DID document using on the given DID or nil if not found. If something goes wrong an error is returned.
+	Get(DID did.DID) (*did.Document, *DIDDocumentMetadata, error)
+	// GetByTag gets a DID document using the given tag or nil if not found. If multiple documents match the given tag
+	// or something else goes wrong, an error is returned.
+	GetByTag(tag string) (*did.Document, error)
+	// Update replaces the DID document identified by DID with the nextVersion if the given hash matches the current valid DID document hash.
+	Update(DID did.DID, hash []byte, nextVersion did.Document) (*did.Document, error)
+	// Tag replaces all tags on a DID document given the DID.
+	Tag(DID did.DID, tags []string) error
+}
+
+// DIDDocumentMetadata holds the metadata of a DID document
+type DIDDocumentMetadata struct {
+	Created time.Time `json:"created"`
+	Updated time.Time `json:"updated"`
+	// Version contains the semantic version of the DID document.
+	Version int `json:"version"`
+	// OriginJWSHash contains the hash of the JWS envelope of the first version of the DID document.
+	OriginJWSHash model.Hash `json:"originJwsHash"`
+	// Hash of DID document bytes. Is equals to payloadHash in network layer.
+	Hash string `json:"hash"`
+}
+
+//type StoreWrapper struct {
+//	networkClient networkPkg.NetworkClient
+//	store         DIDStore
+//}
+//
+//func wrap(store DIDStore) DIDStore {
+//	return &StoreWrapper(store: store)
+//}
 
 // RegistryConfig holds the config
 type RegistryConfig struct {
-	Mode                            string
-	SyncMode                        string
-	SyncAddress                     string
-	SyncInterval                    int
-	Datadir                         string
-	Address                         string
-	VendorCACertificateValidity     int
-	OrganisationCertificateValidity int
-	ClientTimeout                   int
+	Mode          string
+	Datadir       string
+	Address       string
+	ClientTimeout int
 }
 
 func DefaultRegistryConfig() RegistryConfig {
 	return RegistryConfig{
-		SyncMode:                        "fs",
-		SyncAddress:                     "https://codeload.github.com/nuts-foundation/nuts-registry-development/tar.gz/master",
-		SyncInterval:                    30,
-		Datadir:                         "./data",
-		Address:                         "localhost:1323",
-		VendorCACertificateValidity:     1095,
-		OrganisationCertificateValidity: 365,
-		ClientTimeout:                   10,
+		Datadir:       "./data",
+		Address:       "localhost:1323",
+		ClientTimeout: 10,
 	}
 }
 
@@ -155,7 +139,6 @@ func DefaultRegistryConfig() RegistryConfig {
 type Registry struct {
 	Config            RegistryConfig
 	Db                db.Db
-	EventSystem       events.EventSystem
 	network           networkPkg.NetworkClient
 	crypto            crypto.Client
 	OnChange          func(registry *Registry)
@@ -201,107 +184,19 @@ func (r *Registry) Configure() error {
 		cfg := core.NutsConfig()
 		r.Config.Mode = cfg.GetEngineMode(r.Config.Mode)
 		if r.Config.Mode == core.ServerEngineMode {
-			r.EventSystem = events.NewEventSystem(domain.GetEventTypes()...)
-			if r.Config.VendorCACertificateValidity < 1 {
-				err = errors.New("vendor CA certificate validity must be at least 1 day")
-				return
-			}
-			if r.Config.OrganisationCertificateValidity < 1 {
-				err = errors.New("organisation certificate validity must be at least 1 day")
-				return
-			}
-			// Order of event processors:
-			// -  TrustStore; must be first since certificates might be self-signed, and thus be added to the truststore
-			//    before signature validation takes place.
-			// -  Signature validator
-			// -  Database, (in memory) queryable view of the registry
-			// -  Network Ambassador, when all other processors succeeded the event is probably valid and can be broadcast.
-			domain.NewCertificateEventHandler(r.crypto.TrustStore()).RegisterEventHandlers(r.EventSystem.RegisterEventHandler)
-			signatureValidator := events.NewSignatureValidator(r.crypto.VerifyJWS, r.crypto.TrustStore())
-			signatureValidator.RegisterEventHandlers(r.EventSystem.RegisterEventHandler, domain.GetEventTypes())
 			r.Db = db.New()
-			r.Db.RegisterEventHandlers(r.EventSystem.RegisterEventHandler)
 			if r.networkAmbassador == nil {
-				r.networkAmbassador = network.NewAmbassador(r.network, r.crypto, r.EventSystem)
-			}
-			r.networkAmbassador.RegisterEventHandlers(r.EventSystem.RegisterEventHandler, domain.GetEventTypes())
-			if err = r.EventSystem.Configure(r.getEventsDir()); err != nil {
-				logging.Log().WithError(err).Warn("Unable to configure event system")
-				return
-			}
-			// Apply stored events
-			if err = r.EventSystem.LoadAndApplyEvents(); err != nil {
-				logging.Log().WithError(err).Warn("Unable to load registry files")
+				r.networkAmbassador = network.NewAmbassador(r.network, r.crypto)
 			}
 		}
 	})
 	return err
 }
 
-func (r *Registry) Verify(fix bool) ([]events.Event, bool, error) {
-	return r.verify(core.NutsConfig(), fix)
-}
-
-// EndpointsByOrganization is a wrapper for sam func on DB
-func (r *Registry) EndpointsByOrganizationAndType(organizationIdentifier core.PartyID, endpointType *string) ([]db.Endpoint, error) {
-	return r.Db.FindEndpointsByOrganizationAndType(organizationIdentifier, endpointType)
-}
-
-// SearchOrganizations is a wrapper for sam func on DB
-func (r *Registry) SearchOrganizations(query string) ([]db.Organization, error) {
-	return r.Db.SearchOrganizations(query), nil
-}
-
-// OrganizationById is a wrapper for sam func on DB
-func (r *Registry) OrganizationById(id core.PartyID) (*db.Organization, error) {
-	return r.Db.OrganizationById(id)
-}
-
-func (r *Registry) ReverseLookup(name string) (*db.Organization, error) {
-	return r.Db.ReverseLookup(name)
-}
-
-func (r *Registry) VendorCAs() [][]*x509.Certificate {
-	now := time.Now()
-
-	roots, _ := r.crypto.TrustStore().Roots()
-	var rootChains [][]*x509.Certificate
-
-	for _, r := range roots {
-		rootChains = append(rootChains, []*x509.Certificate{r})
-	}
-
-	intermediates := r.crypto.TrustStore().GetCertificates(rootChains, now, true)
-	return r.crypto.TrustStore().GetCertificates(intermediates, now, true)
-}
-
-// ErrVendorNotFound is returned when a vendor is not found based on its ID
-var ErrVendorNotFound = errors.New("vendor not found")
-
-func (r *Registry) VendorById(id core.PartyID) (*db.Vendor, error) {
-	v := r.Db.VendorByID(id)
-	if v == nil {
-		return nil, ErrVendorNotFound
-	}
-	return v, nil
-}
-
 // Start initiates the routines for auto-updating the data
 func (r *Registry) Start() error {
 	if r.Config.Mode == core.ServerEngineMode {
-		_, _, err := r.verify(*core.NutsConfig(), false)
-		if err != nil {
-			logging.Log().Error("Error occurred during registry data verification: ", err)
-		}
 		r.networkAmbassador.Start()
-		switch cm := r.Config.SyncMode; cm {
-		case "fs":
-			return r.startFileSystemWatcher()
-		case "github":
-			return r.startGithubSync()
-		default:
-			return fmt.Errorf("invalid syncMode: %s", cm)
-		}
 	}
 	return nil
 }
@@ -318,222 +213,10 @@ func (r *Registry) Shutdown() error {
 	return nil
 }
 
-// Load signals the Db to (re)load sources. On success the OnChange func is called
-func (r *Registry) Load() error {
-	if err := r.EventSystem.LoadAndApplyEvents(); err != nil {
-		return err
-	}
-
-	if r.OnChange != nil {
-		r.OnChange(r)
-	}
-
-	return nil
-}
-
 func (r *Registry) Diagnostics() []core.DiagnosticResult {
-	return r.EventSystem.Diagnostics()
+	return []core.DiagnosticResult{}
 }
 
 func (r *Registry) getEventsDir() string {
 	return r.Config.Datadir + "/events"
-}
-
-func (r *Registry) startFileSystemWatcher() error {
-	w, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
-
-	closer := make(chan struct{})
-
-	go func() {
-		// Timer needs to be initialized, otherwise Go panics. Reloading after an hour or so isn't a problem.
-		var reloadRegistryTimer = time.NewTimer(time.Hour)
-		for {
-			select {
-			case event, ok := <-w.Events:
-				if !ok {
-					return
-				}
-
-				logging.Log().Debugf("Received file watcher event: %s", event.String())
-				if strings.HasSuffix(event.Name, ".json") &&
-					(event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create) {
-					// When copying or extracting files, we have no guarantees that the filewatcher notifies us about
-					// the files in natural order (of filenames), which we use for our event ordering. To circumvent
-					// conflicts, we schedule an 'idle time-out' before actually reloading the registry as to wait for
-					// new notifications. If a file is added while waiting, the reload timer is rescheduled.
-					reloadRegistryTimer.Stop()
-					reloadRegistryTimer = time.NewTimer(ReloadRegistryIdleTimeout)
-				}
-			case <-reloadRegistryTimer.C:
-				if r.Db != nil {
-					if err := r.Load(); err != nil {
-						logging.Log().WithError(err).Error("error during reloading of registry files")
-					}
-				}
-			case err, ok := <-w.Errors:
-				if !ok {
-					return
-				}
-				logging.Log().WithError(err).Error("Received file watcher error")
-			case <-closer:
-				logging.Log().Debug("Stopping file watcher")
-				return
-			}
-		}
-	}()
-
-	if err := w.Add(r.getEventsDir()); err != nil {
-		return err
-	}
-
-	// register close channel
-	r.closers = append(r.closers, closer)
-
-	return nil
-}
-
-func (r *Registry) startGithubSync() error {
-	if err := r.startFileSystemWatcher(); err != nil {
-		logging.Log().WithError(err).Error("Github sync not started due to file watcher problem")
-		return err
-	}
-
-	close := make(chan struct{})
-	go func(r *Registry, ch chan struct{}) {
-		var eTag string
-
-		for {
-			var err error
-
-			logging.Log().Debugf("Downloading registry files from %s to %s", r.Config.SyncAddress, r.getEventsDir())
-			if eTag, err = r.downloadAndUnzip(eTag); err != nil {
-				logging.Log().WithError(err).Error("Error downloading registry files")
-			}
-
-			select {
-			case <-ch:
-				logging.Log().Debug("Stopping github download")
-				return
-			case <-time.After(time.Duration(int64(r.Config.SyncInterval) * time.Minute.Nanoseconds())):
-
-			}
-		}
-	}(r, close)
-
-	// register close channel
-	r.closers = append(r.closers, close)
-
-	logging.Log().Info("Github sync started")
-
-	return nil
-}
-
-func (r *Registry) downloadAndUnzip(eTag string) (string, error) {
-	newTag, err := r.download(eTag)
-
-	if err != nil {
-		return eTag, err
-	}
-
-	if newTag == eTag {
-		logging.Log().Debug("Latest version on github is the same as local, skipping")
-		return eTag, nil
-	}
-
-	return newTag, r.unzip()
-}
-
-func (r *Registry) download(eTag string) (string, error) {
-	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
-	httpClient := &http.Client{Timeout: 30 * time.Second}
-
-	// Get the data
-	resp, err := httpClient.Get(r.Config.SyncAddress)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	newTag := resp.Header.Get("ETag")
-	if eTag == newTag {
-		return eTag, nil
-	}
-
-	tmpDir := fmt.Sprintf("%s/%s", r.Config.Datadir, "tmp")
-	if _, err := os.Stat(tmpDir); os.IsNotExist(err) {
-		// create and continue
-		os.Mkdir(tmpDir, os.ModePerm)
-	}
-
-	tmpPath := fmt.Sprintf("%s/%s/%s", r.Config.Datadir, "tmp", "registry.tar.gz")
-
-	// Create the file
-	out, err := os.Create(tmpPath)
-	if err != nil {
-		return eTag, err
-	}
-	defer out.Close()
-
-	// Write the body to file
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return eTag, err
-	}
-
-	return newTag, nil
-}
-
-// unzip also strips the directory
-func (r *Registry) unzip() error {
-	tarGzFile := fmt.Sprintf("%s/%s/%s", r.Config.Datadir, "tmp", "registry.tar.gz")
-
-	f, err := os.Open(tarGzFile)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	gzf, err := gzip.NewReader(f)
-	if err != nil {
-		return err
-	}
-
-	tarReader := tar.NewReader(gzf)
-
-	for {
-		header, err := tarReader.Next()
-
-		if err == io.EOF {
-			break
-		}
-
-		if err != nil {
-			return err
-		}
-
-		// Top-level directory in tarball is skipped
-		parts := strings.Split(filepath.Clean(header.Name), string(os.PathSeparator))
-		if len(parts) == 1 {
-			// Skip top-level entries
-			continue
-		}
-
-		if header.Typeflag == tar.TypeReg {
-			// Only extract JSON files
-			if path.Ext(header.Name) == ".json" {
-				targetPath := path.Join(r.Config.Datadir, filepath.Join(parts[1:]...))
-				dst, err := os.Create(targetPath)
-				if err != nil {
-					return err
-				}
-				if _, err := io.Copy(dst, tarReader); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return os.Remove(tarGzFile)
 }

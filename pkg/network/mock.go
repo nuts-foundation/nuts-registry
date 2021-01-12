@@ -6,7 +6,6 @@ package network
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	events "github.com/nuts-foundation/nuts-registry/pkg/events"
 	reflect "reflect"
 )
 
@@ -31,18 +30,6 @@ func NewMockAmbassador(ctrl *gomock.Controller) *MockAmbassador {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockAmbassador) EXPECT() *MockAmbassadorMockRecorder {
 	return m.recorder
-}
-
-// RegisterEventHandlers mocks base method
-func (m *MockAmbassador) RegisterEventHandlers(fn events.EventRegistrar, eventType []events.EventType) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RegisterEventHandlers", fn, eventType)
-}
-
-// RegisterEventHandlers indicates an expected call of RegisterEventHandlers
-func (mr *MockAmbassadorMockRecorder) RegisterEventHandlers(fn, eventType interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterEventHandlers", reflect.TypeOf((*MockAmbassador)(nil).RegisterEventHandlers), fn, eventType)
 }
 
 // Start mocks base method

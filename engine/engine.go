@@ -20,26 +20,14 @@
 package engine
 
 import (
-	"crypto/x509"
 	"fmt"
+
 	"github.com/nuts-foundation/nuts-registry/logging"
-	"io/ioutil"
-	"os"
-	"os/signal"
-	"strings"
 
-	"time"
-
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/api"
 	"github.com/nuts-foundation/nuts-registry/client"
 	"github.com/nuts-foundation/nuts-registry/pkg"
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
-	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -74,11 +62,6 @@ func flagSet() *pflag.FlagSet {
 	flagSet.String(pkg.ConfDataDir, defs.Datadir, fmt.Sprintf("Location of data files, default: %s", defs.Datadir))
 	flagSet.String(pkg.ConfMode, defs.Mode, fmt.Sprintf("server or client, when client it uses the HttpClient, default: %s", defs.Mode))
 	flagSet.String(pkg.ConfAddress, defs.Address, fmt.Sprintf("Interface and port for http server to bind to, default: %s", defs.Address))
-	flagSet.String(pkg.ConfSyncMode, defs.SyncMode, fmt.Sprintf("The method for updating the data, 'fs' for a filesystem watch or 'github' for a periodic download, default: %s", defs.SyncMode))
-	flagSet.String(pkg.ConfSyncAddress, defs.SyncAddress, fmt.Sprintf("The remote url to download the latest registry data from, default: %s", defs.SyncAddress))
-	flagSet.Int(pkg.ConfSyncInterval, defs.SyncInterval, fmt.Sprintf("The interval in minutes between looking for updated registry files on github, default: %d", defs.SyncInterval))
-	flagSet.Int(pkg.ConfVendorCACertificateValidity, defs.VendorCACertificateValidity, fmt.Sprintf("Number of days vendor CA certificates are valid, default: %d", defs.VendorCACertificateValidity))
-	flagSet.Int(pkg.ConfOrganisationCertificateValidity, defs.OrganisationCertificateValidity, fmt.Sprintf("Number of days organisation certificates are valid, default: %d", defs.OrganisationCertificateValidity))
 	flagSet.Int(pkg.ConfClientTimeout, defs.ClientTimeout, fmt.Sprintf("Time-out for the client in seconds (e.g. when using the CLI), default: %d", defs.ClientTimeout))
 
 	return flagSet
@@ -99,204 +82,63 @@ func cmd() *cobra.Command {
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "search [organization]",
-		Short: "Find organizations within the registry",
+		Use:   "search [tags]",
+		Short: "Find DIDs within the registry that have the given tags (comma-separated)",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			cl := registryClientCreator()
-			os, _ := cl.SearchOrganizations(args[0])
+			// split tags on comma and call Search
 
-			logging.Log().Errorf("Found %d organizations\n", len(os))
+			//logging.Log().Errorf("Found %d organizations\n", len(os))
 		},
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "server",
-		Short: "Run standalone api server",
-		Run: func(cmd *cobra.Command, args []string) {
-			i := pkg.RegistryInstance()
-
-			echo := echo.New()
-			echo.HideBanner = true
-			echo.Use(middleware.Logger())
-			api.RegisterHandlers(echo, &api.ApiWrapper{R: i})
-
-			// todo move to nuts-go-core
-			sigc := make(chan os.Signal, 1)
-			signal.Notify(sigc, os.Interrupt, os.Kill)
-
-			recoverFromEcho := func() {
-				defer func() {
-					recover()
-				}()
-				echo.Start(i.Config.Address)
-			}
-
-			go recoverFromEcho()
-			<-sigc
-		},
-	})
-
-	cmd.AddCommand(&cobra.Command{
-		Use:   "register-vendor [vendor CA certificate PEM file]",
-		Short: "Registers a vendor",
-		Args:  cobra.ExactArgs(1),
+		Use:   "create-did",
+		Short: "Registers a new DID",
+		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cl := registryClientCreator()
-			var certificate *x509.Certificate
-			if certificateBytes, err := ioutil.ReadFile(args[0]); err != nil {
-				return err
-			} else {
-				if certificate, err = cert.PemToX509(certificateBytes); err != nil {
-					return err
-				}
-			}
-			event, err := cl.RegisterVendor(certificate)
-			if err != nil {
-				logging.Log().Errorf("Unable to register vendor: %v", err)
-				return err
-			}
-			logging.Log().Info("Vendor registered.")
-			logEventToConsole(event)
+
+			// call Create
+
+			//logging.Log().Info("DID registered.")
 			return nil
 		},
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "refresh-organization-cert [orgID]",
-		Short: "Issues a new organization certificate using existing keys (or newly generated if none exist)",
+		Use:   "get [DID or tag]",
+		Short: "Find a DID document based on its DID or tag",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cl := registryClientCreator()
-			organizationID, err := core.ParsePartyID(args[0])
-			if err != nil {
-				return err
-			}
-			event, err := cl.RefreshOrganizationCertificate(organizationID)
-			if err != nil {
-				logging.Log().Errorf("Unable to refresh organization certificate: %v", err)
-				return err
-			}
-			payload := domain.VendorClaimEvent{}
-			err = event.Unmarshal(&payload)
-			if err != nil {
-				logging.Log().Error("Unable to parse event payload.", err)
-			}
-			certificates := cert.GetActiveCertificates(payload.OrgKeys, time.Now())
-			if len(certificates) == 0 {
-				logging.Log().Error("Certificate refresh succeeded, but couldn't find any activate certificate.")
-			} else {
-				// GetActiveCertificates returns the certificate with the longest validity first.
-				logging.Log().Infof("Organization certificate refreshed, new certificate is valid until %v", certificates[0].NotAfter)
-			}
-			logEventToConsole(event)
+
+			// call Get or GetByTag
 			return nil
 		},
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "vendor-claim [org-identifier] [org-name]",
-		Short: "Registers a vendor claim.",
-		Long:  "Registers a vendor claiming a care organization as its client.",
+		Use:   "tag DID [tags]",
+		Short: "Replace the tags of the given DID document with the given tags (comma-separated)",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cl := registryClientCreator()
-			organizationID, err := core.ParsePartyID(args[0])
-			if err != nil {
-				return err
-			}
-			event, err := cl.VendorClaim(organizationID, args[1], nil)
-			if err != nil {
-				logging.Log().Errorf("Unable to register vendor organisation claim: %v", err)
-				return err
-			}
-			logging.Log().Info("Vendor organisation claim registered.")
-			logEventToConsole(event)
+
+			// call Tag
 			return nil
 		},
 	})
 
-	{
-		var fix *bool
-		command := &cobra.Command{
-			Use:   "verify",
-			Short: "Verifies data in the registry.",
-			Long:  "Verifies the vendor's own data in the registry, use --fix or -f to fix/upgrade data.",
-			RunE: func(cmd *cobra.Command, args []string) error {
-				cl := registryClientCreator()
-				logging.Log().Info("Verifying...")
-				resultingEvents, needsFixing, err := cl.Verify(*fix)
-				if err != nil {
-					logging.Log().Errorf("Verification error: %v", err)
-					return err
-				}
-				if needsFixing {
-					logging.Log().Warn("Verification complete, data must be fixed. Please rerun command with --fix or -f")
-				} else {
-					logging.Log().Info("Verification complete")
-				}
-				if len(resultingEvents) > 0 {
-					logging.Log().Infof("Data was fixed and %d events were emitted:", len(resultingEvents))
-					for _, event := range resultingEvents {
-						logEventToConsole(event)
-					}
-				}
-				return nil
-			},
-		}
-		flagSet := pflag.NewFlagSet("verify", pflag.ContinueOnError)
-		fix = flagSet.BoolP("fix", "f", false, "fix/upgrade data")
-		command.Flags().AddFlagSet(flagSet)
-		cmd.AddCommand(command)
-	}
+	cmd.AddCommand(&cobra.Command{
+		Use:   "update DID [file]",
+		Short: "Update a DID with the given DID document, this replaces the DID document. If no file is given, stdin is used",
+		Args:  cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
 
-	{
-		var properties *[]string
-		var id *string
-		command := &cobra.Command{
-			Use:   "register-endpoint [org-identifier] [type] [url]",
-			Short: "Registers an endpoint",
-			Long:  "Registers an endpoint for an organization.",
-			Args:  cobra.ExactArgs(3),
-			RunE: func(cmd *cobra.Command, args []string) error {
-				cl := registryClientCreator()
-				partyID, err := core.ParsePartyID(args[0])
-				if err != nil {
-					return err
-				}
-				event, err := cl.RegisterEndpoint(partyID, *id, args[2], args[1], db.StatusActive, parseCLIProperties(*properties))
-				if err != nil {
-					logging.Log().Errorf("Unable to register endpoint: %v", err)
-					return err
-				}
-				logging.Log().Info("Endpoint registered.")
-				logEventToConsole(event)
-				return nil
-			},
-		}
-		flagSet := pflag.NewFlagSet("register-endpoint", pflag.ContinueOnError)
-		properties = flagSet.StringArrayP("property", "p", nil, "extra properties for the endpoint, in the format: key=value")
-		id = flagSet.StringP("id", "i", "", "endpoint identifier, defaults to a random GUID when not set")
-		command.Flags().AddFlagSet(flagSet)
-		cmd.AddCommand(command)
-	}
+			// read from file or stdin
+
+			// call Update
+			return nil
+		},
+	})
 
 	return cmd
-}
-
-// parseCLIProperties parses a slice of key-value entries (key=value) to a map.
-func parseCLIProperties(keysAndValues []string) map[string]string {
-	result := make(map[string]string, 0)
-	for _, keyAndValue := range keysAndValues {
-		parts := strings.SplitN(keyAndValue, "=", 2)
-		if len(parts) == 2 {
-			result[parts[0]] = parts[1]
-		}
-	}
-	return result
-}
-
-func logEventToConsole(event events.Event) {
-	println("Event:", events.SuggestEventFileName(event))
-	println(string(event.Marshal()))
 }
