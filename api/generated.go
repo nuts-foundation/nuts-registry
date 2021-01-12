@@ -19,199 +19,64 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// CAListWithChain defines model for CAListWithChain.
-type CAListWithChain struct {
+// DIDDocument defines model for DIDDocument.
+type DIDDocument map[string]interface{}
 
-	// list of current active (or will be active) vendor CAs. PEM encoded
-	CAList []string `json:"CAList"`
+// DIDDocumentMetadata defines model for DIDDocumentMetadata.
+type DIDDocumentMetadata struct {
 
-	// list of certificates, roots first then intermediates, shared amongst all CAs. PEM encoded.
-	Chain []string `json:"chain"`
+	// Date/time at which the document was originally created.
+	Created *time.Time `json:"created,omitempty"`
+
+	// Hash (SHA-256, hex-encoded) of DID document bytes. Is equal to payloadHash in network layer.
+	Hash *string `json:"hash,omitempty"`
+
+	// Hash (SHA-256, hex-encoded) of the JWS envelope of the first version of the DID document.
+	OriginJwsHash *string `json:"originJwsHash,omitempty"`
+
+	// Date/time at which the document (or this version) was updated.
+	Updated *time.Time `json:"updated,omitempty"`
+
+	// Semantic version of the DID document.
+	Version *int `json:"version,omitempty"`
 }
 
-// Domain defines model for Domain.
-type Domain string
+// DIDResolutionResult defines model for DIDResolutionResult.
+type DIDResolutionResult struct {
 
-// List of Domain
-const (
-	Domain_healthcare Domain = "healthcare"
-	Domain_insurance  Domain = "insurance"
-	Domain_personal   Domain = "personal"
-)
+	// The actual DID Document in JSON representation.
+	Document         *DIDDocument         `json:"document,omitempty"`
+	DocumentMetadata *DIDDocumentMetadata `json:"documentMetadata,omitempty"`
 
-// Endpoint defines model for Endpoint.
-type Endpoint struct {
-
-	// location of the actual en endpoint on the internet
-	URL string `json:"URL"`
-
-	// URI of the type of endpoint
-	EndpointType string `json:"endpointType"`
-
-	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
-	Identifier Identifier `json:"identifier"`
-
-	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
-	Organization Identifier `json:"organization"`
-
-	// A property bag, containing extra properties for endpoints
-	Properties *EndpointProperties `json:"properties,omitempty"`
-
-	// status of the endpoint
-	Status string `json:"status"`
+	// Metadata collected during DID Document (a.k.a. DID Resolution Metadata).
+	ResolutionMetadata *map[string]interface{} `json:"resolutionMetadata,omitempty"`
 }
 
-// EndpointProperties defines model for EndpointProperties.
-type EndpointProperties map[string]interface{}
+// SearchDIDParams defines parameters for SearchDID.
+type SearchDIDParams struct {
 
-// Event defines model for Event.
-type Event struct {
-
-	// timestamp at which the event happened
-	IssuedAt *time.Time `json:"issuedAt,omitempty"`
-
-	// payload of the event
-	Payload *interface{} `json:"payload,omitempty"`
-
-	// JWS (JSON Web Signature) securing the payload's authenticity and integrity.
-	Signature *string `json:"signature,omitempty"`
-
-	// type of the event
-	Type *string `json:"type,omitempty"`
+	// URL encoded DID or tag. When given a tag it must resolve to exactly one DID.
+	Tags string `json:"tags"`
 }
 
-// Identifier defines model for Identifier.
-type Identifier string
+// UpdateDIDJSONBody defines parameters for UpdateDID.
+type UpdateDIDJSONBody struct {
 
-// JWK defines model for JWK.
-type JWK map[string]interface{}
+	// SHA-256 hash of the last version of the DID Document
+	CurrentHash *string `json:"currentHash,omitempty"`
 
-// Organization defines model for Organization.
-type Organization struct {
-	Endpoints *[]Endpoint `json:"endpoints,omitempty"`
-
-	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
-	Identifier Identifier `json:"identifier"`
-	Keys       *[]JWK     `json:"keys,omitempty"`
-
-	// the well-known name for the organization
-	Name string `json:"name"`
-
-	// PEM encoded public key (deprecated, use JWK)
-	PublicKey *string `json:"publicKey,omitempty"`
+	// The actual DID Document in JSON representation.
+	Document *DIDDocument `json:"document,omitempty"`
 }
 
-// RegisterEndpointEvent defines model for RegisterEndpointEvent.
-type RegisterEndpointEvent struct {
+// UpdateDIDTagsJSONBody defines parameters for UpdateDIDTags.
+type UpdateDIDTagsJSONBody []string
 
-	// location of the actual en endpoint on the internet
-	URL string `json:"URL"`
+// UpdateDIDRequestBody defines body for UpdateDID for application/json ContentType.
+type UpdateDIDJSONRequestBody UpdateDIDJSONBody
 
-	// URI of the type of endpoint
-	EndpointType string `json:"endpointType"`
-
-	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
-	Identifier Identifier `json:"identifier"`
-
-	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
-	Organization Identifier `json:"organization"`
-
-	// A property bag, containing extra properties for endpoints
-	Properties *EndpointProperties `json:"properties,omitempty"`
-
-	// status of the endpoint
-	Status string `json:"status"`
-}
-
-// RegisterVendorEvent defines model for RegisterVendorEvent.
-type RegisterVendorEvent struct {
-
-	// Domain the entity operates in.
-	Domain Domain `json:"domain"`
-
-	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
-	Identifier Identifier `json:"identifier"`
-
-	// the well-known name for the vendor
-	Name    string `json:"name"`
-	OrgKeys *[]JWK `json:"orgKeys,omitempty"`
-}
-
-// Vendor defines model for Vendor.
-type Vendor struct {
-
-	// Domain the entity operates in.
-	Domain Domain `json:"domain"`
-
-	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
-	Identifier *Identifier `json:"identifier,omitempty"`
-	Keys       *[]JWK      `json:"keys,omitempty"`
-
-	// the well-known name for the vendor
-	Name string `json:"name"`
-}
-
-// VendorClaimEvent defines model for VendorClaimEvent.
-type VendorClaimEvent struct {
-
-	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
-	OrgIdentifier Identifier `json:"orgIdentifier"`
-	OrgKeys       *[]JWK     `json:"orgKeys,omitempty"`
-
-	// the well-known name for the organisation
-	OrgName string `json:"orgName"`
-
-	// Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
-	VendorIdentifier Identifier `json:"vendorIdentifier"`
-}
-
-// VerifyParams defines parameters for Verify.
-type VerifyParams struct {
-
-	// Wheter to fix data in the registry that's broken or requires upgrading
-	Fix *bool `json:"fix,omitempty"`
-}
-
-// EndpointsByOrganisationIdParams defines parameters for EndpointsByOrganisationId.
-type EndpointsByOrganisationIdParams struct {
-
-	// A list of organisation identifiers to query for. identifiers are Nuts Identifiers with proper escaping
-	OrgIds []string `json:"orgIds"`
-
-	// The type of endpoint requested, eg Nuts or FHIR
-	Type *string `json:"type,omitempty"`
-
-	// only return successfull result if each given organisation has an endpoint of the requested type, otherwise 400
-	Strict *bool `json:"strict,omitempty"`
-}
-
-// VendorClaimJSONBody defines parameters for VendorClaim.
-type VendorClaimJSONBody Organization
-
-// RegisterEndpointJSONBody defines parameters for RegisterEndpoint.
-type RegisterEndpointJSONBody Endpoint
-
-// SearchOrganizationsParams defines parameters for SearchOrganizations.
-type SearchOrganizationsParams struct {
-
-	// Search string
-	Query string `json:"query"`
-
-	// Only return exact matches, for reverse lookup
-	Exact *bool `json:"exact,omitempty"`
-}
-
-// DeprecatedVendorClaimJSONBody defines parameters for DeprecatedVendorClaim.
-type DeprecatedVendorClaimJSONBody Organization
-
-// VendorClaimRequestBody defines body for VendorClaim for application/json ContentType.
-type VendorClaimJSONRequestBody VendorClaimJSONBody
-
-// RegisterEndpointRequestBody defines body for RegisterEndpoint for application/json ContentType.
-type RegisterEndpointJSONRequestBody RegisterEndpointJSONBody
-
-// DeprecatedVendorClaimRequestBody defines body for DeprecatedVendorClaim for application/json ContentType.
-type DeprecatedVendorClaimJSONRequestBody DeprecatedVendorClaimJSONBody
+// UpdateDIDTagsRequestBody defines body for UpdateDIDTags for application/json ContentType.
+type UpdateDIDTagsJSONRequestBody UpdateDIDTagsJSONBody
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -286,51 +151,28 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
-	// Verify request
-	Verify(ctx context.Context, params *VerifyParams) (*http.Response, error)
+	// SearchDID request
+	SearchDID(ctx context.Context, params *SearchDIDParams) (*http.Response, error)
 
-	// EndpointsByOrganisationId request
-	EndpointsByOrganisationId(ctx context.Context, params *EndpointsByOrganisationIdParams) (*http.Response, error)
+	// CreateDID request
+	CreateDID(ctx context.Context) (*http.Response, error)
 
-	// MTLSCAs request
-	MTLSCAs(ctx context.Context) (*http.Response, error)
+	// GetDID request
+	GetDID(ctx context.Context, didOrTag string) (*http.Response, error)
 
-	// MTLSCertificates request
-	MTLSCertificates(ctx context.Context) (*http.Response, error)
+	// UpdateDID request  with any body
+	UpdateDIDWithBody(ctx context.Context, didOrTag string, contentType string, body io.Reader) (*http.Response, error)
 
-	// VendorClaim request  with any body
-	VendorClaimWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+	UpdateDID(ctx context.Context, didOrTag string, body UpdateDIDJSONRequestBody) (*http.Response, error)
 
-	VendorClaim(ctx context.Context, body VendorClaimJSONRequestBody) (*http.Response, error)
+	// UpdateDIDTags request  with any body
+	UpdateDIDTagsWithBody(ctx context.Context, didOrTag string, contentType string, body io.Reader) (*http.Response, error)
 
-	// OrganizationById request
-	OrganizationById(ctx context.Context, id string) (*http.Response, error)
-
-	// RegisterEndpoint request  with any body
-	RegisterEndpointWithBody(ctx context.Context, id string, contentType string, body io.Reader) (*http.Response, error)
-
-	RegisterEndpoint(ctx context.Context, id string, body RegisterEndpointJSONRequestBody) (*http.Response, error)
-
-	// RefreshOrganizationCertificate request
-	RefreshOrganizationCertificate(ctx context.Context, id string) (*http.Response, error)
-
-	// SearchOrganizations request
-	SearchOrganizations(ctx context.Context, params *SearchOrganizationsParams) (*http.Response, error)
-
-	// VendorById request
-	VendorById(ctx context.Context, id string) (*http.Response, error)
-
-	// DeprecatedVendorClaim request  with any body
-	DeprecatedVendorClaimWithBody(ctx context.Context, id string, contentType string, body io.Reader) (*http.Response, error)
-
-	DeprecatedVendorClaim(ctx context.Context, id string, body DeprecatedVendorClaimJSONRequestBody) (*http.Response, error)
-
-	// RegisterVendor request  with any body
-	RegisterVendorWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+	UpdateDIDTags(ctx context.Context, didOrTag string, body UpdateDIDTagsJSONRequestBody) (*http.Response, error)
 }
 
-func (c *Client) Verify(ctx context.Context, params *VerifyParams) (*http.Response, error) {
-	req, err := NewVerifyRequest(c.Server, params)
+func (c *Client) SearchDID(ctx context.Context, params *SearchDIDParams) (*http.Response, error) {
+	req, err := NewSearchDIDRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -344,8 +186,8 @@ func (c *Client) Verify(ctx context.Context, params *VerifyParams) (*http.Respon
 	return c.Client.Do(req)
 }
 
-func (c *Client) EndpointsByOrganisationId(ctx context.Context, params *EndpointsByOrganisationIdParams) (*http.Response, error) {
-	req, err := NewEndpointsByOrganisationIdRequest(c.Server, params)
+func (c *Client) CreateDID(ctx context.Context) (*http.Response, error) {
+	req, err := NewCreateDIDRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -359,8 +201,8 @@ func (c *Client) EndpointsByOrganisationId(ctx context.Context, params *Endpoint
 	return c.Client.Do(req)
 }
 
-func (c *Client) MTLSCAs(ctx context.Context) (*http.Response, error) {
-	req, err := NewMTLSCAsRequest(c.Server)
+func (c *Client) GetDID(ctx context.Context, didOrTag string) (*http.Response, error) {
+	req, err := NewGetDIDRequest(c.Server, didOrTag)
 	if err != nil {
 		return nil, err
 	}
@@ -374,8 +216,8 @@ func (c *Client) MTLSCAs(ctx context.Context) (*http.Response, error) {
 	return c.Client.Do(req)
 }
 
-func (c *Client) MTLSCertificates(ctx context.Context) (*http.Response, error) {
-	req, err := NewMTLSCertificatesRequest(c.Server)
+func (c *Client) UpdateDIDWithBody(ctx context.Context, didOrTag string, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewUpdateDIDRequestWithBody(c.Server, didOrTag, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -389,8 +231,8 @@ func (c *Client) MTLSCertificates(ctx context.Context) (*http.Response, error) {
 	return c.Client.Do(req)
 }
 
-func (c *Client) VendorClaimWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
-	req, err := NewVendorClaimRequestWithBody(c.Server, contentType, body)
+func (c *Client) UpdateDID(ctx context.Context, didOrTag string, body UpdateDIDJSONRequestBody) (*http.Response, error) {
+	req, err := NewUpdateDIDRequest(c.Server, didOrTag, body)
 	if err != nil {
 		return nil, err
 	}
@@ -404,8 +246,8 @@ func (c *Client) VendorClaimWithBody(ctx context.Context, contentType string, bo
 	return c.Client.Do(req)
 }
 
-func (c *Client) VendorClaim(ctx context.Context, body VendorClaimJSONRequestBody) (*http.Response, error) {
-	req, err := NewVendorClaimRequest(c.Server, body)
+func (c *Client) UpdateDIDTagsWithBody(ctx context.Context, didOrTag string, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewUpdateDIDTagsRequestWithBody(c.Server, didOrTag, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -419,8 +261,8 @@ func (c *Client) VendorClaim(ctx context.Context, body VendorClaimJSONRequestBod
 	return c.Client.Do(req)
 }
 
-func (c *Client) OrganizationById(ctx context.Context, id string) (*http.Response, error) {
-	req, err := NewOrganizationByIdRequest(c.Server, id)
+func (c *Client) UpdateDIDTags(ctx context.Context, didOrTag string, body UpdateDIDTagsJSONRequestBody) (*http.Response, error) {
+	req, err := NewUpdateDIDTagsRequest(c.Server, didOrTag, body)
 	if err != nil {
 		return nil, err
 	}
@@ -434,128 +276,8 @@ func (c *Client) OrganizationById(ctx context.Context, id string) (*http.Respons
 	return c.Client.Do(req)
 }
 
-func (c *Client) RegisterEndpointWithBody(ctx context.Context, id string, contentType string, body io.Reader) (*http.Response, error) {
-	req, err := NewRegisterEndpointRequestWithBody(c.Server, id, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) RegisterEndpoint(ctx context.Context, id string, body RegisterEndpointJSONRequestBody) (*http.Response, error) {
-	req, err := NewRegisterEndpointRequest(c.Server, id, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) RefreshOrganizationCertificate(ctx context.Context, id string) (*http.Response, error) {
-	req, err := NewRefreshOrganizationCertificateRequest(c.Server, id)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) SearchOrganizations(ctx context.Context, params *SearchOrganizationsParams) (*http.Response, error) {
-	req, err := NewSearchOrganizationsRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) VendorById(ctx context.Context, id string) (*http.Response, error) {
-	req, err := NewVendorByIdRequest(c.Server, id)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) DeprecatedVendorClaimWithBody(ctx context.Context, id string, contentType string, body io.Reader) (*http.Response, error) {
-	req, err := NewDeprecatedVendorClaimRequestWithBody(c.Server, id, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) DeprecatedVendorClaim(ctx context.Context, id string, body DeprecatedVendorClaimJSONRequestBody) (*http.Response, error) {
-	req, err := NewDeprecatedVendorClaimRequest(c.Server, id, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) RegisterVendorWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
-	req, err := NewRegisterVendorRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-// NewVerifyRequest generates requests for Verify
-func NewVerifyRequest(server string, params *VerifyParams) (*http.Request, error) {
+// NewSearchDIDRequest generates requests for SearchDID
+func NewSearchDIDRequest(server string, params *SearchDIDParams) (*http.Request, error) {
 	var err error
 
 	queryUrl, err := url.Parse(server)
@@ -563,7 +285,7 @@ func NewVerifyRequest(server string, params *VerifyParams) (*http.Request, error
 		return nil, err
 	}
 
-	basePath := fmt.Sprintf("/api/admin/verify")
+	basePath := fmt.Sprintf("/internal/registry/v1/did")
 	if basePath[0] == '/' {
 		basePath = basePath[1:]
 	}
@@ -575,54 +297,7 @@ func NewVerifyRequest(server string, params *VerifyParams) (*http.Request, error
 
 	queryValues := queryUrl.Query()
 
-	if params.Fix != nil {
-
-		if queryFrag, err := runtime.StyleParam("form", true, "fix", *params.Fix); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
-				}
-			}
-		}
-
-	}
-
-	queryUrl.RawQuery = queryValues.Encode()
-
-	req, err := http.NewRequest("POST", queryUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewEndpointsByOrganisationIdRequest generates requests for EndpointsByOrganisationId
-func NewEndpointsByOrganisationIdRequest(server string, params *EndpointsByOrganisationIdParams) (*http.Request, error) {
-	var err error
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/api/endpoints")
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	queryValues := queryUrl.Query()
-
-	if queryFrag, err := runtime.StyleParam("form", true, "orgIds", params.OrgIds); err != nil {
+	if queryFrag, err := runtime.StyleParam("form", true, "tags", params.Tags); err != nil {
 		return nil, err
 	} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 		return nil, err
@@ -634,38 +309,6 @@ func NewEndpointsByOrganisationIdRequest(server string, params *EndpointsByOrgan
 		}
 	}
 
-	if params.Type != nil {
-
-		if queryFrag, err := runtime.StyleParam("form", true, "type", *params.Type); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
-				}
-			}
-		}
-
-	}
-
-	if params.Strict != nil {
-
-		if queryFrag, err := runtime.StyleParam("form", true, "strict", *params.Strict); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
-				}
-			}
-		}
-
-	}
-
 	queryUrl.RawQuery = queryValues.Encode()
 
 	req, err := http.NewRequest("GET", queryUrl.String(), nil)
@@ -676,8 +319,8 @@ func NewEndpointsByOrganisationIdRequest(server string, params *EndpointsByOrgan
 	return req, nil
 }
 
-// NewMTLSCAsRequest generates requests for MTLSCAs
-func NewMTLSCAsRequest(server string) (*http.Request, error) {
+// NewCreateDIDRequest generates requests for CreateDID
+func NewCreateDIDRequest(server string) (*http.Request, error) {
 	var err error
 
 	queryUrl, err := url.Parse(server)
@@ -685,187 +328,7 @@ func NewMTLSCAsRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	basePath := fmt.Sprintf("/api/mtls/cas")
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewMTLSCertificatesRequest generates requests for MTLSCertificates
-func NewMTLSCertificatesRequest(server string) (*http.Request, error) {
-	var err error
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/api/mtls/certificates")
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewVendorClaimRequest calls the generic VendorClaim builder with application/json body
-func NewVendorClaimRequest(server string, body VendorClaimJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewVendorClaimRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewVendorClaimRequestWithBody generates requests for VendorClaim with any type of body
-func NewVendorClaimRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/api/organization")
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryUrl.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-	return req, nil
-}
-
-// NewOrganizationByIdRequest generates requests for OrganizationById
-func NewOrganizationByIdRequest(server string, id string) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParam("simple", false, "id", id)
-	if err != nil {
-		return nil, err
-	}
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/api/organization/%s", pathParam0)
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewRegisterEndpointRequest calls the generic RegisterEndpoint builder with application/json body
-func NewRegisterEndpointRequest(server string, id string, body RegisterEndpointJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewRegisterEndpointRequestWithBody(server, id, "application/json", bodyReader)
-}
-
-// NewRegisterEndpointRequestWithBody generates requests for RegisterEndpoint with any type of body
-func NewRegisterEndpointRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParam("simple", false, "id", id)
-	if err != nil {
-		return nil, err
-	}
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/api/organization/%s/endpoints", pathParam0)
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryUrl.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-	return req, nil
-}
-
-// NewRefreshOrganizationCertificateRequest generates requests for RefreshOrganizationCertificate
-func NewRefreshOrganizationCertificateRequest(server string, id string) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParam("simple", false, "id", id)
-	if err != nil {
-		return nil, err
-	}
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/api/organization/%s/refresh-cert", pathParam0)
+	basePath := fmt.Sprintf("/internal/registry/v1/did")
 	if basePath[0] == '/' {
 		basePath = basePath[1:]
 	}
@@ -883,72 +346,13 @@ func NewRefreshOrganizationCertificateRequest(server string, id string) (*http.R
 	return req, nil
 }
 
-// NewSearchOrganizationsRequest generates requests for SearchOrganizations
-func NewSearchOrganizationsRequest(server string, params *SearchOrganizationsParams) (*http.Request, error) {
-	var err error
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/api/organizations")
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	queryValues := queryUrl.Query()
-
-	if queryFrag, err := runtime.StyleParam("form", true, "query", params.Query); err != nil {
-		return nil, err
-	} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-		return nil, err
-	} else {
-		for k, v := range parsed {
-			for _, v2 := range v {
-				queryValues.Add(k, v2)
-			}
-		}
-	}
-
-	if params.Exact != nil {
-
-		if queryFrag, err := runtime.StyleParam("form", true, "exact", *params.Exact); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
-				}
-			}
-		}
-
-	}
-
-	queryUrl.RawQuery = queryValues.Encode()
-
-	req, err := http.NewRequest("GET", queryUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewVendorByIdRequest generates requests for VendorById
-func NewVendorByIdRequest(server string, id string) (*http.Request, error) {
+// NewGetDIDRequest generates requests for GetDID
+func NewGetDIDRequest(server string, didOrTag string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParam("simple", false, "id", id)
+	pathParam0, err = runtime.StyleParam("simple", false, "didOrTag", didOrTag)
 	if err != nil {
 		return nil, err
 	}
@@ -958,7 +362,7 @@ func NewVendorByIdRequest(server string, id string) (*http.Request, error) {
 		return nil, err
 	}
 
-	basePath := fmt.Sprintf("/api/vendor/%s", pathParam0)
+	basePath := fmt.Sprintf("/internal/registry/v1/did/%s", pathParam0)
 	if basePath[0] == '/' {
 		basePath = basePath[1:]
 	}
@@ -976,24 +380,24 @@ func NewVendorByIdRequest(server string, id string) (*http.Request, error) {
 	return req, nil
 }
 
-// NewDeprecatedVendorClaimRequest calls the generic DeprecatedVendorClaim builder with application/json body
-func NewDeprecatedVendorClaimRequest(server string, id string, body DeprecatedVendorClaimJSONRequestBody) (*http.Request, error) {
+// NewUpdateDIDRequest calls the generic UpdateDID builder with application/json body
+func NewUpdateDIDRequest(server string, didOrTag string, body UpdateDIDJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewDeprecatedVendorClaimRequestWithBody(server, id, "application/json", bodyReader)
+	return NewUpdateDIDRequestWithBody(server, didOrTag, "application/json", bodyReader)
 }
 
-// NewDeprecatedVendorClaimRequestWithBody generates requests for DeprecatedVendorClaim with any type of body
-func NewDeprecatedVendorClaimRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
+// NewUpdateDIDRequestWithBody generates requests for UpdateDID with any type of body
+func NewUpdateDIDRequestWithBody(server string, didOrTag string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParam("simple", false, "id", id)
+	pathParam0, err = runtime.StyleParam("simple", false, "didOrTag", didOrTag)
 	if err != nil {
 		return nil, err
 	}
@@ -1003,7 +407,7 @@ func NewDeprecatedVendorClaimRequestWithBody(server string, id string, contentTy
 		return nil, err
 	}
 
-	basePath := fmt.Sprintf("/api/vendor/%s/claim", pathParam0)
+	basePath := fmt.Sprintf("/internal/registry/v1/did/%s", pathParam0)
 	if basePath[0] == '/' {
 		basePath = basePath[1:]
 	}
@@ -1013,7 +417,7 @@ func NewDeprecatedVendorClaimRequestWithBody(server string, id string, contentTy
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	req, err := http.NewRequest("PUT", queryUrl.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -1022,16 +426,34 @@ func NewDeprecatedVendorClaimRequestWithBody(server string, id string, contentTy
 	return req, nil
 }
 
-// NewRegisterVendorRequestWithBody generates requests for RegisterVendor with any type of body
-func NewRegisterVendorRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+// NewUpdateDIDTagsRequest calls the generic UpdateDIDTags builder with application/json body
+func NewUpdateDIDTagsRequest(server string, didOrTag string, body UpdateDIDTagsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateDIDTagsRequestWithBody(server, didOrTag, "application/json", bodyReader)
+}
+
+// NewUpdateDIDTagsRequestWithBody generates requests for UpdateDIDTags with any type of body
+func NewUpdateDIDTagsRequestWithBody(server string, didOrTag string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "didOrTag", didOrTag)
+	if err != nil {
+		return nil, err
+	}
 
 	queryUrl, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
 
-	basePath := fmt.Sprintf("/api/vendors")
+	basePath := fmt.Sprintf("/internal/registry/v1/did/%s/tag", pathParam0)
 	if basePath[0] == '/' {
 		basePath = basePath[1:]
 	}
@@ -1079,129 +501,34 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
-	// Verify request
-	VerifyWithResponse(ctx context.Context, params *VerifyParams) (*VerifyResponse, error)
+	// SearchDID request
+	SearchDIDWithResponse(ctx context.Context, params *SearchDIDParams) (*SearchDIDResponse, error)
 
-	// EndpointsByOrganisationId request
-	EndpointsByOrganisationIdWithResponse(ctx context.Context, params *EndpointsByOrganisationIdParams) (*EndpointsByOrganisationIdResponse, error)
+	// CreateDID request
+	CreateDIDWithResponse(ctx context.Context) (*CreateDIDResponse, error)
 
-	// MTLSCAs request
-	MTLSCAsWithResponse(ctx context.Context) (*MTLSCAsResponse, error)
+	// GetDID request
+	GetDIDWithResponse(ctx context.Context, didOrTag string) (*GetDIDResponse, error)
 
-	// MTLSCertificates request
-	MTLSCertificatesWithResponse(ctx context.Context) (*MTLSCertificatesResponse, error)
+	// UpdateDID request  with any body
+	UpdateDIDWithBodyWithResponse(ctx context.Context, didOrTag string, contentType string, body io.Reader) (*UpdateDIDResponse, error)
 
-	// VendorClaim request  with any body
-	VendorClaimWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*VendorClaimResponse, error)
+	UpdateDIDWithResponse(ctx context.Context, didOrTag string, body UpdateDIDJSONRequestBody) (*UpdateDIDResponse, error)
 
-	VendorClaimWithResponse(ctx context.Context, body VendorClaimJSONRequestBody) (*VendorClaimResponse, error)
+	// UpdateDIDTags request  with any body
+	UpdateDIDTagsWithBodyWithResponse(ctx context.Context, didOrTag string, contentType string, body io.Reader) (*UpdateDIDTagsResponse, error)
 
-	// OrganizationById request
-	OrganizationByIdWithResponse(ctx context.Context, id string) (*OrganizationByIdResponse, error)
-
-	// RegisterEndpoint request  with any body
-	RegisterEndpointWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader) (*RegisterEndpointResponse, error)
-
-	RegisterEndpointWithResponse(ctx context.Context, id string, body RegisterEndpointJSONRequestBody) (*RegisterEndpointResponse, error)
-
-	// RefreshOrganizationCertificate request
-	RefreshOrganizationCertificateWithResponse(ctx context.Context, id string) (*RefreshOrganizationCertificateResponse, error)
-
-	// SearchOrganizations request
-	SearchOrganizationsWithResponse(ctx context.Context, params *SearchOrganizationsParams) (*SearchOrganizationsResponse, error)
-
-	// VendorById request
-	VendorByIdWithResponse(ctx context.Context, id string) (*VendorByIdResponse, error)
-
-	// DeprecatedVendorClaim request  with any body
-	DeprecatedVendorClaimWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader) (*DeprecatedVendorClaimResponse, error)
-
-	DeprecatedVendorClaimWithResponse(ctx context.Context, id string, body DeprecatedVendorClaimJSONRequestBody) (*DeprecatedVendorClaimResponse, error)
-
-	// RegisterVendor request  with any body
-	RegisterVendorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*RegisterVendorResponse, error)
+	UpdateDIDTagsWithResponse(ctx context.Context, didOrTag string, body UpdateDIDTagsJSONRequestBody) (*UpdateDIDTagsResponse, error)
 }
 
-type VerifyResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-
-		// list of events that resulted from fixing the data, list may be empty
-		Events *[]Event `json:"events,omitempty"`
-
-		// if true, the data in the registry needs fixing/upgrading.
-		Fix *bool `json:"fix,omitempty"`
-	}
-}
-
-// Status returns HTTPResponse.Status
-func (r VerifyResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r VerifyResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type EndpointsByOrganisationIdResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r EndpointsByOrganisationIdResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r EndpointsByOrganisationIdResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type MTLSCAsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *CAListWithChain
-}
-
-// Status returns HTTPResponse.Status
-func (r MTLSCAsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r MTLSCAsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type MTLSCertificatesResponse struct {
+type SearchDIDResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *[]string
 }
 
 // Status returns HTTPResponse.Status
-func (r MTLSCertificatesResponse) Status() string {
+func (r SearchDIDResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1209,108 +536,20 @@ func (r MTLSCertificatesResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r MTLSCertificatesResponse) StatusCode() int {
+func (r SearchDIDResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type VendorClaimResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *Event
-}
-
-// Status returns HTTPResponse.Status
-func (r VendorClaimResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r VendorClaimResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type OrganizationByIdResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *Organization
-}
-
-// Status returns HTTPResponse.Status
-func (r OrganizationByIdResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r OrganizationByIdResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type RegisterEndpointResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *Event
-}
-
-// Status returns HTTPResponse.Status
-func (r RegisterEndpointResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r RegisterEndpointResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type RefreshOrganizationCertificateResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *Event
-}
-
-// Status returns HTTPResponse.Status
-func (r RefreshOrganizationCertificateResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r RefreshOrganizationCertificateResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type SearchOrganizationsResponse struct {
+type CreateDIDResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 }
 
 // Status returns HTTPResponse.Status
-func (r SearchOrganizationsResponse) Status() string {
+func (r CreateDIDResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1318,21 +557,21 @@ func (r SearchOrganizationsResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r SearchOrganizationsResponse) StatusCode() int {
+func (r CreateDIDResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type VendorByIdResponse struct {
+type GetDIDResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *Vendor
+	JSON200      *DIDResolutionResult
 }
 
 // Status returns HTTPResponse.Status
-func (r VendorByIdResponse) Status() string {
+func (r GetDIDResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1340,21 +579,20 @@ func (r VendorByIdResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r VendorByIdResponse) StatusCode() int {
+func (r GetDIDResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type DeprecatedVendorClaimResponse struct {
+type UpdateDIDResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *Event
 }
 
 // Status returns HTTPResponse.Status
-func (r DeprecatedVendorClaimResponse) Status() string {
+func (r UpdateDIDResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1362,21 +600,20 @@ func (r DeprecatedVendorClaimResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r DeprecatedVendorClaimResponse) StatusCode() int {
+func (r UpdateDIDResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type RegisterVendorResponse struct {
+type UpdateDIDTagsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *Event
 }
 
 // Status returns HTTPResponse.Status
-func (r RegisterVendorResponse) Status() string {
+func (r UpdateDIDTagsResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1384,235 +621,83 @@ func (r RegisterVendorResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r RegisterVendorResponse) StatusCode() int {
+func (r UpdateDIDTagsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-// VerifyWithResponse request returning *VerifyResponse
-func (c *ClientWithResponses) VerifyWithResponse(ctx context.Context, params *VerifyParams) (*VerifyResponse, error) {
-	rsp, err := c.Verify(ctx, params)
+// SearchDIDWithResponse request returning *SearchDIDResponse
+func (c *ClientWithResponses) SearchDIDWithResponse(ctx context.Context, params *SearchDIDParams) (*SearchDIDResponse, error) {
+	rsp, err := c.SearchDID(ctx, params)
 	if err != nil {
 		return nil, err
 	}
-	return ParseVerifyResponse(rsp)
+	return ParseSearchDIDResponse(rsp)
 }
 
-// EndpointsByOrganisationIdWithResponse request returning *EndpointsByOrganisationIdResponse
-func (c *ClientWithResponses) EndpointsByOrganisationIdWithResponse(ctx context.Context, params *EndpointsByOrganisationIdParams) (*EndpointsByOrganisationIdResponse, error) {
-	rsp, err := c.EndpointsByOrganisationId(ctx, params)
+// CreateDIDWithResponse request returning *CreateDIDResponse
+func (c *ClientWithResponses) CreateDIDWithResponse(ctx context.Context) (*CreateDIDResponse, error) {
+	rsp, err := c.CreateDID(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return ParseEndpointsByOrganisationIdResponse(rsp)
+	return ParseCreateDIDResponse(rsp)
 }
 
-// MTLSCAsWithResponse request returning *MTLSCAsResponse
-func (c *ClientWithResponses) MTLSCAsWithResponse(ctx context.Context) (*MTLSCAsResponse, error) {
-	rsp, err := c.MTLSCAs(ctx)
+// GetDIDWithResponse request returning *GetDIDResponse
+func (c *ClientWithResponses) GetDIDWithResponse(ctx context.Context, didOrTag string) (*GetDIDResponse, error) {
+	rsp, err := c.GetDID(ctx, didOrTag)
 	if err != nil {
 		return nil, err
 	}
-	return ParseMTLSCAsResponse(rsp)
+	return ParseGetDIDResponse(rsp)
 }
 
-// MTLSCertificatesWithResponse request returning *MTLSCertificatesResponse
-func (c *ClientWithResponses) MTLSCertificatesWithResponse(ctx context.Context) (*MTLSCertificatesResponse, error) {
-	rsp, err := c.MTLSCertificates(ctx)
+// UpdateDIDWithBodyWithResponse request with arbitrary body returning *UpdateDIDResponse
+func (c *ClientWithResponses) UpdateDIDWithBodyWithResponse(ctx context.Context, didOrTag string, contentType string, body io.Reader) (*UpdateDIDResponse, error) {
+	rsp, err := c.UpdateDIDWithBody(ctx, didOrTag, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	return ParseMTLSCertificatesResponse(rsp)
+	return ParseUpdateDIDResponse(rsp)
 }
 
-// VendorClaimWithBodyWithResponse request with arbitrary body returning *VendorClaimResponse
-func (c *ClientWithResponses) VendorClaimWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*VendorClaimResponse, error) {
-	rsp, err := c.VendorClaimWithBody(ctx, contentType, body)
+func (c *ClientWithResponses) UpdateDIDWithResponse(ctx context.Context, didOrTag string, body UpdateDIDJSONRequestBody) (*UpdateDIDResponse, error) {
+	rsp, err := c.UpdateDID(ctx, didOrTag, body)
 	if err != nil {
 		return nil, err
 	}
-	return ParseVendorClaimResponse(rsp)
+	return ParseUpdateDIDResponse(rsp)
 }
 
-func (c *ClientWithResponses) VendorClaimWithResponse(ctx context.Context, body VendorClaimJSONRequestBody) (*VendorClaimResponse, error) {
-	rsp, err := c.VendorClaim(ctx, body)
+// UpdateDIDTagsWithBodyWithResponse request with arbitrary body returning *UpdateDIDTagsResponse
+func (c *ClientWithResponses) UpdateDIDTagsWithBodyWithResponse(ctx context.Context, didOrTag string, contentType string, body io.Reader) (*UpdateDIDTagsResponse, error) {
+	rsp, err := c.UpdateDIDTagsWithBody(ctx, didOrTag, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	return ParseVendorClaimResponse(rsp)
+	return ParseUpdateDIDTagsResponse(rsp)
 }
 
-// OrganizationByIdWithResponse request returning *OrganizationByIdResponse
-func (c *ClientWithResponses) OrganizationByIdWithResponse(ctx context.Context, id string) (*OrganizationByIdResponse, error) {
-	rsp, err := c.OrganizationById(ctx, id)
+func (c *ClientWithResponses) UpdateDIDTagsWithResponse(ctx context.Context, didOrTag string, body UpdateDIDTagsJSONRequestBody) (*UpdateDIDTagsResponse, error) {
+	rsp, err := c.UpdateDIDTags(ctx, didOrTag, body)
 	if err != nil {
 		return nil, err
 	}
-	return ParseOrganizationByIdResponse(rsp)
+	return ParseUpdateDIDTagsResponse(rsp)
 }
 
-// RegisterEndpointWithBodyWithResponse request with arbitrary body returning *RegisterEndpointResponse
-func (c *ClientWithResponses) RegisterEndpointWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader) (*RegisterEndpointResponse, error) {
-	rsp, err := c.RegisterEndpointWithBody(ctx, id, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRegisterEndpointResponse(rsp)
-}
-
-func (c *ClientWithResponses) RegisterEndpointWithResponse(ctx context.Context, id string, body RegisterEndpointJSONRequestBody) (*RegisterEndpointResponse, error) {
-	rsp, err := c.RegisterEndpoint(ctx, id, body)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRegisterEndpointResponse(rsp)
-}
-
-// RefreshOrganizationCertificateWithResponse request returning *RefreshOrganizationCertificateResponse
-func (c *ClientWithResponses) RefreshOrganizationCertificateWithResponse(ctx context.Context, id string) (*RefreshOrganizationCertificateResponse, error) {
-	rsp, err := c.RefreshOrganizationCertificate(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRefreshOrganizationCertificateResponse(rsp)
-}
-
-// SearchOrganizationsWithResponse request returning *SearchOrganizationsResponse
-func (c *ClientWithResponses) SearchOrganizationsWithResponse(ctx context.Context, params *SearchOrganizationsParams) (*SearchOrganizationsResponse, error) {
-	rsp, err := c.SearchOrganizations(ctx, params)
-	if err != nil {
-		return nil, err
-	}
-	return ParseSearchOrganizationsResponse(rsp)
-}
-
-// VendorByIdWithResponse request returning *VendorByIdResponse
-func (c *ClientWithResponses) VendorByIdWithResponse(ctx context.Context, id string) (*VendorByIdResponse, error) {
-	rsp, err := c.VendorById(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return ParseVendorByIdResponse(rsp)
-}
-
-// DeprecatedVendorClaimWithBodyWithResponse request with arbitrary body returning *DeprecatedVendorClaimResponse
-func (c *ClientWithResponses) DeprecatedVendorClaimWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader) (*DeprecatedVendorClaimResponse, error) {
-	rsp, err := c.DeprecatedVendorClaimWithBody(ctx, id, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeprecatedVendorClaimResponse(rsp)
-}
-
-func (c *ClientWithResponses) DeprecatedVendorClaimWithResponse(ctx context.Context, id string, body DeprecatedVendorClaimJSONRequestBody) (*DeprecatedVendorClaimResponse, error) {
-	rsp, err := c.DeprecatedVendorClaim(ctx, id, body)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeprecatedVendorClaimResponse(rsp)
-}
-
-// RegisterVendorWithBodyWithResponse request with arbitrary body returning *RegisterVendorResponse
-func (c *ClientWithResponses) RegisterVendorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*RegisterVendorResponse, error) {
-	rsp, err := c.RegisterVendorWithBody(ctx, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRegisterVendorResponse(rsp)
-}
-
-// ParseVerifyResponse parses an HTTP response from a VerifyWithResponse call
-func ParseVerifyResponse(rsp *http.Response) (*VerifyResponse, error) {
+// ParseSearchDIDResponse parses an HTTP response from a SearchDIDWithResponse call
+func ParseSearchDIDResponse(rsp *http.Response) (*SearchDIDResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &VerifyResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-
-			// list of events that resulted from fixing the data, list may be empty
-			Events *[]Event `json:"events,omitempty"`
-
-			// if true, the data in the registry needs fixing/upgrading.
-			Fix *bool `json:"fix,omitempty"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseEndpointsByOrganisationIdResponse parses an HTTP response from a EndpointsByOrganisationIdWithResponse call
-func ParseEndpointsByOrganisationIdResponse(rsp *http.Response) (*EndpointsByOrganisationIdResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &EndpointsByOrganisationIdResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	}
-
-	return response, nil
-}
-
-// ParseMTLSCAsResponse parses an HTTP response from a MTLSCAsWithResponse call
-func ParseMTLSCAsResponse(rsp *http.Response) (*MTLSCAsResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &MTLSCAsResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest CAListWithChain
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case rsp.StatusCode == 200:
-		// Content-type (application/x-pem-file) unsupported
-
-	}
-
-	return response, nil
-}
-
-// ParseMTLSCertificatesResponse parses an HTTP response from a MTLSCertificatesWithResponse call
-func ParseMTLSCertificatesResponse(rsp *http.Response) (*MTLSCertificatesResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &MTLSCertificatesResponse{
+	response := &SearchDIDResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1625,30 +710,46 @@ func ParseMTLSCertificatesResponse(rsp *http.Response) (*MTLSCertificatesRespons
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (application/x-pem-file) unsupported
-
 	}
 
 	return response, nil
 }
 
-// ParseVendorClaimResponse parses an HTTP response from a VendorClaimWithResponse call
-func ParseVendorClaimResponse(rsp *http.Response) (*VendorClaimResponse, error) {
+// ParseCreateDIDResponse parses an HTTP response from a CreateDIDWithResponse call
+func ParseCreateDIDResponse(rsp *http.Response) (*CreateDIDResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &VendorClaimResponse{
+	response := &CreateDIDResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	}
+
+	return response, nil
+}
+
+// ParseGetDIDResponse parses an HTTP response from a GetDIDWithResponse call
+func ParseGetDIDResponse(rsp *http.Response) (*GetDIDResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetDIDResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Event
+		var dest DIDResolutionResult
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1659,93 +760,15 @@ func ParseVendorClaimResponse(rsp *http.Response) (*VendorClaimResponse, error) 
 	return response, nil
 }
 
-// ParseOrganizationByIdResponse parses an HTTP response from a OrganizationByIdWithResponse call
-func ParseOrganizationByIdResponse(rsp *http.Response) (*OrganizationByIdResponse, error) {
+// ParseUpdateDIDResponse parses an HTTP response from a UpdateDIDWithResponse call
+func ParseUpdateDIDResponse(rsp *http.Response) (*UpdateDIDResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &OrganizationByIdResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Organization
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseRegisterEndpointResponse parses an HTTP response from a RegisterEndpointWithResponse call
-func ParseRegisterEndpointResponse(rsp *http.Response) (*RegisterEndpointResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &RegisterEndpointResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Event
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseRefreshOrganizationCertificateResponse parses an HTTP response from a RefreshOrganizationCertificateWithResponse call
-func ParseRefreshOrganizationCertificateResponse(rsp *http.Response) (*RefreshOrganizationCertificateResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &RefreshOrganizationCertificateResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Event
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseSearchOrganizationsResponse parses an HTTP response from a SearchOrganizationsWithResponse call
-func ParseSearchOrganizationsResponse(rsp *http.Response) (*SearchOrganizationsResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &SearchOrganizationsResponse{
+	response := &UpdateDIDResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1756,79 +779,20 @@ func ParseSearchOrganizationsResponse(rsp *http.Response) (*SearchOrganizationsR
 	return response, nil
 }
 
-// ParseVendorByIdResponse parses an HTTP response from a VendorByIdWithResponse call
-func ParseVendorByIdResponse(rsp *http.Response) (*VendorByIdResponse, error) {
+// ParseUpdateDIDTagsResponse parses an HTTP response from a UpdateDIDTagsWithResponse call
+func ParseUpdateDIDTagsResponse(rsp *http.Response) (*UpdateDIDTagsResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &VendorByIdResponse{
+	response := &UpdateDIDTagsResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Vendor
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseDeprecatedVendorClaimResponse parses an HTTP response from a DeprecatedVendorClaimWithResponse call
-func ParseDeprecatedVendorClaimResponse(rsp *http.Response) (*DeprecatedVendorClaimResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &DeprecatedVendorClaimResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Event
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseRegisterVendorResponse parses an HTTP response from a RegisterVendorWithResponse call
-func ParseRegisterVendorResponse(rsp *http.Response) (*RegisterVendorResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &RegisterVendorResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Event
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
 	}
 
 	return response, nil
@@ -1836,42 +800,21 @@ func ParseRegisterVendorResponse(rsp *http.Response) (*RegisterVendorResponse, e
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// Verifies the registry data (owned by the vendor) and fixes where necessarry (e.g. issue certificates) if fix = true.
-	// (POST /api/admin/verify)
-	Verify(ctx echo.Context, params VerifyParams) error
-	// Find endpoints based on organisation identifiers and type of endpoint (optional)
-	// (GET /api/endpoints)
-	EndpointsByOrganisationId(ctx echo.Context, params EndpointsByOrganisationIdParams) error
-	// Get a list of current active vendor CAs
-	// (GET /api/mtls/cas)
-	MTLSCAs(ctx echo.Context) error
-	// Get a list of current active certificates that may be used to setup a mTLS connection
-	// (GET /api/mtls/certificates)
-	MTLSCertificates(ctx echo.Context) error
-	// Claim an organization for the current vendor (registers an organization under the vendor in the registry).
-	// (POST /api/organization)
-	VendorClaim(ctx echo.Context) error
-	// Get organization by id
-	// (GET /api/organization/{id})
-	OrganizationById(ctx echo.Context, id string) error
-	// Adds/updates an endpoint for this organisation to the registry. If the endpoint already exists (matched by endpoint ID) it is updated.
-	// (POST /api/organization/{id}/endpoints)
-	RegisterEndpoint(ctx echo.Context, id string) error
-	// Refreshes the organization's certificate.
-	// (POST /api/organization/{id}/refresh-cert)
-	RefreshOrganizationCertificate(ctx echo.Context, id string) error
-	// Search for organizations
-	// (GET /api/organizations)
-	SearchOrganizations(ctx echo.Context, params SearchOrganizationsParams) error
-	// Get vendor by id
-	// (GET /api/vendor/{id})
-	VendorById(ctx echo.Context, id string) error
-	// Claim an organization for a vendor (registers an organization under a vendor in the registry).
-	// (POST /api/vendor/{id}/claim)
-	DeprecatedVendorClaim(ctx echo.Context, id string) error
-	// Registers the vendor in the registry
-	// (POST /api/vendors)
-	RegisterVendor(ctx echo.Context) error
+	// Searches for Nuts DIDs
+	// (GET /internal/registry/v1/did)
+	SearchDID(ctx echo.Context, params SearchDIDParams) error
+	// Creates a new Nuts DID
+	// (POST /internal/registry/v1/did)
+	CreateDID(ctx echo.Context) error
+	// Resolves a Nuts DID Document
+	// (GET /internal/registry/v1/did/{didOrTag})
+	GetDID(ctx echo.Context, didOrTag string) error
+	// Updates a Nuts DID Document
+	// (PUT /internal/registry/v1/did/{didOrTag})
+	UpdateDID(ctx echo.Context, didOrTag string) error
+	// Replaces the tags of the DID Document.
+	// (POST /internal/registry/v1/did/{didOrTag}/tag)
+	UpdateDIDTags(ctx echo.Context, didOrTag string) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -1879,194 +822,78 @@ type ServerInterfaceWrapper struct {
 	Handler ServerInterface
 }
 
-// Verify converts echo context to params.
-func (w *ServerInterfaceWrapper) Verify(ctx echo.Context) error {
+// SearchDID converts echo context to params.
+func (w *ServerInterfaceWrapper) SearchDID(ctx echo.Context) error {
 	var err error
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params VerifyParams
-	// ------------- Optional query parameter "fix" -------------
+	var params SearchDIDParams
+	// ------------- Required query parameter "tags" -------------
 
-	err = runtime.BindQueryParameter("form", true, false, "fix", ctx.QueryParams(), &params.Fix)
+	err = runtime.BindQueryParameter("form", true, true, "tags", ctx.QueryParams(), &params.Tags)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter fix: %s", err))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter tags: %s", err))
 	}
 
 	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.Verify(ctx, params)
+	err = w.Handler.SearchDID(ctx, params)
 	return err
 }
 
-// EndpointsByOrganisationId converts echo context to params.
-func (w *ServerInterfaceWrapper) EndpointsByOrganisationId(ctx echo.Context) error {
+// CreateDID converts echo context to params.
+func (w *ServerInterfaceWrapper) CreateDID(ctx echo.Context) error {
 	var err error
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params EndpointsByOrganisationIdParams
-	// ------------- Required query parameter "orgIds" -------------
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.CreateDID(ctx)
+	return err
+}
 
-	err = runtime.BindQueryParameter("form", true, true, "orgIds", ctx.QueryParams(), &params.OrgIds)
+// GetDID converts echo context to params.
+func (w *ServerInterfaceWrapper) GetDID(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "didOrTag" -------------
+	var didOrTag string
+
+	err = runtime.BindStyledParameter("simple", false, "didOrTag", ctx.Param("didOrTag"), &didOrTag)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter orgIds: %s", err))
-	}
-
-	// ------------- Optional query parameter "type" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "type", ctx.QueryParams(), &params.Type)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter type: %s", err))
-	}
-
-	// ------------- Optional query parameter "strict" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "strict", ctx.QueryParams(), &params.Strict)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter strict: %s", err))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter didOrTag: %s", err))
 	}
 
 	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.EndpointsByOrganisationId(ctx, params)
+	err = w.Handler.GetDID(ctx, didOrTag)
 	return err
 }
 
-// MTLSCAs converts echo context to params.
-func (w *ServerInterfaceWrapper) MTLSCAs(ctx echo.Context) error {
+// UpdateDID converts echo context to params.
+func (w *ServerInterfaceWrapper) UpdateDID(ctx echo.Context) error {
 	var err error
+	// ------------- Path parameter "didOrTag" -------------
+	var didOrTag string
 
-	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.MTLSCAs(ctx)
-	return err
-}
-
-// MTLSCertificates converts echo context to params.
-func (w *ServerInterfaceWrapper) MTLSCertificates(ctx echo.Context) error {
-	var err error
-
-	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.MTLSCertificates(ctx)
-	return err
-}
-
-// VendorClaim converts echo context to params.
-func (w *ServerInterfaceWrapper) VendorClaim(ctx echo.Context) error {
-	var err error
-
-	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.VendorClaim(ctx)
-	return err
-}
-
-// OrganizationById converts echo context to params.
-func (w *ServerInterfaceWrapper) OrganizationById(ctx echo.Context) error {
-	var err error
-	// ------------- Path parameter "id" -------------
-	var id string
-
-	err = runtime.BindStyledParameter("simple", false, "id", ctx.Param("id"), &id)
+	err = runtime.BindStyledParameter("simple", false, "didOrTag", ctx.Param("didOrTag"), &didOrTag)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter didOrTag: %s", err))
 	}
 
 	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.OrganizationById(ctx, id)
+	err = w.Handler.UpdateDID(ctx, didOrTag)
 	return err
 }
 
-// RegisterEndpoint converts echo context to params.
-func (w *ServerInterfaceWrapper) RegisterEndpoint(ctx echo.Context) error {
+// UpdateDIDTags converts echo context to params.
+func (w *ServerInterfaceWrapper) UpdateDIDTags(ctx echo.Context) error {
 	var err error
-	// ------------- Path parameter "id" -------------
-	var id string
+	// ------------- Path parameter "didOrTag" -------------
+	var didOrTag string
 
-	err = runtime.BindStyledParameter("simple", false, "id", ctx.Param("id"), &id)
+	err = runtime.BindStyledParameter("simple", false, "didOrTag", ctx.Param("didOrTag"), &didOrTag)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter didOrTag: %s", err))
 	}
 
 	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.RegisterEndpoint(ctx, id)
-	return err
-}
-
-// RefreshOrganizationCertificate converts echo context to params.
-func (w *ServerInterfaceWrapper) RefreshOrganizationCertificate(ctx echo.Context) error {
-	var err error
-	// ------------- Path parameter "id" -------------
-	var id string
-
-	err = runtime.BindStyledParameter("simple", false, "id", ctx.Param("id"), &id)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
-	}
-
-	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.RefreshOrganizationCertificate(ctx, id)
-	return err
-}
-
-// SearchOrganizations converts echo context to params.
-func (w *ServerInterfaceWrapper) SearchOrganizations(ctx echo.Context) error {
-	var err error
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params SearchOrganizationsParams
-	// ------------- Required query parameter "query" -------------
-
-	err = runtime.BindQueryParameter("form", true, true, "query", ctx.QueryParams(), &params.Query)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter query: %s", err))
-	}
-
-	// ------------- Optional query parameter "exact" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "exact", ctx.QueryParams(), &params.Exact)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter exact: %s", err))
-	}
-
-	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.SearchOrganizations(ctx, params)
-	return err
-}
-
-// VendorById converts echo context to params.
-func (w *ServerInterfaceWrapper) VendorById(ctx echo.Context) error {
-	var err error
-	// ------------- Path parameter "id" -------------
-	var id string
-
-	err = runtime.BindStyledParameter("simple", false, "id", ctx.Param("id"), &id)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
-	}
-
-	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.VendorById(ctx, id)
-	return err
-}
-
-// DeprecatedVendorClaim converts echo context to params.
-func (w *ServerInterfaceWrapper) DeprecatedVendorClaim(ctx echo.Context) error {
-	var err error
-	// ------------- Path parameter "id" -------------
-	var id string
-
-	err = runtime.BindStyledParameter("simple", false, "id", ctx.Param("id"), &id)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
-	}
-
-	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.DeprecatedVendorClaim(ctx, id)
-	return err
-}
-
-// RegisterVendor converts echo context to params.
-func (w *ServerInterfaceWrapper) RegisterVendor(ctx echo.Context) error {
-	var err error
-
-	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.RegisterVendor(ctx)
+	err = w.Handler.UpdateDIDTags(ctx, didOrTag)
 	return err
 }
 
@@ -2098,18 +925,11 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 		Handler: si,
 	}
 
-	router.POST(baseURL+"/api/admin/verify", wrapper.Verify)
-	router.GET(baseURL+"/api/endpoints", wrapper.EndpointsByOrganisationId)
-	router.GET(baseURL+"/api/mtls/cas", wrapper.MTLSCAs)
-	router.GET(baseURL+"/api/mtls/certificates", wrapper.MTLSCertificates)
-	router.POST(baseURL+"/api/organization", wrapper.VendorClaim)
-	router.GET(baseURL+"/api/organization/:id", wrapper.OrganizationById)
-	router.POST(baseURL+"/api/organization/:id/endpoints", wrapper.RegisterEndpoint)
-	router.POST(baseURL+"/api/organization/:id/refresh-cert", wrapper.RefreshOrganizationCertificate)
-	router.GET(baseURL+"/api/organizations", wrapper.SearchOrganizations)
-	router.GET(baseURL+"/api/vendor/:id", wrapper.VendorById)
-	router.POST(baseURL+"/api/vendor/:id/claim", wrapper.DeprecatedVendorClaim)
-	router.POST(baseURL+"/api/vendors", wrapper.RegisterVendor)
+	router.GET(baseURL+"/internal/registry/v1/did", wrapper.SearchDID)
+	router.POST(baseURL+"/internal/registry/v1/did", wrapper.CreateDID)
+	router.GET(baseURL+"/internal/registry/v1/did/:didOrTag", wrapper.GetDID)
+	router.PUT(baseURL+"/internal/registry/v1/did/:didOrTag", wrapper.UpdateDID)
+	router.POST(baseURL+"/internal/registry/v1/did/:didOrTag/tag", wrapper.UpdateDIDTags)
 
 }
 

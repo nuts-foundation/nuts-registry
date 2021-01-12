@@ -20,7 +20,10 @@
 package api
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/nuts-foundation/go-did"
 	"github.com/nuts-foundation/nuts-registry/pkg"
@@ -57,7 +60,13 @@ func (hb HttpClient) Search(onlyOwn bool, tags []string) ([]did.Document, error)
 }
 
 func (hb HttpClient) Create() (*did.Document, error) {
-	panic("implement me")
+	if response, err := hb.client().CreateDID(context.Background()); err != nil {
+		return nil, err
+	} else if err := testResponseCode(http.StatusCreated, response); err != nil {
+		return nil, err
+	} else {
+		return readDIDDocument(response.Body)
+	}
 }
 
 func (hb HttpClient) Get(DID did.DID) (*did.Document, *pkg.DIDDocumentMetadata, error) {
@@ -94,4 +103,16 @@ func testAndParseEventResponse(response *http.Response) (events.Event, error) {
 		return nil, err
 	}
 	return events.EventFromJSON(responseData)
+}
+
+func readDIDDocument(reader io.Reader) (*did.Document, error) {
+	if data, err := ioutil.ReadAll(reader); err != nil {
+		return nil, fmt.Errorf("unable to read DID Document response: %w", err)
+	} else {
+		document := did.Document{}
+		if err := json.Unmarshal(data, &document); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal DID Document response: %w", err)
+		}
+		return &document, nil
+	}
 }
