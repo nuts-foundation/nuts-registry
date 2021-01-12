@@ -20,7 +20,6 @@
 package pkg
 
 import (
-	"github.com/ockam-network/did"
 	"sync"
 	"time"
 
@@ -92,7 +91,7 @@ type DIDStore interface {
 	Get(DID did.DID) (*did.Document, *DIDDocumentMetadata, error)
 	// GetByTag gets a DID document using the given tag or nil if not found. If multiple documents match the given tag
 	// or something else goes wrong, an error is returned.
-	GetByTag(tag string) (*did.Document, error)
+	GetByTag(tag string) (*did.Document, *DIDDocumentMetadata, error)
 	// Update replaces the DID document identified by DID with the nextVersion if the given hash matches the current valid DID document hash.
 	Update(DID did.DID, hash []byte, nextVersion did.Document) (*did.Document, error)
 	// Tag replaces all tags on a DID document given the DID.

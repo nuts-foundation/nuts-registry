@@ -32,8 +32,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
 )
 
 // HttpClient holds the server address and other basic settings for the http client
@@ -70,11 +68,24 @@ func (hb HttpClient) Create() (*did.Document, error) {
 }
 
 func (hb HttpClient) Get(DID did.DID) (*did.Document, *pkg.DIDDocumentMetadata, error) {
-	panic("implement me")
+	return hb.get(DID.String())
 }
 
-func (hb HttpClient) GetByTag(tag string) (*did.Document, error) {
-	panic("implement me")
+func (hb HttpClient) GetByTag(tag string) (*did.Document, *pkg.DIDDocumentMetadata, error) {
+	return hb.get("tag:" + tag)
+}
+
+func (hb HttpClient) get(identifier string) (*did.Document, *pkg.DIDDocumentMetadata, error) {
+	response, err := hb.client().GetDID(context.Background(), identifier)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := testResponseCode(http.StatusOK, response); err != nil {
+		return nil, nil, err
+	} else {
+		// TODO: Parse response
+		return nil, nil, nil
+	}
 }
 
 func (hb HttpClient) Update(DID did.DID, hash []byte, nextVersion did.Document) (*did.Document, error) {
@@ -92,17 +103,6 @@ func testResponseCode(expectedStatusCode int, response *http.Response) error {
 			response.StatusCode, expectedStatusCode, string(responseData))
 	}
 	return nil
-}
-
-func testAndParseEventResponse(response *http.Response) (events.Event, error) {
-	if err := testResponseCode(http.StatusOK, response); err != nil {
-		return nil, err
-	}
-	responseData, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-	return events.EventFromJSON(responseData)
 }
 
 func readDIDDocument(reader io.Reader) (*did.Document, error) {
