@@ -17,7 +17,7 @@
  *
  */
 
-package api
+package client
 
 import (
 	"crypto/rand"
@@ -25,6 +25,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"github.com/nuts-foundation/nuts-registry/internal/api"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -48,6 +49,44 @@ func (h handler) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 }
 
 var genericError = []byte("error reason")
+
+type TestCase struct {
+	Name          string
+	ResponseCode  int
+	ResponseData  []byte
+	ExpectedError error
+	ExpectedResult interface{}
+}
+
+func OKTestCase(name string, responseCode int, responseData string) TestCase {
+	return TestCase{
+		Name:         name,
+		ResponseCode: responseCode,
+		ResponseData: []byte(responseData),
+	}
+}
+
+func TestHttpClient_Create(t *testing.T) {
+	testCases := []TestCase{
+		OKTestCase("ok", http.StatusOK, "{}"),
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			server := httptest.NewServer(handler{statusCode: testCase.ResponseCode, responseData: testCase.ResponseData})
+			client := HttpClient{ServerAddress: server.URL, Timeout: time.Second}
+
+			createdDID, err := client.Create()
+			if testCase.ExpectedError == nil {
+				assert.NoError(t, err)
+				assert.Equal(t, testCase.ExpectedResult, createdDID)
+			} else {
+				assert.EqualError(t, err, testCase.ExpectedError.Error())
+				assert.Nil(t, createdDID)
+			}
+		})
+	}
+}
 
 func TestHttpClient_OrganizationById(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
@@ -285,7 +324,7 @@ func TestHttpClient_RegisterEndpoint(t *testing.T) {
 
 func TestHttpClient_Verify(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		response := altVerifyResponse{Fix: false, Events: []events.Event{
+		response := api.altVerifyResponse{Fix: false, Events: []events.Event{
 			events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{}, nil),
 			events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{}, nil),
 			events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{}, nil),

@@ -21,11 +21,11 @@ package engine
 
 import (
 	"fmt"
+	api "github.com/nuts-foundation/nuts-registry/internal/api"
 
 	"github.com/nuts-foundation/nuts-registry/logging"
 
 	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-registry/api"
 	"github.com/nuts-foundation/nuts-registry/client"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/spf13/cobra"

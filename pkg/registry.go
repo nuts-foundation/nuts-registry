@@ -35,7 +35,6 @@ import (
 	core "github.com/nuts-foundation/nuts-go-core"
 	networkClient "github.com/nuts-foundation/nuts-network/client"
 	networkPkg "github.com/nuts-foundation/nuts-network/pkg"
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/sirupsen/logrus"
 )
 
@@ -78,49 +77,6 @@ type RegistryClient interface {
 	DIDStore
 }
 
-// DIDStore is the interface for the low level DID operations.
-type DIDStore interface {
-	// Search searches for DID documents that match the given conditions;
-	// - onlyOwn: only return documents which contain a verificationMethod which' private key is present in this node.
-	// - tags: only return documents that match ALL of the given tags.
-	// If something goes wrong an error is returned.
-	Search(onlyOwn bool, tags []string) ([]did.Document, error)
-	// Create creates a new DID document and returns it. If something goes wrong an error is returned.
-	Create() (*did.Document, error)
-	// Get returns the DID document using on the given DID or nil if not found. If something goes wrong an error is returned.
-	Get(DID did.DID) (*did.Document, *DIDDocumentMetadata, error)
-	// GetByTag gets a DID document using the given tag or nil if not found. If multiple documents match the given tag
-	// or something else goes wrong, an error is returned.
-	GetByTag(tag string) (*did.Document, *DIDDocumentMetadata, error)
-	// Update replaces the DID document identified by DID with the nextVersion if the given hash matches the current valid DID document hash.
-	Update(DID did.DID, hash []byte, nextVersion did.Document) (*did.Document, error)
-	// Tag replaces all tags on a DID document given the DID.
-	Tag(DID did.DID, tags []string) error
-}
-
-// DIDDocumentMetadata holds the metadata of a DID document
-type DIDDocumentMetadata struct {
-	Created time.Time `json:"created"`
-	Updated time.Time `json:"updated,omitempty"`
-	// Version contains the semantic version of the DID document.
-	Version int `json:"version"`
-	// OriginJWSHash contains the hash of the JWS envelope of the first version of the DID document.
-	OriginJWSHash model.Hash `json:"originJwsHash"`
-	// Hash of DID document bytes. Is equal to payloadHash in network layer.
-	Hash string `json:"hash"`
-	// Tags of the DID document.
-	Tags []string `json:"tags,omitempty"`
-}
-
-//type StoreWrapper struct {
-//	networkClient networkPkg.NetworkClient
-//	store         DIDStore
-//}
-//
-//func wrap(store DIDStore) DIDStore {
-//	return &StoreWrapper(store: store)
-//}
-
 // RegistryConfig holds the config
 type RegistryConfig struct {
 	Mode          string
@@ -140,14 +96,40 @@ func DefaultRegistryConfig() RegistryConfig {
 // Registry holds the config and Db reference
 type Registry struct {
 	Config            RegistryConfig
-	Db                db.Db
 	network           networkPkg.NetworkClient
 	crypto            crypto.Client
 	OnChange          func(registry *Registry)
 	networkAmbassador network.Ambassador
 	configOnce        sync.Once
+	DIDStore          DIDStore
 	_logger           *logrus.Entry
 	closers           []chan struct{}
+}
+
+func (r *Registry) Search(onlyOwn bool, tags []string) ([]did.Document, error) {
+	logging.Log().Debugf("Search called (onlyOwn: %s, tags: %v)", onlyOwn, tags)
+	return r.DIDStore.Search(onlyOwn, tags)
+}
+
+func (r *Registry) Create() (*did.Document, error) {
+	return r.DIDStore.Create()
+}
+
+func (r *Registry) Get(DID did.DID) (*did.Document, *DIDDocumentMetadata, error) {
+	return r.DIDStore.Get(DID)
+}
+
+func (r *Registry) GetByTag(tag string) (*did.Document, *DIDDocumentMetadata, error) {
+	return r.DIDStore.GetByTag(tag)
+}
+
+func (r *Registry) Update(DID did.DID, hash model.Hash, nextVersion did.Document) (*did.Document, error) {
+	return r.DIDStore.Update(DID, hash, nextVersion)
+
+}
+
+func (r *Registry) Tag(DID did.DID, tags []string) error {
+	return r.DIDStore.Tag(DID, tags)
 }
 
 var instance *Registry
@@ -186,7 +168,6 @@ func (r *Registry) Configure() error {
 		cfg := core.NutsConfig()
 		r.Config.Mode = cfg.GetEngineMode(r.Config.Mode)
 		if r.Config.Mode == core.ServerEngineMode {
-			r.Db = db.New()
 			if r.networkAmbassador == nil {
 				r.networkAmbassador = network.NewAmbassador(r.network, r.crypto)
 			}

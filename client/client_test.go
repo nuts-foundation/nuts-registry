@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-registry/api"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/stretchr/testify/assert"
 )
@@ -31,7 +30,7 @@ func TestInitialize(t *testing.T) {
 	t.Run("client mode", func(t *testing.T) {
 		instance := pkg.RegistryInstance()
 		instance.Config.Mode = core.ClientEngineMode
-		assert.IsType(t, api.HttpClient{}, initialize(instance))
+		assert.IsType(t, HttpClient{}, initialize(instance))
 	})
 }
 

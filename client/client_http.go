@@ -17,12 +17,13 @@
  *
  */
 
-package api
+package client
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/nuts-foundation/nuts-network/pkg/model"
 	"io"
 
 	"github.com/nuts-foundation/go-did"
@@ -88,7 +89,7 @@ func (hb HttpClient) get(identifier string) (*did.Document, *pkg.DIDDocumentMeta
 	}
 }
 
-func (hb HttpClient) Update(DID did.DID, hash []byte, nextVersion did.Document) (*did.Document, error) {
+func (hb HttpClient) Update(DID did.DID, hash model.Hash, nextVersion did.Document) (*did.Document, error) {
 	panic("implement me")
 }
 

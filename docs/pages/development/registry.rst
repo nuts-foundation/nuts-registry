@@ -30,7 +30,8 @@ The server and client API is generated from the open-api spec:
 
 .. code-block:: shell
 
-    oapi-codegen -generate types,server,client -package api docs/_static/nuts-registry.yaml > api/generated.go
+    oapi-codegen -generate types,client -package client docs/_static/nuts-registry.yaml > client/generated.go
+    oapi-codegen -generate types,server -package api docs/_static/nuts-registry.yaml > internal/api/generated.go
 
 Generating Mocks
 ****************
@@ -41,6 +42,7 @@ These mocks are used by other modules
 
     mockgen -destination=mock/mock_client.go -package=mock -source=pkg/registry.go
     mockgen -destination=mock/mock_db.go -package=mock -source=pkg/db/db.go
+    mockgen -destination=mock/mock_didstore.go -package=mock -source=pkg/interface.go
     mockgen -destination=pkg/network/mock.go -package=network -source=pkg/network/ambassador.go
 
 README

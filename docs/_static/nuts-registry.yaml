@@ -78,6 +78,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DIDResolutionResult"
+        "400":
+          description: "Given DID is invalid."
+          content:
+            text/plain:
+              schema:
+                type: string
         "404":
           description: "DID couldn't be found."
           content:
@@ -90,6 +96,15 @@ paths:
             text/plain:
               schema:
                 type: string
+  /internal/registry/v1/did/{did}:
+    parameters:
+      - name: did
+        in: path
+        description: "URL encoded DID."
+        required: true
+        example: "did:nuts:1234"
+        schema:
+          type: string
     put:
       summary: "Updates a Nuts DID Document"
       operationId: "updateDID"
@@ -100,6 +115,9 @@ paths:
         content:
           application/json:
             schema:
+              required:
+                - document
+                - currentHash
               properties:
                 document:
                   $ref: "#/components/schemas/DIDDocument"
@@ -131,11 +149,11 @@ paths:
             text/plain:
               schema:
                 type: string
-  /internal/registry/v1/did/{didOrTag}/tag:
+  /internal/registry/v1/did/{did}/tag:
     parameters:
-      - name: didOrTag
+      - name: did
         in: path
-        description: "URL encoded DID or tag. When given a tag it must resolve to exactly one DID."
+        description: "URL encoded DID."
         required: true
         example:
           - "did:nuts:1234"
@@ -176,6 +194,11 @@ components:
       type: object
       description: The actual DID Document in JSON representation.
     DIDDocumentMetadata:
+      required:
+        - created
+        - version
+        - originJwsHash
+        - hash
       properties:
         created:
           description: "Date/time at which the document was originally created."

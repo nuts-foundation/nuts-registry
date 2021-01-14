@@ -22,7 +22,6 @@ package client
 import (
 	"time"
 
-	"github.com/nuts-foundation/nuts-registry/api"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 )
 
@@ -32,7 +31,7 @@ func NewRegistryClient() pkg.RegistryClient {
 }
 
 func initialize(registry *pkg.Registry) pkg.RegistryClient {
-	return api.HttpClient{
+	return HttpClient{
 		ServerAddress: registry.Config.Address,
 		Timeout:       time.Duration(registry.Config.ClientTimeout) * time.Second,
 	}
