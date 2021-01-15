@@ -12,7 +12,7 @@ import (
 	reflect "reflect"
 )
 
-// MockDIDStore is a mock of DIDStore interface
+// MockDIDStore is a mock of DIDService interface
 type MockDIDStore struct {
 	ctrl     *gomock.Controller
 	recorder *MockDIDStoreMockRecorder

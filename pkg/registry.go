@@ -20,12 +20,19 @@
 package pkg
 
 import (
-	"sync"
-	"time"
-
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/nuts-foundation/go-did"
 	"github.com/nuts-foundation/nuts-network/pkg/model"
+	"github.com/nuts-foundation/nuts-registry/internal/storage"
 	"github.com/nuts-foundation/nuts-registry/logging"
+	"sync"
+	"time"
 
 	"github.com/nuts-foundation/nuts-network/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/network"
@@ -38,6 +45,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type constError string
+
+func (err constError) Error() string {
+	return string(err)
+}
+
+const (
+	// ErrIncorrectLastVersionHash indicates that the DID Document can't be updated because the supplied hash doesn't
+	// match with the hash of the last version (of the DID Document).
+	ErrIncorrectLastVersionHash = constError("supplied hash of last DID Document version is incorrect")
+	ErrInvalidDIDDocument       = constError("invalid DID document")
+)
+
 // ConfDataDir is the config name for specifiying the data location of the requiredFiles
 const ConfDataDir = "datadir"
 
@@ -47,34 +67,15 @@ const ConfMode = "mode"
 // ConfAddress is the config name for the http server/client address
 const ConfAddress = "address"
 
-// ConfSyncMode is the config name for the used SyncMode
-const ConfSyncMode = "syncMode"
-
-// ConfSyncAddress is the config name for the remote address used to fetch updated registry files
-const ConfSyncAddress = "syncAddress"
-
-// ConfSyncInterval is the config name for the interval in minutes to look for new registry files online
-const ConfSyncInterval = "syncInterval"
-
-// ConfOrganisationCertificateValidity is the config name for the number of days organisation certificates are valid
-const ConfOrganisationCertificateValidity = "organisationCertificateValidity"
-
-// ConfVendorCACertificateValidity is the config name for the number of days vendor CA certificates are valid
-const ConfVendorCACertificateValidity = "vendorCACertificateValidity"
-
 // ConfClientTimeout is the time-out for the client in seconds (e.g. when using the CLI).
 const ConfClientTimeout = "clientTimeout"
 
 // ModuleName == Registry
 const ModuleName = "Registry"
 
-// ReloadRegistryIdleTimeout defines the cooling down period after receiving a file watcher notification, before
-// the registry is reloaded (from disk).
-var ReloadRegistryIdleTimeout time.Duration
-
-// RegistryClient is an alias for the DIDStore so older code can still use it.
+// RegistryClient is an alias for the DIDService so older code can still use it.
 type RegistryClient interface {
-	DIDStore
+	DIDService
 }
 
 // RegistryConfig holds the config
@@ -112,7 +113,54 @@ func (r *Registry) Search(onlyOwn bool, tags []string) ([]did.Document, error) {
 }
 
 func (r *Registry) Create() (*did.Document, error) {
-	return r.DIDStore.Create()
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	generatedDID := ecdsaPublicKeyToNutsDID(privateKey.PublicKey)
+	publicKeyJWK, err := jwk.New(privateKey.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	if err := jwk.AssignKeyID(publicKeyJWK); err != nil {
+		return nil, err
+	}
+	verificationMethod, err := jwkToVerificationMethod(generatedDID, publicKeyJWK)
+	if err != nil {
+		return nil, err
+	}
+	document := did.Document{
+		Context:            []did.URI{did.DIDContextV1URI()},
+		ID:                 generatedDID,
+		VerificationMethod: []did.VerificationMethod{*verificationMethod},
+		Authentication:     []did.VerificationRelationship{{VerificationMethod: verificationMethod}},
+	}
+	var metadata DIDDocumentMetadata
+
+	// Send DID Document to Nuts Network
+	if didDocumentAsJSON, err := json.Marshal(document); err != nil {
+		return nil, fmt.Errorf("unable to marshal DID Document: %w", err)
+	} else if envelope, err := r.network.AddDocumentWithContents(time.Now(), "application/json+did-document", didDocumentAsJSON); err != nil {
+		return nil, fmt.Errorf("unable to register DID Document on Nuts Network: %w", err)
+	} else {
+		// TODO: envelope is still the old Nuts Network Document type, this should be changed to Distributed Document
+		// format as specified by RFC004 and used in RFC006.
+		metadata.Hash = envelope.Hash
+		metadata.Version = 0
+		metadata.OriginJWSHash = envelope.Hash
+	}
+
+	if err = r.DIDStore.Add(document, DIDDocumentMetadata{
+		Created:       time.Time{},
+		Updated:       time.Time{},
+		Version:       0,
+		OriginJWSHash: model.Hash{},
+		Hash:          model.Hash{},
+	}); err != nil {
+		return nil, fmt.Errorf("unable to store created DID: %w", err)
+	}
+
+	return &document, nil
 }
 
 func (r *Registry) Get(DID did.DID) (*did.Document, *DIDDocumentMetadata, error) {
@@ -124,6 +172,17 @@ func (r *Registry) GetByTag(tag string) (*did.Document, *DIDDocumentMetadata, er
 }
 
 func (r *Registry) Update(DID did.DID, hash model.Hash, nextVersion did.Document) (*did.Document, error) {
+	current, metadata, err := r.DIDStore.Get(DID)
+	if err != nil {
+		return nil, err
+	} else if !metadata.Hash.Equals(hash) {
+		return nil, ErrIncorrectLastVersionHash
+	}
+
+	// TODO: More validation?
+	if !nextVersion.ID.Equals(DID) {
+		return nil, ErrInvalidDIDDocument
+	}
 	return r.DIDStore.Update(DID, hash, nextVersion)
 
 }
@@ -134,10 +193,6 @@ func (r *Registry) Tag(DID did.DID, tags []string) error {
 
 var instance *Registry
 var oneRegistry sync.Once
-
-func init() {
-	ReloadRegistryIdleTimeout = 3 * time.Second
-}
 
 // RegistryInstance returns the singleton Registry
 func RegistryInstance() *Registry {
@@ -153,10 +208,11 @@ func RegistryInstance() *Registry {
 
 func NewRegistryInstance(config RegistryConfig, cryptoClient crypto.Client, networkClient pkg.NetworkClient) *Registry {
 	return &Registry{
-		Config:  config,
-		crypto:  cryptoClient,
-		network: networkClient,
-		_logger: logging.Log(),
+		Config:   config,
+		crypto:   cryptoClient,
+		network:  networkClient,
+		DIDStore: storage.NewMemoryDIDStore(),
+		_logger:  logging.Log(),
 	}
 }
 

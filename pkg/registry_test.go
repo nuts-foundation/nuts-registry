@@ -168,10 +168,6 @@ func configureIdentity() {
 	core.NutsConfig().Load(&cobra.Command{})
 }
 
-func configureIdleTimeout() {
-	ReloadRegistryIdleTimeout = 100 * time.Millisecond
-}
-
 func createRegistry(repo *test.TestRepo) *Registry {
 	core.NutsConfig().Load(&cobra.Command{})
 	return NewTestRegistryInstance(repo.Directory)

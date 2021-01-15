@@ -36,7 +36,7 @@ import (
 
 var genericError = errors.New("generic error occurred")
 
-func newRequest(didStore pkg.DIDStore, method string, path string, body []byte) (*ServerInterfaceWrapper, echo.Context, *httptest.ResponseRecorder) {
+func newRequest(didStore pkg.DIDService, method string, path string, body []byte) (*ServerInterfaceWrapper, echo.Context, *httptest.ResponseRecorder) {
 	server := echo.New()
 	stub := ApiWrapper{R: &pkg.Registry{DIDStore: didStore}}
 	wrapper := &ServerInterfaceWrapper{
